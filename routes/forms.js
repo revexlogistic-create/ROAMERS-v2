@@ -16,11 +16,20 @@ router.post('/plan', function(req, res) {
   if (!f.fname||!f.email||!f.phone) return res.status(400).json({ error:'Name, email and phone required' });
   var id = 'RC-PLAN-'+Math.random().toString(36).substr(2,4).toUpperCase();
   var doc = db.plans.insert({
-    id:id, segment:f.segment||'', types:f.types||[], groupSize:f.groupSize||'',
-    duration:f.duration||'', budget:f.budget||'', lang:f.lang||'',
-    dateFrom:f.dateFrom||'', dateTo:f.dateTo||'',
+    id:id,
+    segment:f.segment||'',
+    moods:f.moods||[],
+    who:f.who||'',
+    destination:f.destination||'',
+    groupSize:f.groupSize||'',
+    duration:f.duration||'',
+    budget:f.budget||'',
+    lang:f.lang||'',
+    dateFrom:f.dateFrom||'',
+    dateTo:f.dateTo||'',
+    departCity:f.departCity||'',
     fname:f.fname, lname:f.lname||'', email:f.email, phone:f.phone,
-    nationality:f.nationality||'Morocco', source:f.source||'', message:f.message||'',
+    source:f.source||'', message:f.message||'',
     status:'new', created:new Date().toISOString()
   });
   mailer.sendPlanRequest(doc).catch(function(){});

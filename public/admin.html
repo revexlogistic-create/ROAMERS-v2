@@ -168,6 +168,7 @@ table tr:hover .tbl-actions{opacity:1}
 .badge-pending{background:var(--amber-l);color:var(--amber)}.badge-pending::before{background:var(--amber)}
 .badge-confirmed{background:var(--green-l);color:var(--green)}.badge-confirmed::before{background:var(--green)}
 .badge-cancelled{background:rgba(220,38,38,.1);color:#DC2626}.badge-cancelled::before{background:#DC2626}
+.badge-info{background:var(--blue-l);color:var(--blue)}.badge-info::before{background:var(--blue)}
 .badge-open{background:var(--blue-l);color:var(--blue)}.badge-open::before{background:var(--blue)}
 .badge-full{background:rgba(124,58,237,.1);color:#7C3AED}.badge-full::before{background:#7C3AED}
 .badge-closed{background:var(--surface3);color:var(--text3)}.badge-closed::before{background:var(--text3)}
@@ -389,6 +390,8 @@ label.fl{display:block;font-size:11px;font-weight:600;letter-spacing:.05em;text-
   <div class="sb-item" onclick="goPage('cms')" id="nav-cms"><div class="si">📝</div><span>Website Content</span></div>
 
   <div class="sb-section-label">Business</div>
+  <div class="sb-item" onclick="goPage('plans')" id="nav-plans"><div class="si">🗓️</div><span>Plan Requests</span><span class="badge" id="plansBadge" style="display:none">0</span></div>
+  <div class="sb-item" onclick="goPage('teams')" id="nav-teams"><div class="si">🏢</div><span>Team Building</span><span class="badge" id="teamsBadge" style="display:none">0</span></div>
   <div class="sb-item" onclick="goPage('partners')" id="nav-partners"><div class="si">🤝</div><span>Partnerships</span></div>
   <div class="sb-item" onclick="goPage('analytics')" id="nav-analytics"><div class="si">📈</div><span>Analytics</span></div>
 
@@ -535,18 +538,27 @@ function loadAll(cb) {
   }).catch(function(){}).then(done);
   api('GET','/admin/plan-requests').then(function(d){
     if(d.requests) {
+      DB.plans = d.requests;
       DB.notifications = DB.notifications.filter(function(n){ return !String(n.id).startsWith('plan-'); });
-      d.requests.filter(function(r){ return r.status==='new'; }).forEach(function(r){
-        DB.notifications.unshift({id:'plan-'+r.id,text:'New plan request from '+r.name+(r.destination?' — '+r.destination:''),time:fmtDate(r.created),read:false,type:'booking'});
+      var newPlans = d.requests.filter(function(r){ return r.status==='new'; });
+      newPlans.forEach(function(r){
+        var name = [r.fname,r.lname].filter(Boolean).join(' ') || r.email || '—';
+        DB.notifications.unshift({id:'plan-'+r.id,text:'Nouvelle demande de '+name+(r.destination?' — '+r.destination:''),time:fmtDate(r.created),read:false,type:'booking'});
       });
+      var pb=document.getElementById('plansBadge');
+      if(pb){pb.textContent=newPlans.length;pb.style.display=newPlans.length?'inline-block':'none';}
     }
   }).catch(function(){}).then(done);
   api('GET','/admin/team-requests').then(function(d){
     if(d.requests) {
+      DB.teams = d.requests;
       DB.notifications = DB.notifications.filter(function(n){ return !String(n.id).startsWith('team-'); });
-      d.requests.filter(function(r){ return r.status==='new'; }).forEach(function(r){
-        DB.notifications.unshift({id:'team-'+r.id,text:'New team building request from '+(r.company||r.name),time:fmtDate(r.created),read:false,type:'booking'});
+      var newTeams = d.requests.filter(function(r){ return r.status==='new'; });
+      newTeams.forEach(function(r){
+        DB.notifications.unshift({id:'team-'+r.id,text:'Nouvelle demande team building de '+(r.company||r.fname||'—'),time:fmtDate(r.created),read:false,type:'booking'});
       });
+      var tb=document.getElementById('teamsBadge');
+      if(tb){tb.textContent=newTeams.length;tb.style.display=newTeams.length?'inline-block':'none';}
     }
   }).catch(function(){}).then(done);
   api('GET','/admin/messages').then(function(d){
@@ -566,6 +578,8 @@ var DB = {
   trips: [],
   bookings: [],
   customers: [],
+  plans: [],
+  teams: [],
   activities: [
     {id:1,title:'Camel Trekking at Sunset',category:'adventure',duration:'2h',price:350,status:'active',desc:'Classic Sahara camel experience at golden hour'},
     {id:2,title:'Traditional Cooking Class',category:'culture',duration:'3h',price:280,status:'active',desc:'Learn to cook tagine and couscous with a local family'},
@@ -636,11 +650,11 @@ function goPage(page) {
   document.querySelectorAll('.sb-item').forEach(function(el){ el.classList.remove('active'); });
   var navEl = document.getElementById('nav-'+page);
   if (navEl) navEl.classList.add('active');
-  var titles = {overview:'Overview',bookings:'Bookings',trips:'Trips (Voyages)',activities:'Activities & Experiences',customers:'Customers',media:'Media Library',cms:'Website Content (CMS)',partners:'Partnerships & Programs',analytics:'Analytics',users:'Users & Roles',settings:'Settings'};
+  var titles = {overview:'Overview',bookings:'Bookings',trips:'Trips (Voyages)',activities:'Activities & Experiences',customers:'Customers',media:'Media Library',cms:'Website Content (CMS)',partners:'Partnerships & Programs',analytics:'Analytics',users:'Users & Roles',settings:'Settings',plans:'Plan Requests',teams:'Team Building Requests'};
   document.getElementById('pageTitle').textContent = titles[page] || page;
   Object.values(APP.chartInstances).forEach(function(c){ if(c) c.destroy(); });
   APP.chartInstances = {};
-  var renders = {overview:renderOverview,bookings:renderBookings,trips:renderTrips,activities:renderActivities,customers:renderCustomers,media:renderMedia,cms:renderCMS,partners:renderPartners,analytics:renderAnalytics,users:renderUsers,settings:renderSettings};
+  var renders = {overview:renderOverview,bookings:renderBookings,trips:renderTrips,activities:renderActivities,customers:renderCustomers,media:renderMedia,cms:renderCMS,partners:renderPartners,analytics:renderAnalytics,users:renderUsers,settings:renderSettings,plans:renderPlanRequests,teams:renderTeamRequests};
   document.getElementById('content').innerHTML = (renders[page] || renderOverview)();
   if (page === 'overview') initOverviewCharts();
   if (page === 'analytics') initAnalyticsCharts();
@@ -2220,6 +2234,293 @@ function toggleNotif() {
       });
     }, 10);
   }
+}
+
+/* ══════════════════════════════════════════════════
+   PAGE: PLAN REQUESTS
+══════════════════════════════════════════════════ */
+function renderPlanRequests() {
+  var total = DB.plans.length;
+  var newC = DB.plans.filter(function(r){return r.status==='new';}).length;
+  var inprog = DB.plans.filter(function(r){return r.status==='in_progress';}).length;
+  var done = DB.plans.filter(function(r){return r.status==='done';}).length;
+
+  var MOOD_LABELS = {desert:'🏜️ Désert',mountain:'⛰️ Montagne',coastal:'🌊 Côtier',cultural:'🏛️ Culturel',adventure:'⚡ Aventure',wellness:'🧘 Bien-être',luxury:'💎 Luxe',family:'👨‍👩‍👧 Famille'};
+  var WHO_LABELS  = {couple:'👫 Couple',family:'👨‍👩‍👧 Famille',friends:'👯 Amis',solo:'🧍 Solo',corporate:'🏢 Entreprise'};
+  var BUDGET_LABELS = {'low':'< 3 000 MAD','mid':'3 000 – 8 000 MAD','high':'8 000 – 20 000 MAD','premium':'> 20 000 MAD'};
+
+  function statusBadgePlan(s){
+    var map={new:'badge-pending',in_progress:'badge-info',done:'badge-confirmed',cancelled:'badge-cancelled'};
+    var lbl={new:'Nouveau',in_progress:'En cours',done:'Traité',cancelled:'Annulé'};
+    return '<span class="badge '+(map[s]||'badge-pending')+'">'+(lbl[s]||cap(s))+'</span>';
+  }
+
+  var html = '<div class="page-header"><div><h1>Demandes Plan My Trip 🗓️</h1><p>Gérez les demandes de voyages personnalisés soumises via le site</p></div>'
+    +'<div class="ph-actions"><button class="btn btn-secondary" onclick="exportPlanCSV()">⬇ Export CSV</button><button class="btn btn-primary" onclick="reloadPlanRequests()">↻ Actualiser</button></div></div>'
+
+  +'<div class="grid-4" style="margin-bottom:20px">'
+  + miniStat('Total','📋',total,'var(--blue-l)')
+  + miniStat('Nouveaux','🆕',newC,'var(--red-l)')
+  + miniStat('En cours','⏳',inprog,'var(--amber-l)')
+  + miniStat('Traités','✅',done,'var(--green-l)')
+  +'</div>'
+
+  /* Status filter pills */
+  +'<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px">'
+  +'<button class="plan-status-filter" onclick="filterPlanStatus(\'all\',this)" style="padding:6px 13px;border-radius:100px;font-size:12px;font-weight:600;border:1.5px solid var(--red);background:var(--red);color:#fff;cursor:pointer">✦ Tous ('+total+')</button>'
+  +'<button class="plan-status-filter" onclick="filterPlanStatus(\'new\',this)" style="padding:6px 13px;border-radius:100px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text2);cursor:pointer">🆕 Nouveaux ('+newC+')</button>'
+  +'<button class="plan-status-filter" onclick="filterPlanStatus(\'in_progress\',this)" style="padding:6px 13px;border-radius:100px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text2);cursor:pointer">⏳ En cours ('+inprog+')</button>'
+  +'<button class="plan-status-filter" onclick="filterPlanStatus(\'done\',this)" style="padding:6px 13px;border-radius:100px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text2);cursor:pointer">✅ Traités ('+done+')</button>'
+  +'</div>'
+
+  +'<div class="tbl-wrap"><div class="tbl-toolbar">'
+  +'<div class="tbl-search"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6" cy="6" r="4" stroke="#94A3B8" stroke-width="1.3"/><path d="M9.5 9.5l2 2" stroke="#94A3B8" stroke-width="1.3" stroke-linecap="round"/></svg><input type="text" placeholder="Rechercher une demande…" oninput="filterTable(this.value,\'planTable\')"></div>'
+  +'<span class="tbl-count" id="planCount">'+total+' demandes</span></div>'
+
+  +'<table id="planTable"><thead><tr><th>Réf.</th><th>Date</th><th>Client</th><th>Destination</th><th>Moods</th><th>Qui</th><th>Groupe</th><th>Durée</th><th>Budget</th><th>Statut</th><th>Actions</th></tr></thead><tbody>';
+
+  if (!total) {
+    html += '<tr><td colspan="11"><div class="empty-state"><p>Aucune demande Plan My Trip pour le moment</p><span>Les demandes soumises via le site apparaîtront ici</span></div></td></tr>';
+  } else {
+    html += DB.plans.map(function(r){
+      var name = [r.fname,r.lname].filter(Boolean).join(' ') || '—';
+      var moodsHtml = (r.moods||[]).map(function(m){return '<span class="chip">'+( MOOD_LABELS[m]||m)+'</span>';}).join('');
+      var whoHtml = WHO_LABELS[r.who]||r.who||'—';
+      var budgetLbl = BUDGET_LABELS[r.budget]||r.budget||'—';
+      return '<tr data-search="'+r.id+' '+name+' '+(r.email||'')+' '+(r.destination||'')+' '+r.status+'">'
+        +'<td><span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--red)">'+r.id+'</span></td>'
+        +'<td style="font-size:12px;white-space:nowrap">'+fmtDate(r.created)+'</td>'
+        +'<td><div style="display:flex;align-items:center;gap:8px"><div class="avatar av-sm" style="background:'+hashColor(name)+'">'+initials(name)+'</div><div><div style="font-weight:600">'+name+'</div><div class="text-muted text-xs">'+r.email+'</div><div class="text-muted text-xs">'+r.phone+'</div></div></div></td>'
+        +'<td style="font-weight:600;font-size:12px">'+(r.destination||'<span class="text-muted">—</span>')+'</td>'
+        +'<td><div style="display:flex;gap:3px;flex-wrap:wrap">'+(moodsHtml||'<span class="text-muted">—</span>')+'</div></td>'
+        +'<td style="font-size:12px">'+whoHtml+'</td>'
+        +'<td style="font-size:12px;font-weight:600">'+( r.groupSize||'—')+'</td>'
+        +'<td style="font-size:12px">'+(r.duration||'—')+'</td>'
+        +'<td style="font-size:12px">'+budgetLbl+'</td>'
+        +'<td>'+statusBadgePlan(r.status)+'</td>'
+        +'<td><div class="tbl-actions">'
+          +'<button class="btn btn-secondary btn-sm btn-icon" onclick="viewPlanRequest(\''+r.id+'\')" title="Voir détails">👁</button>'
+          +'<a href="https://wa.me/'+r.phone.replace(/[^0-9]/g,'')+'" target="_blank" class="btn btn-success btn-sm btn-icon" title="WhatsApp" style="text-decoration:none">💬</a>'
+          +'<select onchange="updatePlanStatus(\''+r.id+'\',this.value,this)" class="fi fi-select" style="width:auto;font-size:11px;padding:3px 6px;height:28px">'
+            +'<option value="">Changer statut</option>'
+            +'<option value="new">Nouveau</option>'
+            +'<option value="in_progress">En cours</option>'
+            +'<option value="done">Traité</option>'
+            +'<option value="cancelled">Annulé</option>'
+          +'</select>'
+        +'</div></td>'
+      +'</tr>';
+    }).join('');
+  }
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function filterPlanStatus(s, btn) {
+  document.querySelectorAll('.plan-status-filter').forEach(function(b){b.style.background='#fff';b.style.color='var(--text2)';b.style.borderColor='var(--border)';});
+  btn.style.background='var(--red)';btn.style.color='#fff';btn.style.borderColor='var(--red)';
+  document.querySelectorAll('#planTable tbody tr').forEach(function(r){
+    r.style.display=(s==='all'||(r.dataset.search||'').includes(s))?'':'none';
+  });
+}
+
+function updatePlanStatus(id, status, sel) {
+  if (!status) return;
+  api('PATCH','/admin/plan-requests/'+id,{status:status}).then(function(){
+    var r = DB.plans.find(function(x){return x.id===id;});
+    if(r) r.status=status;
+    showToast('Statut mis à jour : '+status);
+    sel.value='';
+    goPage('plans');
+  }).catch(function(){ showToast('Erreur lors de la mise à jour','error'); sel.value=''; });
+}
+
+function reloadPlanRequests() {
+  api('GET','/admin/plan-requests').then(function(d){
+    if(d.requests) { DB.plans=d.requests; goPage('plans'); showToast('Demandes actualisées'); }
+  }).catch(function(){ showToast('Erreur de chargement','error'); });
+}
+
+function viewPlanRequest(id) {
+  var r = DB.plans.find(function(x){return x.id===id;});
+  if(!r) return;
+  var name = [r.fname,r.lname].filter(Boolean).join(' ')||'—';
+  var MOOD_LABELS = {desert:'🏜️ Désert',mountain:'⛰️ Montagne',coastal:'🌊 Côtier',cultural:'🏛️ Culturel',adventure:'⚡ Aventure',wellness:'🧘 Bien-être',luxury:'💎 Luxe',family:'👨‍👩‍👧 Famille'};
+  var WHO_LABELS  = {couple:'👫 Couple',family:'👨‍👩‍👧 Famille',friends:'👯 Amis',solo:'🧍 Solo',corporate:'🏢 Entreprise'};
+  var BUDGET_LABELS = {'low':'< 3 000 MAD','mid':'3 000 – 8 000 MAD','high':'8 000 – 20 000 MAD','premium':'> 20 000 MAD'};
+  var moodsHtml = (r.moods||[]).map(function(m){return '<span class="chip">'+( MOOD_LABELS[m]||m)+'</span>';}).join(' ')||'—';
+  var row = function(l,v){return '<div class="stat-row"><span class="text-muted text-sm">'+l+'</span><span style="font-weight:600;text-align:right">'+v+'</span></div>';};
+  var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">'
+    +'<div>'
+      +'<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Contact</div>'
+      + row('Nom',name) + row('Email',r.email||'—') + row('Téléphone',r.phone||'—') + row('Source',r.source||'—')
+    +'</div>'
+    +'<div>'
+      +'<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Voyage</div>'
+      + row('Destination',r.destination||'—') + row('Moods','<div style="display:flex;gap:4px;flex-wrap:wrap">'+moodsHtml+'</div>')
+      + row('Qui',WHO_LABELS[r.who]||r.who||'—') + row('Groupe',r.groupSize||'—')
+      + row('Durée',r.duration||'—') + row('Budget',BUDGET_LABELS[r.budget]||r.budget||'—')
+      + row('Départ',r.departCity||'—') + row('Dates',(r.dateFrom||'—')+' → '+(r.dateTo||'—'))
+    +'</div>'
+  +'</div>'
+  +(r.message?'<div style="margin-top:16px"><div class="text-muted text-sm" style="margin-bottom:6px">Message</div><div style="background:var(--surface2);border-radius:var(--r);padding:12px;font-size:13px;line-height:1.6">'+r.message+'</div></div>':'')
+  +'<div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">'
+    +'<a href="https://wa.me/'+( r.phone||'').replace(/[^0-9]/g,'')+'" target="_blank" class="btn btn-success" style="text-decoration:none">💬 WhatsApp</a>'
+    +'<a href="mailto:'+r.email+'" class="btn btn-secondary" style="text-decoration:none">📧 Email</a>'
+    +'<button class="btn btn-ghost" onclick="closeModal()">Fermer</button>'
+  +'</div>';
+  openModal('<div class="modal-header"><h3>Demande Plan My Trip — '+r.id+'</h3><div class="modal-close" onclick="closeModal()">✕</div></div><div class="modal-body">'+html+'</div>','modal-lg');
+}
+
+function exportPlanCSV() {
+  var cols=['Réf','Date','Prénom','Nom','Email','Téléphone','Destination','Qui','Groupe','Durée','Budget','Départ','DateFrom','DateTo','Statut','Message'];
+  var rows=DB.plans.map(function(r){
+    return [r.id,fmtDate(r.created),r.fname||'',r.lname||'',r.email||'',r.phone||'',r.destination||'',(r.who||''),(r.groupSize||''),(r.duration||''),(r.budget||''),(r.departCity||''),(r.dateFrom||''),(r.dateTo||''),r.status||'',(r.message||'').replace(/"/g,'""')];
+  });
+  var csv=[cols].concat(rows).map(function(r){return r.map(function(c){return '"'+c+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='plan-requests-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
+}
+
+/* ══════════════════════════════════════════════════
+   PAGE: TEAM BUILDING REQUESTS
+══════════════════════════════════════════════════ */
+function renderTeamRequests() {
+  var total = DB.teams.length;
+  var newC = DB.teams.filter(function(r){return r.status==='new';}).length;
+  var inprog = DB.teams.filter(function(r){return r.status==='in_progress';}).length;
+  var done = DB.teams.filter(function(r){return r.status==='done';}).length;
+
+  function statusBadgeTeam(s){
+    var map={new:'badge-pending',in_progress:'badge-info',done:'badge-confirmed',cancelled:'badge-cancelled'};
+    var lbl={new:'Nouveau',in_progress:'En cours',done:'Traité',cancelled:'Annulé'};
+    return '<span class="badge '+(map[s]||'badge-pending')+'">'+(lbl[s]||cap(s))+'</span>';
+  }
+
+  var html = '<div class="page-header"><div><h1>Demandes Team Building 🏢</h1><p>Gérez les demandes de team building entreprise soumises via le site</p></div>'
+    +'<div class="ph-actions"><button class="btn btn-secondary" onclick="exportTeamCSV()">⬇ Export CSV</button><button class="btn btn-primary" onclick="reloadTeamRequests()">↻ Actualiser</button></div></div>'
+
+  +'<div class="grid-4" style="margin-bottom:20px">'
+  + miniStat('Total','📋',total,'var(--blue-l)')
+  + miniStat('Nouveaux','🆕',newC,'var(--red-l)')
+  + miniStat('En cours','⏳',inprog,'var(--amber-l)')
+  + miniStat('Traités','✅',done,'var(--green-l)')
+  +'</div>'
+
+  /* Status filter pills */
+  +'<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px">'
+  +'<button class="team-status-filter" onclick="filterTeamStatus(\'all\',this)" style="padding:6px 13px;border-radius:100px;font-size:12px;font-weight:600;border:1.5px solid var(--red);background:var(--red);color:#fff;cursor:pointer">✦ Tous ('+total+')</button>'
+  +'<button class="team-status-filter" onclick="filterTeamStatus(\'new\',this)" style="padding:6px 13px;border-radius:100px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text2);cursor:pointer">🆕 Nouveaux ('+newC+')</button>'
+  +'<button class="team-status-filter" onclick="filterTeamStatus(\'in_progress\',this)" style="padding:6px 13px;border-radius:100px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text2);cursor:pointer">⏳ En cours ('+inprog+')</button>'
+  +'<button class="team-status-filter" onclick="filterTeamStatus(\'done\',this)" style="padding:6px 13px;border-radius:100px;font-size:12px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--text2);cursor:pointer">✅ Traités ('+done+')</button>'
+  +'</div>'
+
+  +'<div class="tbl-wrap"><div class="tbl-toolbar">'
+  +'<div class="tbl-search"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6" cy="6" r="4" stroke="#94A3B8" stroke-width="1.3"/><path d="M9.5 9.5l2 2" stroke="#94A3B8" stroke-width="1.3" stroke-linecap="round"/></svg><input type="text" placeholder="Rechercher une demande…" oninput="filterTable(this.value,\'teamTable\')"></div>'
+  +'<span class="tbl-count" id="teamCount">'+total+' demandes</span></div>'
+
+  +'<table id="teamTable"><thead><tr><th>Réf.</th><th>Date</th><th>Entreprise</th><th>Contact</th><th>Groupe</th><th>Durée</th><th>Lieu</th><th>Budget</th><th>Dates souhaitées</th><th>Statut</th><th>Actions</th></tr></thead><tbody>';
+
+  if (!total) {
+    html += '<tr><td colspan="11"><div class="empty-state"><p>Aucune demande team building pour le moment</p><span>Les demandes soumises via le site apparaîtront ici</span></div></td></tr>';
+  } else {
+    html += DB.teams.map(function(r){
+      var contactName = [r.contactFn,r.contactLn].filter(Boolean).join(' ')||'—';
+      return '<tr data-search="'+r.id+' '+(r.company||'')+' '+contactName+' '+(r.email||'')+' '+r.status+'">'
+        +'<td><span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--red)">'+r.id+'</span></td>'
+        +'<td style="font-size:12px;white-space:nowrap">'+fmtDate(r.created)+'</td>'
+        +'<td><div style="font-weight:700">'+(r.company||'—')+'</div><div class="text-muted text-xs">'+(r.industry||'')+(r.city?' · '+r.city:'')+'</div></td>'
+        +'<td><div style="font-weight:600">'+contactName+'</div><div class="text-muted text-xs">'+(r.contactRole||'')+'</div><div class="text-muted text-xs">'+(r.email||'')+'</div><div class="text-muted text-xs">'+(r.phone||'')+'</div></td>'
+        +'<td style="font-weight:700;text-align:center">'+(r.groupExact||r.groupSize||'—')+'</td>'
+        +'<td style="font-size:12px">'+(r.duration||'—')+'</td>'
+        +'<td style="font-size:12px">'+(r.location||'—')+'</td>'
+        +'<td style="font-size:12px">'+(r.budget||'—')+'</td>'
+        +'<td style="font-size:12px;white-space:nowrap">'+(r.flexDate?'🔄 Flexible':(r.dateFrom||'—')+(r.dateTo?' → '+r.dateTo:''))+'</td>'
+        +'<td>'+statusBadgeTeam(r.status)+'</td>'
+        +'<td><div class="tbl-actions">'
+          +'<button class="btn btn-secondary btn-sm btn-icon" onclick="viewTeamRequest(\''+r.id+'\')" title="Voir détails">👁</button>'
+          +'<a href="https://wa.me/'+(r.phone||'').replace(/[^0-9]/g,'')+'" target="_blank" class="btn btn-success btn-sm btn-icon" title="WhatsApp" style="text-decoration:none">💬</a>'
+          +'<select onchange="updateTeamStatus(\''+r.id+'\',this.value,this)" class="fi fi-select" style="width:auto;font-size:11px;padding:3px 6px;height:28px">'
+            +'<option value="">Changer statut</option>'
+            +'<option value="new">Nouveau</option>'
+            +'<option value="in_progress">En cours</option>'
+            +'<option value="done">Traité</option>'
+            +'<option value="cancelled">Annulé</option>'
+          +'</select>'
+        +'</div></td>'
+      +'</tr>';
+    }).join('');
+  }
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function filterTeamStatus(s, btn) {
+  document.querySelectorAll('.team-status-filter').forEach(function(b){b.style.background='#fff';b.style.color='var(--text2)';b.style.borderColor='var(--border)';});
+  btn.style.background='var(--red)';btn.style.color='#fff';btn.style.borderColor='var(--red)';
+  document.querySelectorAll('#teamTable tbody tr').forEach(function(r){
+    r.style.display=(s==='all'||(r.dataset.search||'').includes(s))?'':'none';
+  });
+}
+
+function updateTeamStatus(id, status, sel) {
+  if (!status) return;
+  api('PATCH','/admin/team-requests/'+id,{status:status}).then(function(){
+    var r = DB.teams.find(function(x){return x.id===id;});
+    if(r) r.status=status;
+    showToast('Statut mis à jour : '+status);
+    sel.value='';
+    goPage('teams');
+  }).catch(function(){ showToast('Erreur lors de la mise à jour','error'); sel.value=''; });
+}
+
+function reloadTeamRequests() {
+  api('GET','/admin/team-requests').then(function(d){
+    if(d.requests) { DB.teams=d.requests; goPage('teams'); showToast('Demandes actualisées'); }
+  }).catch(function(){ showToast('Erreur de chargement','error'); });
+}
+
+function viewTeamRequest(id) {
+  var r = DB.teams.find(function(x){return x.id===id;});
+  if(!r) return;
+  var contactName=[r.contactFn,r.contactLn].filter(Boolean).join(' ')||'—';
+  var row=function(l,v){return '<div class="stat-row"><span class="text-muted text-sm">'+l+'</span><span style="font-weight:600;text-align:right">'+v+'</span></div>';};
+  var chips=function(arr){return(arr||[]).map(function(x){return '<span class="chip">'+x+'</span>';}).join(' ')||'—';};
+  var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">'
+    +'<div>'
+      +'<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Entreprise</div>'
+      +row('Société',r.company||'—')+row('Secteur',r.industry||'—')+row('Taille',r.corpSize||'—')+row('Ville',r.city||'—')
+      +'<div style="margin-top:14px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Contact</div>'
+      +row('Nom',contactName)+row('Rôle',r.contactRole||'—')+row('Email',r.email||'—')+row('Téléphone',r.phone||'—')
+    +'</div>'
+    +'<div>'
+      +'<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Événement</div>'
+      +row('Participants',(r.groupExact||r.groupSize||'—'))+row('Durée',r.duration||'—')+row('Lieu',r.location||'—')
+      +row('Budget',r.budget||'—')+row('Dates',r.flexDate?'🔄 Flexible':(r.dateFrom||'—')+(r.dateTo?' → '+r.dateTo:''))
+      +'<div style="margin-top:14px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Programme</div>'
+      +row('Programmes','<div style="display:flex;gap:4px;flex-wrap:wrap">'+chips(r.programs)+'</div>')
+      +row('Objectifs','<div style="display:flex;gap:4px;flex-wrap:wrap">'+chips(r.objectives)+'</div>')
+      +row('Besoins spéciaux','<div style="display:flex;gap:4px;flex-wrap:wrap">'+chips(r.needs)+'</div>')
+    +'</div>'
+  +'</div>'
+  +(r.notes?'<div style="margin-top:16px"><div class="text-muted text-sm" style="margin-bottom:6px">Notes</div><div style="background:var(--surface2);border-radius:var(--r);padding:12px;font-size:13px;line-height:1.6">'+r.notes+'</div></div>':'')
+  +'<div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">'
+    +'<a href="https://wa.me/'+(r.phone||'').replace(/[^0-9]/g,'')+'" target="_blank" class="btn btn-success" style="text-decoration:none">💬 WhatsApp</a>'
+    +'<a href="mailto:'+r.email+'" class="btn btn-secondary" style="text-decoration:none">📧 Email</a>'
+    +'<button class="btn btn-ghost" onclick="closeModal()">Fermer</button>'
+  +'</div>';
+  openModal('<div class="modal-header"><h3>Demande Team Building — '+r.id+'</h3><div class="modal-close" onclick="closeModal()">✕</div></div><div class="modal-body">'+html+'</div>','modal-lg');
+}
+
+function exportTeamCSV() {
+  var cols=['Réf','Date','Société','Secteur','Contact','Email','Téléphone','Rôle','Participants','Durée','Lieu','Budget','DateFrom','DateTo','Statut'];
+  var rows=DB.teams.map(function(r){
+    var cn=[r.contactFn,r.contactLn].filter(Boolean).join(' ');
+    return [r.id,fmtDate(r.created),r.company||'',r.industry||'',cn,r.email||'',r.phone||'',r.contactRole||'',(r.groupExact||r.groupSize||''),r.duration||'',r.location||'',r.budget||'',r.dateFrom||'',r.dateTo||'',r.status||''];
+  });
+  var csv=[cols].concat(rows).map(function(r){return r.map(function(c){return '"'+c+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='team-requests-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
 }
 
 function renderNotifList() {
