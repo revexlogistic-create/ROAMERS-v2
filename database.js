@@ -8,9 +8,15 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-// On Vercel the project root is read-only; write runtime data to /tmp instead
-const DATA_DIR = process.env.VERCEL ? '/tmp/roamers-data' : path.resolve('./data');
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+// Vercel/Lambda deploy to /var/task which is read-only — use /tmp for data
+const _serverless = process.env.VERCEL === '1' || __dirname.startsWith('/var/task') || __dirname.startsWith('/var/runtime');
+let DATA_DIR = _serverless ? '/tmp/roamers-data' : path.resolve('./data');
+try {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+} catch (_mkErr) {
+  DATA_DIR = '/tmp/roamers-data';
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+}
 
 function createTable(name) {
   const file = path.join(DATA_DIR, name + '.json');
