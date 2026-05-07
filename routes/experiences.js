@@ -6,10 +6,10 @@ const router = require('express').Router();
 const db     = require('../database');
 const { adminOnly } = require('../middleware/auth');
 
-const ALLOWED_SEGMENTS = ['groupe','weekend','mesure','team'];
+const ALLOWED_SEGMENTS = ['groupe','weekend','express','team'];
 const ALLOWED_TYPES    = ['desert','mountain','coastal','cultural'];
 const ALLOWED_STATUS   = ['open','closed','full','draft'];
-const ALLOWED_DIFF     = ['Facile','Modéré','Sportif','Expert'];
+const ALLOWED_DIFF     = ['Facile','Modéré','Sportif','Extrême'];
 
 function slugify(s) {
   return String(s || '').toLowerCase()

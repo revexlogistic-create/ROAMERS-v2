@@ -1,7 +1,13 @@
 node_modules/
-data/
 .env
-*.db
 *.log
 .DS_Store
 npm-debug.log*
+
+# Runtime data — not committed
+data/*.json
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+# data/seed-experiences.js is intentionally committed (needed at deploy time)

@@ -23,8 +23,8 @@ app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use(cors({ origin: isProd ? (process.env.FRONTEND_URL || true) : true, credentials: true }));
 app.use(compress());
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 if (!isProd) app.use(morgan('dev'));
 
 const apiLim  = rateLimit({ windowMs: 15*60*1000, max: 300 });

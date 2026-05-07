@@ -8,7 +8,8 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-const DATA_DIR = path.resolve('./data');
+// On Vercel the project root is read-only; write runtime data to /tmp instead
+const DATA_DIR = process.env.VERCEL ? '/tmp/roamers-data' : path.resolve('./data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 function createTable(name) {

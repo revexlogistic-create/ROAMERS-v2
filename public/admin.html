@@ -191,6 +191,33 @@ table tr:hover .tbl-actions{opacity:1}
 @keyframes fadein{from{opacity:0}to{opacity:1}}
 @keyframes slideup{from{transform:translateY(16px);opacity:.6}to{transform:translateY(0);opacity:1}}
 
+/* ── PHOTO UPLOAD ── */
+.photo-upload-zone{border:2px dashed var(--border2);border-radius:var(--r-lg);padding:24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface3);position:relative}
+.photo-upload-zone:hover,.photo-upload-zone.drag{border-color:var(--red);background:var(--red-xl)}
+.photo-upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-top:10px}
+.photo-thumb{position:relative;aspect-ratio:4/3;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--border)}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-thumb .rm{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;line-height:1}
+.photo-thumb .cover-badge{position:absolute;bottom:4px;left:4px;font-size:9px;font-weight:700;background:var(--red);color:#fff;padding:2px 5px;border-radius:3px;letter-spacing:.04em}
+/* ── ITINERARY BUILDER ── */
+.it-row{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;margin-bottom:10px;position:relative}
+.it-row-num{width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;line-height:1}
+.it-row-num small{font-size:8px;opacity:.7;font-weight:400}
+.it-row-fields{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.it-row-rm{width:28px;height:28px;border-radius:50%;background:var(--surface3);border:1px solid var(--border);color:var(--text3);font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:4px;transition:all .15s}
+.it-row-rm:hover{background:#FEE2E2;color:var(--red);border-color:rgba(184,23,46,.25)}
+.it-day-photo-row{display:flex;gap:8px;align-items:center}
+.it-day-photo-row .fi{flex:1}
+.it-day-thumb{width:56px;height:42px;border-radius:var(--r-sm);object-fit:cover;flex-shrink:0;border:1px solid var(--border);display:none}
+.btn-add-day{width:100%;padding:11px;border:2px dashed var(--border2);border-radius:var(--r-lg);background:none;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.btn-add-day:hover{border-color:var(--red);color:var(--red);background:var(--red-xl)}
+/* diff pills */
+.dif-pill{flex:1;border:2px solid var(--border);border-radius:var(--r-sm);padding:7px 4px;text-align:center;cursor:pointer;transition:all .15s;font-size:12px;font-weight:700;background:var(--surface)}
+.dif-pill.sel-f{border-color:#16A34A;background:rgba(22,163,74,.1);color:#16A34A}
+.dif-pill.sel-m{border-color:#D97706;background:rgba(217,119,6,.1);color:#D97706}
+.dif-pill.sel-s{border-color:#EA580C;background:rgba(234,88,12,.1);color:#EA580C}
+.dif-pill.sel-x{border-color:#B8172E;background:rgba(184,23,46,.1);color:#B8172E}
 .fg{margin-bottom:16px}
 .fg-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .fg-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
@@ -1396,15 +1423,109 @@ function openModal(content, size) {
 }
 function closeModal() { document.getElementById('modals').innerHTML = ''; }
 
+/* ── Admin trip form state ── */
+var _aPhotos = [];   /* [{dataUrl, isBase64}] */
+var _aIt     = [];   /* [{d,t,desc,img,imgData}] */
+var _aEditId = null;
+
+function _aPhotoRead(file, cb){
+  var r = new FileReader();
+  r.onload = function(e){ cb(e.target.result); };
+  r.readAsDataURL(file);
+}
+function _aRenderPhotos(){
+  var grid = document.getElementById('aPhotoGrid');
+  if(!grid) return;
+  if(!_aPhotos.length){ grid.innerHTML = ''; return; }
+  grid.innerHTML = _aPhotos.map(function(p,i){
+    return '<div class="photo-thumb">'
+      +'<img src="'+p+'" alt="photo '+i+'">'
+      +(i===0?'<span class="cover-badge">Couverture</span>':'')
+      +'<button class="rm" onclick="_aRemovePhoto('+i+')">✕</button>'
+    +'</div>';
+  }).join('');
+}
+function _aRemovePhoto(i){ _aPhotos.splice(i,1); _aRenderPhotos(); }
+function _aHandlePhotos(input){
+  var files = Array.from(input.files);
+  var remaining = 8 - _aPhotos.length;
+  files.slice(0, remaining).forEach(function(f){
+    _aPhotoRead(f, function(data){ _aPhotos.push(data); _aRenderPhotos(); });
+  });
+  input.value='';
+}
+function _aRenderIt(){
+  var c = document.getElementById('aItBuilder');
+  if(!c) return;
+  if(!_aIt.length){ c.innerHTML=''; return; }
+  c.innerHTML = _aIt.map(function(d,i){
+    return '<div class="it-row" id="aItRow-'+i+'">'
+      +'<div class="it-row-num"><small>J</small>'+d.d+'</div>'
+      +'<div class="it-row-fields">'
+        +'<input class="fi" placeholder="Titre de la journée *" value="'+d.t.replace(/"/g,'&quot;')+'" oninput="_aIt['+i+'].t=this.value" style="font-weight:600">'
+        +'<textarea class="fi fi-area" style="min-height:68px" placeholder="Déroulé de la journée..." oninput="_aIt['+i+'].desc=this.value">'+d.desc+'</textarea>'
+        +'<div class="it-day-photo-row">'
+          +'<input class="fi" placeholder="URL photo (ou uploader →)" value="'+d.img.replace(/"/g,'&quot;')+'" oninput="_aIt['+i+'].img=this.value;_aUpdateDayThumb('+i+')">'
+          +(d.imgData||d.img?'<img class="it-day-thumb" id="aThumb-'+i+'" src="'+(d.imgData||d.img)+'" style="display:block">':'<img class="it-day-thumb" id="aThumb-'+i+'">')
+          +'<label style="display:inline-flex;align-items:center;gap:5px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;background:var(--surface3);transition:all .15s" onmouseover="this.style.borderColor=\'var(--red)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
+            +'📷'
+            +'<input type="file" accept="image/*" style="display:none" onchange="_aHandleDayPhoto(this,'+i+')">'
+          +'</label>'
+        +'</div>'
+      +'</div>'
+      +'<button class="it-row-rm" onclick="_aRemoveItDay('+i+')">✕</button>'
+    +'</div>';
+  }).join('');
+}
+function _aHandleDayPhoto(input,i){
+  var f=input.files[0]; if(!f)return;
+  _aPhotoRead(f, function(data){
+    _aIt[i].imgData=data;
+    var thumb=document.getElementById('aThumb-'+i);
+    if(thumb){thumb.src=data;thumb.style.display='block';}
+  });
+  input.value='';
+}
+function _aUpdateDayThumb(i){
+  var thumb=document.getElementById('aThumb-'+i);
+  if(!thumb)return;
+  var url=_aIt[i].img;
+  if(url){thumb.src=url;thumb.style.display='block';}
+  else if(!_aIt[i].imgData){thumb.style.display='none';}
+}
+function _aAddItDay(){
+  _aIt.push({d:_aIt.length+1,t:'',desc:'',img:'',imgData:''});
+  _aRenderIt();
+  var last=document.getElementById('aItRow-'+(_aIt.length-1));
+  if(last)last.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function _aRemoveItDay(i){
+  _aIt.splice(i,1);
+  _aIt.forEach(function(d,idx){d.d=idx+1;});
+  _aRenderIt();
+}
+function _aPickDif(val){
+  document.querySelectorAll('.dif-pill').forEach(function(el){
+    el.className='dif-pill';
+    if(el.dataset.dif===val){
+      var cls={Facile:'sel-f',Modéré:'sel-m',Sportif:'sel-s',Extrême:'sel-x'};
+      el.className='dif-pill '+(cls[val]||'');
+    }
+  });
+  document.getElementById('mTripDif').value=val;
+}
+
 function openTripModal(id) {
   var t = id ? DB.trips.find(function(x){return x.id===id;}) : null;
   var v = function(f){ return t ? (t[f]||'') : ''; };
+  _aEditId = id||null;
+  _aPhotos = t && t.imgs ? t.imgs.slice() : (t && t.img ? [t.img] : []);
+  _aIt = t && t.it ? t.it.map(function(d){return {d:d.d,t:d.t,desc:d.desc,img:d.img||'',imgData:''};}) : [];
 
   var SEGS = [
     {id:'groupe',  label:'Voyage Groupe',   icon:'🧭', desc:'Départs fixes, groupes organisés', color:'#B8172E'},
     {id:'weekend', label:'Weekend à Thème', icon:'🌙', desc:'2–3 jours, dépaysement total',      color:'#7C3AED'},
     {id:'express', label:'Activité Express',icon:'⚡', desc:'Demi-journée ou journée complète',  color:'#16A34A'},
-    {id:'mesure',  label:'Sur Mesure',      icon:'✂️', desc:'100% personnalisé, devis sur demande', color:'#2563EB'},
     {id:'team',    label:'Team Building',   icon:'🤝', desc:'Cohésion et leadership en nature',  color:'#D97706'}
   ];
   var TYPES = [
@@ -1435,15 +1556,26 @@ function openTripModal(id) {
     +'</div>';
   }).join('');
 
+  var curDif = v('dif');
+  var DIFS = [
+    {v:'Facile',  ico:'🟢'},{v:'Modéré', ico:'🟡'},
+    {v:'Sportif', ico:'🟠'},{v:'Extrême',ico:'🔴'}
+  ];
+  var difPills = DIFS.map(function(d){
+    var cls={Facile:'sel-f',Modéré:'sel-m',Sportif:'sel-s',Extrême:'sel-x'};
+    var sel = curDif === d.v;
+    return '<div class="dif-pill'+(sel?' '+(cls[d.v]||''):'')+'" data-dif="'+d.v+'" onclick="_aPickDif(\''+d.v+'\')" style="text-align:center">'+d.ico+' '+d.v+'</div>';
+  }).join('');
+
   openModal(
     '<div class="modal-header">'
       +'<div><h3 style="margin-bottom:2px">'+(t ? '✏️ Modifier le voyage' : '🚀 Publier un nouveau voyage')+'</h3>'
-      +'<div style="font-size:12px;color:var(--text3)">'+(t ? 'Modifiez les informations ci-dessous' : 'Suivez les 4 étapes pour publier votre voyage')+'</div></div>'
+      +'<div style="font-size:12px;color:var(--text3)">'+(t ? 'Modifiez les informations ci-dessous' : 'Remplissez les 6 sections pour publier votre voyage')+'</div></div>'
       +'<div class="modal-close" onclick="closeModal()">✕</div>'
     +'</div>'
     +'<div class="modal-body">'
 
-    /* ── STEP 1: Segment & Type ── */
+    /* ── SECTION 1: Catégorie & Univers ── */
     +'<div style="background:rgba(184,23,46,.04);border:1px solid rgba(184,23,46,.15);border-radius:var(--r-lg);padding:18px 20px;margin-bottom:18px">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'
         +'<div style="width:24px;height:24px;border-radius:50%;background:var(--red);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>'
@@ -1465,7 +1597,7 @@ function openTripModal(id) {
       +'</div>'
     +'</div>'
 
-    /* ── STEP 2: Info ── */
+    /* ── SECTION 2: Informations générales ── */
     +'<div style="background:var(--surface3);border-radius:var(--r-lg);padding:18px 20px;margin-bottom:18px">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'
         +'<div style="width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>'
@@ -1475,13 +1607,42 @@ function openTripModal(id) {
         +'<input class="fi" id="mTripTitle" placeholder="ex : Bivouac Sahara — Étoiles &amp; Silence" value="'+v('title')+'">'
       +'</div>'
       +'<div class="fg-row">'
-        +'<div class="fg"><label class="fl">Destination / Lieu</label><input class="fi" id="mTripDest" placeholder="ex : Merzouga, Erg Chebbi" value="'+v('destination')+'"></div>'
-        +'<div class="fg"><label class="fl">Durée</label><input class="fi" id="mTripDur" placeholder="ex : 3 Jours / 2 Nuits" value="'+v('dur')+'"></div>'
+        +'<div class="fg"><label class="fl">Destination / Lieu</label><input class="fi" id="mTripDest" placeholder="ex : Merzouga" value="'+v('destination')+'"></div>'
+        +'<div class="fg"><label class="fl">Durée (affichée)</label><input class="fi" id="mTripDur" placeholder="ex : 3 Jours / 2 Nuits" value="'+v('dur')+'"></div>'
       +'</div>'
-      +'<div class="fg"><label class="fl">Description</label>'
+      +'<div class="fg-row-3">'
+        +'<div class="fg"><label class="fl">Jours</label><input class="fi" id="mTripDays" type="number" placeholder="3" value="'+(v('days')||'')+'" min="1"></div>'
+        +'<div class="fg"><label class="fl">Nuits</label><input class="fi" id="mTripNights" type="number" placeholder="2" value="'+(v('nights')||'')+'" min="0"></div>'
+        +'<div class="fg"><label class="fl">Badge promo</label><input class="fi" id="mTripBadge" placeholder="ex : Coup de Cœur" value="'+v('badge')+'"></div>'
+      +'</div>'
+      +'<div class="fg"><label class="fl">Tags</label>'
+        +'<input class="fi" id="mTripTags" placeholder="desert, aventure, bivouac, famille..." value="'+(t&&t.tags?t.tags.join(', '):'')+'">'
+        +'<div style="font-size:11px;color:var(--text3);margin-top:3px">Mots-clés séparés par des virgules</div>'
+      +'</div>'
+      +'<div class="fg"><label class="fl">Difficulté</label>'
+        +'<div style="display:flex;gap:8px;margin-top:6px">'+difPills+'</div>'
+        +'<input type="hidden" id="mTripDif" value="'+curDif+'">'
+      +'</div>'
+      +'<div class="fg" style="margin-bottom:0"><label class="fl">Description</label>'
         +'<textarea class="fi fi-area" id="mTripDesc" style="min-height:80px" placeholder="Décrivez l\'expérience en 2–3 phrases...">'+v('desc')+'</textarea>'
       +'</div>'
-      +'<div class="fg" style="margin-bottom:0"><label class="fl">Image de couverture (URL)</label>'
+    +'</div>'
+
+    /* ── SECTION 3: Photos ── */
+    +'<div style="background:var(--surface3);border-radius:var(--r-lg);padding:18px 20px;margin-bottom:18px">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'
+        +'<div style="width:24px;height:24px;border-radius:50%;background:#D97706;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>'
+        +'<div style="font-size:13px;font-weight:700;color:var(--text)">Photos du voyage</div>'
+      +'</div>'
+      +'<div class="photo-upload-zone" onclick="document.getElementById(\'aPhotoInput\').click()">'
+        +'<div style="font-size:28px;margin-bottom:8px">📷</div>'
+        +'<div style="font-size:13px;font-weight:600;color:var(--text)">Cliquez pour choisir des photos</div>'
+        +'<div style="font-size:12px;color:var(--text3);margin-top:4px">JPG, PNG · max 8 photos · La 1ère = couverture</div>'
+        +'<input type="file" id="aPhotoInput" accept="image/*" multiple style="display:none" onchange="_aHandlePhotos(this)">'
+      +'</div>'
+      +'<div class="photo-grid" id="aPhotoGrid" style="margin-top:12px"></div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-top:8px">— ou renseignez une URL de couverture —</div>'
+      +'<div style="margin-top:6px">'
         +'<input class="fi" id="mTripImg" placeholder="https://images.unsplash.com/..." value="'+v('img')+'" oninput="previewImg(this.value)">'
         +'<div id="imgPreview" style="margin-top:7px;border-radius:var(--r-sm);overflow:hidden;display:'+(v('img')?'block':'none')+'">'
           +(v('img')?'<img src="'+v('img')+'" style="width:100%;height:130px;object-fit:cover">':'')
@@ -1489,10 +1650,10 @@ function openTripModal(id) {
       +'</div>'
     +'</div>'
 
-    /* ── STEP 3: Dates & Prix ── */
+    /* ── SECTION 4: Dates & Prix ── */
     +'<div style="background:var(--surface3);border-radius:var(--r-lg);padding:18px 20px;margin-bottom:18px">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'
-        +'<div style="width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>'
+        +'<div style="width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>'
         +'<div style="font-size:13px;font-weight:700;color:var(--text)">Dates, Prix &amp; Capacité</div>'
       +'</div>'
       +'<div class="fg-row-3">'
@@ -1518,21 +1679,31 @@ function openTripModal(id) {
       +'</div>'
     +'</div>'
 
-    /* ── STEP 4: Services ── */
+    /* ── SECTION 5: Programme ── */
+    +'<div style="background:var(--surface3);border-radius:var(--r-lg);padding:18px 20px;margin-bottom:18px">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'
+        +'<div style="width:24px;height:24px;border-radius:50%;background:#7C3AED;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">5</div>'
+        +'<div style="font-size:13px;font-weight:700;color:var(--text)">Programme jour par jour</div>'
+      +'</div>'
+      +'<div id="aItBuilder"></div>'
+      +'<button class="btn-add-day" onclick="_aAddItDay()">+ Ajouter un jour</button>'
+    +'</div>'
+
+    /* ── SECTION 6: Services ── */
     +'<div style="background:var(--surface3);border-radius:var(--r-lg);padding:18px 20px">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'
-        +'<div style="width:24px;height:24px;border-radius:50%;background:var(--amber);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>'
+        +'<div style="width:24px;height:24px;border-radius:50%;background:var(--amber);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">6</div>'
         +'<div style="font-size:13px;font-weight:700;color:var(--text)">Services &amp; Points forts</div>'
       +'</div>'
       +'<div class="fg"><label class="fl">Services inclus</label>'
-        +'<input class="fi" id="mTripSvc" placeholder="Transport, Hébergement, Repas, Guide, Chameau..." value="'+(t&&t.services?t.services.join(', '):'')+'">'
+        +'<input class="fi" id="mTripSvc" placeholder="Transport, Hébergement, Repas, Guide..." value="'+(t&&t.services?t.services.join(', '):'')+'">'
         +'<div style="font-size:11px;color:var(--text3);margin-top:3px">Séparés par des virgules</div>'
       +'</div>'
-      +'<div class="fg"><label class="fl">Points forts du voyage (1 par ligne)</label>'
-        +'<textarea class="fi fi-area" id="mTripHi" style="min-height:85px" placeholder="Nuit en bivouac de luxe dans les dunes\nTrek chameau au coucher du soleil\nDîner berbère avec musique gnawa...">'+((t&&t.hi)?t.hi.join('\n'):'')+'</textarea>'
+      +'<div class="fg"><label class="fl">Non inclus</label>'
+        +'<input class="fi" id="mTripExc" placeholder="Vols, Assurance personnelle..." value="'+(t&&t.exc?t.exc.join(', '):'')+'">'
       +'</div>'
-      +'<div class="fg" style="margin-bottom:0"><label class="fl">Non inclus</label>'
-        +'<input class="fi" id="mTripExc" placeholder="Vols, Assurance personnelle, Dépenses personnelles..." value="'+(t&&t.exc?t.exc.join(', '):'')+'">'
+      +'<div class="fg" style="margin-bottom:0"><label class="fl">Points forts (1 par ligne)</label>'
+        +'<textarea class="fi fi-area" id="mTripHi" style="min-height:85px" placeholder="Nuit en bivouac de luxe dans les dunes\nTrek chameau au coucher du soleil...">'+((t&&t.hi)?t.hi.join('\n'):'')+'</textarea>'
       +'</div>'
     +'</div>'
 
@@ -1546,6 +1717,12 @@ function openTripModal(id) {
     +'</div>',
     'modal-xl'
   );
+
+  setTimeout(function(){
+    _aRenderPhotos();
+    _aRenderIt();
+    if(t && t.dif) _aPickDif(t.dif);
+  }, 0);
 }
 
 function editTrip(id) { openTripModal(id); }
@@ -1591,15 +1768,23 @@ function saveTrip(id) {
 
   var statusEl = document.querySelector('input[name="tripStatus"]:checked');
   var existing = id ? DB.trips.find(function(t){return t.id===id;}) : null;
+  var fallbackImg = 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400&q=75';
+  var urlImg = (document.getElementById('mTripImg')||{value:''}).value;
+  var imgs = _aPhotos.length ? _aPhotos : (urlImg ? [urlImg] : [fallbackImg]);
 
   var trip = {
     id:          id || Date.now(),
     title:       title,
     segment:     seg,
     type:        type,
-    destination: (document.getElementById('mTripDest')||{value:''}).value,
-    dur:         (document.getElementById('mTripDur') ||{value:''}).value,
-    desc:        (document.getElementById('mTripDesc')||{value:''}).value,
+    destination: (document.getElementById('mTripDest')  ||{value:''}).value,
+    dur:         (document.getElementById('mTripDur')   ||{value:''}).value,
+    days:        parseInt((document.getElementById('mTripDays')   ||{value:''}).value)||null,
+    nights:      parseInt((document.getElementById('mTripNights') ||{value:''}).value)||null,
+    dif:         (document.getElementById('mTripDif')   ||{value:''}).value,
+    badge:       (document.getElementById('mTripBadge') ||{value:''}).value,
+    tags:        ((document.getElementById('mTripTags') ||{value:''}).value).split(',').map(function(s){return s.trim();}).filter(Boolean),
+    desc:        (document.getElementById('mTripDesc')  ||{value:''}).value,
     price:       parseInt((document.getElementById('mTripPrice')||{value:0}).value)||0,
     priceChild:  parseInt((document.getElementById('mTripPriceChild')||{value:''}).value)||null,
     capacity:    parseInt((document.getElementById('mTripCap')||{value:20}).value)||20,
@@ -1610,19 +1795,22 @@ function saveTrip(id) {
     services:    ((document.getElementById('mTripSvc') ||{value:''}).value).split(',').map(function(s){return s.trim();}).filter(Boolean),
     hi:          ((document.getElementById('mTripHi')  ||{value:''}).value).split('\n').map(function(s){return s.trim();}).filter(Boolean),
     exc:         ((document.getElementById('mTripExc') ||{value:''}).value).split(',').map(function(s){return s.trim();}).filter(Boolean),
-    img:         (document.getElementById('mTripImg')||{value:''}).value || 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400&q=75',
+    img:         imgs[0],
+    imgs:        imgs,
+    it:          _aIt.map(function(d){return {d:d.d,t:d.t,desc:d.desc,img:d.imgData||d.img};}).filter(function(d){return d.t;}),
     created:     existing ? existing.created : new Date().toISOString().split('T')[0]
   };
 
   var body = {
     title:trip.title, segment:trip.segment, type:trip.type,
     loc:trip.destination, dur:trip.dur, desc:trip.desc,
+    days:trip.days, nights:trip.nights, dif:trip.dif,
+    badge:trip.badge, tags:trip.tags,
     price:trip.price, pChild:trip.priceChild||null,
     maxP:trip.capacity, minP:trip.minP,
-    status:trip.status,
-    dates:trip.dates,
+    status:trip.status, dates:trip.dates,
     inc:trip.services, hi:trip.hi, exc:trip.exc,
-    img:trip.img
+    img:trip.img, imgs:trip.imgs, it:trip.it
   };
 
   if (id) {
