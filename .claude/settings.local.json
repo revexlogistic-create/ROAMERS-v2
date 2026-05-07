@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"http://localhost:3000/api/experiences?includeDrafts=1\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); u=d.get\\('user',{}\\); print\\(f'name: {u.get\\(\\\\\"fname\\\\\",\\\\\"\\\\\"\\)} {u.get\\(\\\\\"lname\\\\\",\\\\\"\\\\\"\\)}, role: {u.get\\(\\\\\"role\\\\\",\\\\\"\\\\\"\\)}'\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); e=d['experiences'][0]; print\\('dates:', json.dumps\\(e.get\\('dates',[]\\)[:2]\\)\\)\")",
+      "mcp__Claude_in_Chrome__tabs_create_mcp"
+    ]
+  }
+}
