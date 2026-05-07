@@ -392,6 +392,7 @@ label.fl{display:block;font-size:11px;font-weight:600;letter-spacing:.05em;text-
   <div class="sb-section-label">Business</div>
   <div class="sb-item" onclick="goPage('plans')" id="nav-plans"><div class="si">🗓️</div><span>Plan Requests</span><span class="badge" id="plansBadge" style="display:none">0</span></div>
   <div class="sb-item" onclick="goPage('teams')" id="nav-teams"><div class="si">🏢</div><span>Team Building</span><span class="badge" id="teamsBadge" style="display:none">0</span></div>
+  <div class="sb-item" onclick="goPage('messages')" id="nav-messages"><div class="si">💬</div><span>Messages</span><span class="badge" id="msgsBadge" style="display:none">0</span></div>
   <div class="sb-item" onclick="goPage('partners')" id="nav-partners"><div class="si">🤝</div><span>Partnerships</span></div>
   <div class="sb-item" onclick="goPage('analytics')" id="nav-analytics"><div class="si">📈</div><span>Analytics</span></div>
 
@@ -521,7 +522,7 @@ function mapBk(b) {
   });
 }
 function loadAll(cb) {
-  var left = 6;
+  var left = 9;
   function done(){ if(--left===0) cb(); }
   api('GET','/experiences?includeDrafts=1').then(function(d){
     if(d.experiences) DB.trips = d.experiences.map(mapExp);
@@ -530,11 +531,18 @@ function loadAll(cb) {
     if(d.bookings) DB.bookings = d.bookings.map(mapBk);
   }).catch(function(){}).then(done);
   api('GET','/admin/users').then(function(d){
-    if(d.users) DB.customers = d.users.filter(function(u){return u.role!=='admin';}).map(function(u){
-      return { id:u.id, name:u.name||u.email, email:u.email, phone:u.phone||'',
-        nationality:'', country:'', trips:0, spent:0,
-        status:'regular', joined:(u.created||'').split('T')[0] };
-    });
+    if(d.users) {
+      DB.customers = d.users.filter(function(u){return u.role==='user';}).map(function(u){
+        var fullName = (u.fname&&u.lname) ? u.fname+' '+u.lname : (u.fname||u.lname||u.email);
+        return { id:u.id, name:fullName, email:u.email, phone:u.phone||'',
+          nationality:'', country:u.country||'', trips:0, spent:0,
+          status:'regular', joined:(u.joined||u.created||'').split('T')[0] };
+      });
+      DB.adminUsers = d.users.filter(function(u){return u.role!=='user';}).map(function(u){
+        var fullName = (u.fname&&u.lname) ? u.fname+' '+u.lname : (u.fname||u.lname||u.email);
+        return { id:u.id, name:fullName, email:u.email, role:u.role||'admin', status:'active', lastLogin:'—' };
+      });
+    }
   }).catch(function(){}).then(done);
   api('GET','/admin/plan-requests').then(function(d){
     if(d.requests) {
@@ -563,11 +571,25 @@ function loadAll(cb) {
   }).catch(function(){}).then(done);
   api('GET','/admin/messages').then(function(d){
     if(d.messages) {
+      DB.messages = d.messages;
       DB.notifications = DB.notifications.filter(function(n){ return !String(n.id).startsWith('msg-'); });
-      d.messages.filter(function(m){ return m.status==='unread'; }).forEach(function(m){
-        DB.notifications.unshift({id:'msg-'+m.id,text:'New message from '+m.name+(m.subject?' — '+m.subject:''),time:fmtDate(m.created),read:false,type:'info'});
+      var unread = d.messages.filter(function(m){ return m.status==='unread'; });
+      unread.forEach(function(m){
+        var senderName = m.fname ? (m.fname+(m.lname?' '+m.lname:'')) : (m.name||'?');
+        DB.notifications.unshift({id:'msg-'+m.id,text:'Nouveau message de '+senderName+(m.subject?' — '+m.subject:''),time:fmtDate(m.created),read:false,type:'info'});
       });
+      var mb=document.getElementById('msgsBadge');
+      if(mb){mb.textContent=unread.length;mb.style.display=unread.length?'inline-block':'none';}
     }
+  }).catch(function(){}).then(done);
+  api('GET','/admin/activities').then(function(d){
+    if(d.activities) DB.activities = d.activities;
+  }).catch(function(){}).then(done);
+  api('GET','/admin/partners').then(function(d){
+    if(d.partners) DB.partners = d.partners;
+  }).catch(function(){}).then(done);
+  api('GET','/admin/settings').then(function(d){
+    if(d.settings) DB.settings = d.settings;
   }).catch(function(){}).then(done);
 }
 
@@ -580,35 +602,12 @@ var DB = {
   customers: [],
   plans: [],
   teams: [],
-  activities: [
-    {id:1,title:'Camel Trekking at Sunset',category:'adventure',duration:'2h',price:350,status:'active',desc:'Classic Sahara camel experience at golden hour'},
-    {id:2,title:'Traditional Cooking Class',category:'culture',duration:'3h',price:280,status:'active',desc:'Learn to cook tagine and couscous with a local family'},
-    {id:3,title:'Outdoor Leadership Workshop',category:'corporate',duration:'4h',price:600,status:'active',desc:'Facilitated team leadership session in nature'},
-    {id:4,title:'Medina Guided Walk — Fes',category:'culture',duration:'3h',price:200,status:'active',desc:'Expert-led walking tour through Fes el-Bali'},
-    {id:5,title:'Sandboarding & 4x4 Dune Adventure',category:'adventure',duration:'3h',price:450,status:'active',desc:'Adrenaline-packed dune bashing and sandboarding'},
-    {id:6,title:'Yoga & Meditation at Sunrise',category:'wellness',duration:'1.5h',price:180,status:'inactive',desc:'Morning wellness session on the Sahara dunes'},
-    {id:7,title:'CSR Community Service Day',category:'corporate',duration:'8h',price:400,status:'active',desc:'Give back to local Berber communities — team bonding with impact'},
-    {id:8,title:'Surf Lesson — Taghazout',category:'adventure',duration:'2h',price:320,status:'active',desc:'Beginner-friendly Atlantic surf lesson with certified instructor'}
-  ],
-  partners: [
-    {id:1,name:'Alliance Access International',country:'China',type:'Tour Operator',contact:'Liu Jing',email:'liu@allianceaccess.cn',phone:'+86 21 5888 6666',trips:['Sahara Desert Immersion','High Atlas Mountain Trek'],status:'active',programs:3,revenue:86400},
-    {id:2,name:'Le Bon Voyage',country:'France',type:'Travel Agency',contact:'Pierre Dupont',email:'pierre@lebonvoyage.fr',phone:'+33 1 42 68 53 00',trips:['Fes & Marrakech Medina Deep Dive'],status:'active',programs:1,revenue:24000},
-    {id:3,name:'Morocco Ventures',country:'USA',type:'DMC Partner',contact:'Sarah Johnson',email:'sarah@moroccoventures.com',phone:'+1 212 555 0190',trips:['Atlantic Coast Road Trip'],status:'active',programs:2,revenue:35200},
-    {id:4,name:'Silk Road Tourism',country:'Japan',type:'Tour Operator',contact:'Tanaka Hiroshi',email:'tanaka@silkroad.co.jp',phone:'+81 3 5544 6789',trips:[],status:'prospect',programs:0,revenue:0}
-  ],
-  adminUsers: [
-    {id:1,name:'Youssef El Fassi',email:'youssef@roamerscommunity.ma',role:'admin',status:'active',lastLogin:'2024-03-09 09:14'},
-    {id:2,name:'Fatima Zahra Benali',email:'fatima@roamerscommunity.ma',role:'manager',status:'active',lastLogin:'2024-03-09 08:42'},
-    {id:3,name:'Hassan Mouaouia',email:'hassan@roamerscommunity.ma',role:'editor',status:'active',lastLogin:'2024-03-08 16:55'},
-    {id:4,name:'Wei Chen',email:'wei@roamerscommunity.ma',role:'manager',status:'active',lastLogin:'2024-03-07 11:20'}
-  ],
-  notifications: [
-    {id:1,text:'New booking RC-G2M7 from Youssef Alami — Sahara Desert Immersion',time:'5 min ago',read:false,type:'booking'},
-    {id:2,text:'Aisha Khalil submitted a new booking for Chefchaouen Blue City Escape',time:'2h ago',read:false,type:'booking'},
-    {id:3,text:'Wei Zhang\'s group (12 pax) pending confirmation — respond within 24h',time:'4h ago',read:false,type:'alert'},
-    {id:4,text:'Sahara Desert Immersion (May 10) is 80% booked — only 4 spots left',time:'1d ago',read:true,type:'info'},
-    {id:5,text:'Corporate Team Building invoice sent to Fatima Ezzahra Idrissi',time:'2d ago',read:true,type:'payment'}
-  ],
+  activities: [],
+  partners: [],
+  messages: [],
+  adminUsers: [],
+  settings: {},
+  notifications: [],
   cms: {
     hero:{title:'Explore Morocco. Feel it. Live it.',subtitle:'From Sahara sunrises to Atlas peaks — immersive adventures built for those who want more than a postcard.',cta:'Discover Experiences',enabled:true},
     about:{title:'We built a community, not an agency.',body:'Roamers Community was founded by passionate Moroccan explorers who believed travel could create genuine human connection and support local communities.',enabled:true},
@@ -650,11 +649,11 @@ function goPage(page) {
   document.querySelectorAll('.sb-item').forEach(function(el){ el.classList.remove('active'); });
   var navEl = document.getElementById('nav-'+page);
   if (navEl) navEl.classList.add('active');
-  var titles = {overview:'Overview',bookings:'Bookings',trips:'Trips (Voyages)',activities:'Activities & Experiences',customers:'Customers',media:'Media Library',cms:'Website Content (CMS)',partners:'Partnerships & Programs',analytics:'Analytics',users:'Users & Roles',settings:'Settings',plans:'Plan Requests',teams:'Team Building Requests'};
+  var titles = {overview:'Overview',bookings:'Bookings',trips:'Trips (Voyages)',activities:'Activities & Experiences',customers:'Customers',media:'Media Library',cms:'Website Content (CMS)',partners:'Partnerships & Programs',analytics:'Analytics',users:'Users & Roles',settings:'Settings',plans:'Plan Requests',teams:'Team Building Requests',messages:'Messages'};
   document.getElementById('pageTitle').textContent = titles[page] || page;
   Object.values(APP.chartInstances).forEach(function(c){ if(c) c.destroy(); });
   APP.chartInstances = {};
-  var renders = {overview:renderOverview,bookings:renderBookings,trips:renderTrips,activities:renderActivities,customers:renderCustomers,media:renderMedia,cms:renderCMS,partners:renderPartners,analytics:renderAnalytics,users:renderUsers,settings:renderSettings,plans:renderPlanRequests,teams:renderTeamRequests};
+  var renders = {overview:renderOverview,bookings:renderBookings,trips:renderTrips,activities:renderActivities,customers:renderCustomers,media:renderMedia,cms:renderCMS,partners:renderPartners,analytics:renderAnalytics,users:renderUsers,settings:renderSettings,plans:renderPlanRequests,teams:renderTeamRequests,messages:renderMessages};
   document.getElementById('content').innerHTML = (renders[page] || renderOverview)();
   if (page === 'overview') initOverviewCharts();
   if (page === 'analytics') initAnalyticsCharts();
@@ -798,12 +797,12 @@ function renderBookings() {
 
   +'<div class="tbl-wrap"><div class="tbl-toolbar">'
   +'<div class="tbl-search"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6" cy="6" r="4" stroke="#94A3B8" stroke-width="1.3"/><path d="M9.5 9.5l2 2" stroke="#94A3B8" stroke-width="1.3" stroke-linecap="round"/></svg><input type="text" placeholder="Rechercher…" oninput="filterTable(this.value,\'bkTable\')"></div>'
-  +'<div class="tbl-filter"><select class="fi fi-select" style="width:auto" onchange="filterTableByStatus(this.value,\'bkTable\')"><option value="">Tous statuts</option><option>confirmed</option><option>pending</option><option>cancelled</option></select><select class="fi fi-select" style="width:auto"><option value="">Tout paiement</option><option>paid</option><option>partial</option><option>unpaid</option></select></div>'
+  +'<div class="tbl-filter"><select class="fi fi-select" style="width:auto" onchange="filterTableByStatus(this.value,\'bkTable\')"><option value="">Tous statuts</option><option>confirmed</option><option>pending</option><option>cancelled</option></select><select class="fi fi-select" style="width:auto" onchange="filterTableByStatus(this.value,\'bkTable\')"><option value="">Tout paiement</option><option>paid</option><option>partial</option><option>unpaid</option></select></div>'
   +'<span class="tbl-count" id="bkCount">'+DB.bookings.length+' réservations</span></div>'
   +'<table id="bkTable"><thead><tr><th><input type="checkbox" class="tbl-check" onclick="toggleAll(this,\'bkTable\')"></th><th>Réf.</th><th>Client</th><th>Voyage</th><th>Segment</th><th>Date</th><th>Pers.</th><th>Total</th><th>Statut</th><th>Paiement</th><th>Actions</th></tr></thead><tbody>'
   + DB.bookings.map(function(b){
       var trip=DB.trips.find(function(t){return t.id===b.tripId;})||{};
-      return '<tr data-search="'+b.id+' '+b.customer+' '+b.tripTitle+' '+b.status+' '+(trip.segment||'')+'">'
+      return '<tr data-search="'+b.id+' '+b.customer+' '+b.tripTitle+' '+b.status+' '+(b.payment||'')+' '+(trip.segment||'')+'">'
         +'<td><input type="checkbox" class="tbl-check"></td>'
         +'<td><span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--red)">'+b.id+'</span></td>'
         +'<td><div style="display:flex;align-items:center;gap:8px"><div class="avatar av-sm" style="background:'+hashColor(b.customer)+'">'+initials(b.customer)+'</div><div><div style="font-weight:600">'+b.customer+'</div><div class="text-muted text-xs">'+b.email+'</div></div></div></td>'
@@ -876,10 +875,10 @@ function renderActivities() {
         +'<td><span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11px;font-weight:700;background:'+(c.color||'#16A34A')+'18;color:'+(c.color||'#16A34A')+'">'+(c.icon||'⚡')+' '+cap(a.category)+'</span></td>'
         +'<td><span style="background:var(--surface3);padding:3px 9px;border-radius:100px;font-size:12px;font-weight:600">⏱ '+a.duration+'</span></td>'
         +'<td style="font-weight:700;color:var(--red)">'+a.price+' MAD</td>'
-        +'<td><div class="toggle'+(a.status==='active'?' red-on':'')+'" onclick="toggleActivity('+a.id+',this)" title="'+(a.status==='active'?'Actif':'Inactif')+'"></div></td>'
+        +'<td><div class="toggle'+(a.status==='active'?' red-on':'')+'" onclick="toggleActivity(\''+a.id+'\',this)" title="'+(a.status==='active'?'Actif':'Inactif')+'"></div></td>'
         +'<td><div class="tbl-actions">'
-          +'<button class="btn btn-secondary btn-sm btn-icon" onclick="editActivity('+a.id+')" title="Modifier">✏️</button>'
-          +'<button class="btn btn-danger btn-sm btn-icon" onclick="deleteItem(\'activities\','+a.id+')" title="Supprimer">🗑</button>'
+          +'<button class="btn btn-secondary btn-sm btn-icon" onclick="editActivity(\''+a.id+'\')" title="Modifier">✏️</button>'
+          +'<button class="btn btn-danger btn-sm btn-icon" onclick="deleteItem(\'activities\',\''+a.id+'\')" title="Supprimer">🗑</button>'
         +'</div></td>'
       +'</tr>';
     }).join('')
@@ -1079,7 +1078,7 @@ function renderCmsTab(tab){
    PAGE: PARTNERS
 ══════════════════════════════════════════════════ */
 function renderPartners() {
-  var totalPartnerRev=DB.partners.reduce(function(s,p){return s+p.revenue;},0);
+  var totalPartnerRev=DB.partners.reduce(function(s,p){return s+(p.revenue||0);},0);
   return '<div class="page-header"><div><h1>Partenariats & Programmes Internationaux</h1><p>Gérez les partenaires B2B et les programmes de collaboration</p></div>'
     +'<div class="ph-actions"><button class="btn btn-primary" onclick="openPartnerModal()">+ Ajouter partenaire</button></div></div>'
 
@@ -1094,7 +1093,7 @@ function renderPartners() {
   +'<div class="card" style="margin-bottom:20px"><div class="card-header"><div class="card-title">Segments couverts par les partenaires</div></div>'
   +'<div style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0">'
   +ADMIN_SEGS.map(function(s){
-    var hasPart=DB.partners.some(function(p){return p.trips.some(function(t){return DB.trips.some(function(tr){return tr.title===t&&tr.segment===s.id;});});});
+    var hasPart=DB.partners.some(function(p){return (p.trips||[]).some(function(t){return DB.trips.some(function(tr){return tr.title===t&&tr.segment===s.id;});});});
     return '<div style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:'+(hasPart?s.color+'18':'var(--surface3)')+';border:1.5px solid '+(hasPart?s.color:'var(--border)')+';border-radius:100px">'
       +'<span style="font-size:16px">'+s.icon+'</span>'
       +'<span style="font-size:12px;font-weight:600;color:'+(hasPart?s.color:'var(--text3)')+'">'+s.label+'</span>'
@@ -1105,7 +1104,7 @@ function renderPartners() {
 
   +'<div class="grid-2">'
   + DB.partners.map(function(p){
-      var partnerTrips=p.trips.map(function(title){
+      var partnerTrips=(p.trips||[]).map(function(title){
         var t=DB.trips.find(function(x){return x.title===title;});
         return t?{title:title,seg:t.segment,type:t.type}:{title:title,seg:null,type:null};
       });
@@ -1120,7 +1119,8 @@ function renderPartners() {
         +'<div style="font-size:12px;color:var(--text2);margin-bottom:10px">Contact : <strong>'+p.contact+'</strong> · <span style="color:var(--blue)">'+p.email+'</span></div>'
         +(partnerTrips.length?'<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Voyages assignés</div><div style="display:flex;flex-direction:column;gap:5px">'+partnerTrips.map(function(t){return '<div style="display:flex;align-items:center;gap:6px;font-size:12px"><span>'+t.title+'</span>'+(t.seg?segBadge(t.seg):'')+(t.type?typeBadge(t.type):'')+'</div>';}).join('')+'</div></div>':'')
         +'<div style="display:flex;gap:7px">'
-          +'<button class="btn btn-secondary btn-sm" onclick="editPartner('+p.id+')" style="flex:1">✏️ Modifier</button>'
+          +'<button class="btn btn-secondary btn-sm" onclick="editPartner(\''+p.id+'\')" style="flex:1">✏️ Modifier</button>'
+          +'<button class="btn btn-danger btn-sm btn-icon" onclick="deleteItem(\'partners\',\''+p.id+'\')" title="Supprimer">🗑</button>'
           +'<button class="btn btn-ghost btn-sm btn-icon" onclick="sendEmail(\''+p.email+'\')" title="Email">✉️</button>'
           +'<button class="btn btn-ghost btn-sm btn-icon" onclick="sendWhatsApp(\''+p.phone+'\',\''+p.name+'\')" title="WhatsApp">💬</button>'
         +'</div>'
@@ -1203,13 +1203,14 @@ function renderUsers() {
   +'<div>'
   +'<div class="tbl-wrap"><div class="tbl-toolbar"><div style="font-size:14px;font-weight:700">Membres de l\'équipe</div><span class="tbl-count">'+DB.adminUsers.length+' utilisateurs</span></div>'
   +'<table><thead><tr><th>Utilisateur</th><th>Rôle</th><th>Statut</th><th>Dernière connexion</th><th>Actions</th></tr></thead><tbody>'
+  +(DB.adminUsers.length?'':('<tr><td colspan="5"><div class="empty-state"><p>Aucun membre d\'équipe</p><span>Invitez des collaborateurs via le bouton + Inviter</span></div></td></tr>'))
   +DB.adminUsers.map(function(u){
     var rd=roleDefs.find(function(r){return r.role===u.role;})||roleDefs[0];
     return '<tr><td><div style="display:flex;align-items:center;gap:9px"><div class="avatar av-sm" style="background:'+hashColor(u.name)+'">'+initials(u.name)+'</div><div><div style="font-weight:600">'+u.name+'</div><div class="text-muted text-xs">'+u.email+'</div></div></div></td>'
       +'<td><span style="padding:3px 9px;border-radius:100px;font-size:11px;font-weight:700;background:'+rd.color+'18;color:'+rd.color+'">'+rd.label+'</span></td>'
       +'<td><span class="badge badge-confirmed">Actif</span></td>'
       +'<td class="text-muted text-xs">'+u.lastLogin+'</td>'
-      +'<td><div class="tbl-actions"><button class="btn btn-secondary btn-sm btn-icon">✏️</button><button class="btn btn-danger btn-sm btn-icon">🗑</button></div></td>'
+      +'<td><div class="tbl-actions"><button class="btn btn-secondary btn-sm btn-icon" onclick="openEditUserModal(\''+u.id+'\')">✏️</button><button class="btn btn-danger btn-sm btn-icon" onclick="deleteUser(\''+u.id+'\')">🗑</button></div></td>'
     +'</tr>';
   }).join('')
   +'</tbody></table></div>'
@@ -1235,43 +1236,44 @@ function renderUsers() {
    PAGE: SETTINGS
 ══════════════════════════════════════════════════ */
 function renderSettings() {
+  var s = DB.settings || {};
   return '<div class="page-header"><div><h1>Paramètres</h1><p>Configurez votre espace admin Roamers Community</p></div>'
-    +'<div class="ph-actions"><button class="btn btn-primary" onclick="showToast(\'Paramètres enregistrés\',\'success\')">💾 Enregistrer</button></div></div>'
+    +'<div class="ph-actions"><button class="btn btn-primary" onclick="saveSettings()">💾 Enregistrer tout</button></div></div>'
 
   +'<div class="grid-2">'
   +'<div>'
   + settingsCard('🏢 Informations entreprise',[
-      {label:'Nom de l\'entreprise',val:'Roamers Community'},
-      {label:'Email principal',val:'hello@roamerscommunity.ma'},
-      {label:'Téléphone / WhatsApp',val:'+212 6 00 00 00 00'},
-      {label:'Adresse',val:'Casablanca, Maroc'},
-      {label:'Site web',val:'https://roamerscommunity.ma'}
+      {label:'Nom de l\'entreprise',     id:'settCompanyName',  val:s.settCompanyName||'Roamers Community'},
+      {label:'Email principal',          id:'settCompanyEmail', val:s.settCompanyEmail||'hello@roamerscommunity.ma'},
+      {label:'Téléphone / WhatsApp',     id:'settCompanyPhone', val:s.settCompanyPhone||'+212 6 00 00 00 00'},
+      {label:'Adresse',                  id:'settCompanyAddr',  val:s.settCompanyAddr||'Casablanca, Maroc'},
+      {label:'Site web',                 id:'settCompanySite',  val:s.settCompanySite||'https://roamerscommunity.ma'}
     ])
   + settingsCard('💬 Intégration WhatsApp',[
-      {label:'Numéro WhatsApp Business',val:'+212 6 00 00 00 00'},
-      {label:'Message de confirmation (template)',val:'Réservation {{ref}} pour {{voyage}} le {{date}} confirmée — Roamers Community'},
-      {label:'Envoi auto à la réservation',type:'toggle',val:true}
+      {label:'Numéro WhatsApp Business',             id:'settWhatsappNum', val:s.settWhatsappNum||'+212 6 00 00 00 00'},
+      {label:'Message de confirmation (template)',    id:'settWhatsappTpl', val:s.settWhatsappTpl||'Réservation {{ref}} pour {{voyage}} le {{date}} confirmée — Roamers Community'},
+      {label:'Envoi auto à la réservation',type:'toggle',id:'settWaAuto',val:true}
     ])
   + settingsCard('💰 Devises & Tarification',[
-      {label:'Devise par défaut',val:'MAD (Dirham Marocain)'},
-      {label:'Taux TVA (%)',val:'0'},
-      {label:'Acompte requis (%)',val:'30'}
+      {label:'Devise par défaut',   id:'settCurrency', val:s.settCurrency||'MAD'},
+      {label:'Taux TVA (%)',        id:'settVAT',      val:s.settVAT||'0'},
+      {label:'Acompte requis (%)',  id:'settDeposit',  val:s.settDeposit||'30'}
     ])
   +'</div>'
 
   +'<div>'
   + settingsCard('📧 Notifications email',[
-      {label:'Envoyer les nouvelles réservations à',val:'bookings@roamerscommunity.ma'},
-      {label:'Confirmation automatique au client',type:'toggle',val:true},
-      {label:'Rappel 7 jours avant le départ',type:'toggle',val:true},
-      {label:'WhatsApp auto à chaque réservation',type:'toggle',val:true}
+      {label:'Envoyer les nouvelles réservations à', id:'settBookingEmail', val:s.settBookingEmail||'bookings@roamerscommunity.ma'},
+      {label:'Confirmation automatique au client',   type:'toggle',val:true},
+      {label:'Rappel 7 jours avant le départ',       type:'toggle',val:true},
+      {label:'WhatsApp auto à chaque réservation',   type:'toggle',val:true}
     ])
-  + settingsCard('🔒 Sécurité',[
-      {label:'Mot de passe actuel',val:'',type:'password'},
-      {label:'Nouveau mot de passe',val:'',type:'password'},
-      {label:'Confirmer le nouveau mot de passe',val:'',type:'password'}
+  + settingsCard('🔒 Changer le mot de passe',[
+      {label:'Mot de passe actuel',             id:'settPwCurrent', type:'password'},
+      {label:'Nouveau mot de passe',            id:'settPwNew',     type:'password'},
+      {label:'Confirmer le nouveau mot de passe',id:'settPwConfirm',type:'password'}
     ])
-  +'<div class="card"><div class="card-header"><div class="card-title">🔌 Intégrations</div></div>'
+  +'<div class="card" style="margin-bottom:14px"><div class="card-header" style="display:flex;align-items:center;justify-content:space-between"><div class="card-title">🔌 Intégrations</div><span style="font-size:11px;color:var(--text3)">Les toggles s\'enregistrent automatiquement</span></div>'
   +[
     ['Google Analytics','Suivi des visiteurs et du comportement',true],
     ['WhatsApp Business API','Confirmations automatiques de réservation',true],
@@ -1283,6 +1285,35 @@ function renderSettings() {
   }).join('')
   +'</div>'
   +'</div></div>';
+}
+
+function saveSettings() {
+  var fields = ['settCompanyName','settCompanyEmail','settCompanyPhone','settCompanyAddr','settCompanySite',
+                'settWhatsappNum','settWhatsappTpl','settCurrency','settVAT','settDeposit','settBookingEmail'];
+  var s = {};
+  fields.forEach(function(id){ var el=document.getElementById(id); if(el) s[id]=el.value; });
+
+  var pwCur  = document.getElementById('settPwCurrent');
+  var pwNew  = document.getElementById('settPwNew');
+  var pwCon  = document.getElementById('settPwConfirm');
+  var doChangePassword = pwCur && pwNew && pwCur.value && pwNew.value;
+
+  if (doChangePassword && pwNew.value !== (pwCon?pwCon.value:'')) {
+    showToast('Les mots de passe ne correspondent pas','error'); return;
+  }
+
+  var saveMain = api('PUT','/admin/settings',s).then(function(){
+    DB.settings = Object.assign(DB.settings||{}, s);
+    showToast('Paramètres enregistrés','success');
+  }).catch(function(){ showToast('Erreur lors de l\'enregistrement','error'); });
+
+  if (doChangePassword) {
+    api('PUT','/auth/password',{current:pwCur.value,newPass:pwNew.value}).then(function(d){
+      if(d.error){showToast(d.error,'error');return;}
+      pwCur.value=''; pwNew.value=''; if(pwCon)pwCon.value='';
+      showToast('Mot de passe changé','success');
+    }).catch(function(){ showToast('Erreur changement mot de passe','error'); });
+  }
 }
 
 
@@ -1382,8 +1413,8 @@ function filterAdminTrips(seg, btn){
           +'<div style="font-size:12px;color:var(--text3);margin-bottom:9px">⏱ '+a.duration+' &nbsp;·&nbsp; 📍 '+a.category+'</div>'
           +'<div style="font-size:16px;font-weight:700;color:var(--red);margin-bottom:11px">'+a.price+' MAD</div>'
           +'<div style="display:flex;gap:7px">'
-            +'<button class="btn btn-secondary btn-sm" style="flex:1" onclick="editActivity('+a.id+')">✏️ Modifier</button>'
-            +'<div class="toggle'+(a.status==='active'?' red-on':'')+'" onclick="toggleActivity('+a.id+',this)"></div>'
+            +'<button class="btn btn-secondary btn-sm" style="flex:1" onclick="editActivity(\''+a.id+'\')">✏️ Modifier</button>'
+            +'<div class="toggle'+(a.status==='active'?' red-on':'')+'" onclick="toggleActivity(\''+a.id+'\',this)"></div>'
           +'</div>'
         +'</div>'
       +'</div>';
@@ -1422,9 +1453,10 @@ function initAnalyticsCharts() {
 function settingsCard(title, fields) {
   return '<div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">'+title+'</div></div>'
     + fields.map(function(f){
-        if (f.type === 'toggle') return '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)"><label style="font-size:13px;color:var(--text2)">'+f.label+'</label><div class="toggle'+(f.val?' red-on':'')+'" onclick="this.classList.toggle(\'red-on\')"></div></div>';
-        if (f.type === 'password') return '<div class="fg"><label class="fl">'+f.label+'</label><input class="fi" type="password" placeholder="••••••••"></div>';
-        return '<div class="fg"><label class="fl">'+f.label+'</label><input class="fi" value="'+f.val+'"></div>';
+        var iid = f.id ? ' id="'+f.id+'"' : '';
+        if (f.type === 'toggle') return '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)"><label style="font-size:13px;color:var(--text2)">'+f.label+'</label><div class="toggle'+(f.val?' red-on':'')+'"'+iid+' onclick="this.classList.toggle(\'red-on\')"></div></div>';
+        if (f.type === 'password') return '<div class="fg"><label class="fl">'+f.label+'</label><input class="fi" type="password" placeholder="••••••••"'+iid+'></div>';
+        return '<div class="fg"><label class="fl">'+f.label+'</label><input class="fi" value="'+(f.val||'')+'"'+iid+'></div>';
       }).join('')
     + '</div>';
 }
@@ -1537,10 +1569,11 @@ function openTripModal(id) {
   _aIt = t && t.it ? t.it.map(function(d){return {d:d.d,t:d.t,desc:d.desc,img:d.img||'',imgData:''};}) : [];
 
   var SEGS = [
-    {id:'groupe',  label:'Voyage Groupe',   icon:'🧭', desc:'Départs fixes, groupes organisés', color:'#B8172E'},
-    {id:'weekend', label:'Weekend à Thème', icon:'🌙', desc:'2–3 jours, dépaysement total',      color:'#7C3AED'},
-    {id:'express', label:'Activité Express',icon:'⚡', desc:'Demi-journée ou journée complète',  color:'#16A34A'},
-    {id:'team',    label:'Team Building',   icon:'🤝', desc:'Cohésion et leadership en nature',  color:'#D97706'}
+    {id:'groupe',  label:'Voyage Groupe',   icon:'🧭', desc:'Départs fixes, groupes organisés',   color:'#B8172E'},
+    {id:'weekend', label:'Weekend à Thème', icon:'🌙', desc:'2–3 jours, dépaysement total',        color:'#7C3AED'},
+    {id:'express', label:'Activité Express',icon:'⚡', desc:'Demi-journée ou journée complète',    color:'#16A34A'},
+    {id:'mesure',  label:'Sur Mesure',      icon:'✂️', desc:'Programme totalement personnalisé',   color:'#2563EB'},
+    {id:'team',    label:'Team Building',   icon:'🤝', desc:'Cohésion et leadership en nature',    color:'#D97706'}
   ];
   var TYPES = [
     {id:'desert',   label:'Désert',   icon:'🏜️'},
@@ -1918,31 +1951,48 @@ function viewBooking(id) {
     'modal-md');
 }
 
-function openActivityModal(id) {
-  var a = id!==undefined ? DB.activities[id] : null;
-  openModal('<div class="modal-header"><h3>'+(a?'Edit':'New')+' Activity</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
+function openActivityModal(actId) {
+  var a = actId ? DB.activities.find(function(x){return x.id===actId;}) : null;
+  openModal('<div class="modal-header"><h3>'+(a?'Modifier':'Nouvelle')+' Activité</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
     + '<div class="modal-body">'
-    + '<div class="fg"><label class="fl">Title *</label><input class="fi" id="maTitle" placeholder="e.g. Camel Trekking at Sunset" value="'+(a?a.title:'')+'"></div>'
-    + '<div class="fg-row"><div class="fg"><label class="fl">Category</label><select class="fi fi-select" id="maCat"><option>adventure</option><option>culture</option><option>corporate</option><option>wellness</option></select></div><div class="fg"><label class="fl">Duration</label><input class="fi" id="maDur" placeholder="e.g. 2h" value="'+(a?a.duration:'')+'"></div></div>'
-    + '<div class="fg-row"><div class="fg"><label class="fl">Price (MAD)</label><input class="fi" id="maPrice" type="number" value="'+(a?a.price:'')+'"></div><div class="fg"><label class="fl">Status</label><select class="fi fi-select" id="maStatus"><option value="active">Active</option><option value="inactive">Inactive</option></select></div></div>'
-    + '<div class="fg"><label class="fl">Description</label><textarea class="fi fi-area" id="maDesc">'+(a?a.desc:'')+'</textarea></div>'
+    + '<div class="fg"><label class="fl">Titre *</label><input class="fi" id="maTitle" placeholder="ex : Camel Trekking au coucher du soleil" value="'+(a?a.title:'')+'"></div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Catégorie</label><select class="fi fi-select" id="maCat"><option value="adventure">Adventure</option><option value="culture">Culture</option><option value="corporate">Corporate</option><option value="wellness">Wellness</option></select></div><div class="fg"><label class="fl">Durée</label><input class="fi" id="maDur" placeholder="ex : 2h" value="'+(a?a.duration:'')+'"></div></div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Prix (MAD)</label><input class="fi" id="maPrice" type="number" placeholder="350" value="'+(a?a.price:'')+'"></div><div class="fg"><label class="fl">Statut</label><select class="fi fi-select" id="maStatus"><option value="active">Actif</option><option value="inactive">Inactif</option></select></div></div>'
+    + '<div class="fg"><label class="fl">Description</label><textarea class="fi fi-area" id="maDesc" style="min-height:80px">'+(a?a.desc:'')+'</textarea></div>'
     + '</div>'
-    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveActivity('+(id!==undefined?id:'null')+')">'+(a?'Save':'Create')+'</button></div>',
+    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="saveActivity('+(actId?'\''+actId+'\'':'null')+')">'+(a?'Enregistrer':'Créer')+'</button></div>',
     'modal-md');
-  if (a) { document.getElementById('maCat').value = a.category; document.getElementById('maStatus').value = a.status; }
+  setTimeout(function(){
+    if(a){ document.getElementById('maCat').value=a.category; document.getElementById('maStatus').value=a.status; }
+  },0);
 }
 
-function editActivity(id) {
-  var idx = DB.activities.findIndex(function(a){ return a.id===id; });
-  openActivityModal(idx);
-}
+function editActivity(id) { openActivityModal(id); }
 
-function saveActivity(idx) {
+function saveActivity(actId) {
   var title = document.getElementById('maTitle').value;
-  if (!title) { showToast('Title required','error'); return; }
-  var act = {id:idx!==null?DB.activities[idx].id:Date.now(),title:title,category:document.getElementById('maCat').value,duration:document.getElementById('maDur').value,price:parseInt(document.getElementById('maPrice').value)||0,status:document.getElementById('maStatus').value,desc:document.getElementById('maDesc').value};
-  if (idx!==null) DB.activities[idx]=act; else DB.activities.unshift(act);
-  closeModal(); goPage('activities'); showToast('Activity saved','success');
+  if (!title) { showToast('Titre requis','error'); return; }
+  var body = {
+    title:title, category:document.getElementById('maCat').value,
+    duration:document.getElementById('maDur').value,
+    price:parseInt(document.getElementById('maPrice').value)||0,
+    status:document.getElementById('maStatus').value,
+    desc:document.getElementById('maDesc').value
+  };
+  if (actId && actId !== 'null') {
+    api('PUT','/admin/activities/'+actId,body).then(function(d){
+      if(d.error){showToast(d.error,'error');return;}
+      var idx=DB.activities.findIndex(function(x){return x.id===actId;});
+      if(idx>-1) DB.activities[idx]=d.activity;
+      closeModal(); goPage('activities'); showToast('Activité modifiée','success');
+    }).catch(function(){showToast('Erreur réseau','error');});
+  } else {
+    api('POST','/admin/activities',body).then(function(d){
+      if(d.error){showToast(d.error,'error');return;}
+      DB.activities.unshift(d.activity);
+      closeModal(); goPage('activities'); showToast('Activité créée','success');
+    }).catch(function(){showToast('Erreur réseau','error');});
+  }
 }
 
 function openCustomerModal() {
@@ -1995,7 +2045,7 @@ function openPartnerModal(id) {
     + '<div class="fg-row"><div class="fg"><label class="fl">Contact Person</label><input class="fi" id="mpContact" placeholder="Name" value="'+(p?p.contact:'')+'"></div><div class="fg"><label class="fl">Email</label><input class="fi" id="mpEmail" type="email" placeholder="email@company.com" value="'+(p?p.email:'')+'"></div></div>'
     + '<div class="fg"><label class="fl">Phone</label><input class="fi" id="mpPhone" placeholder="+XX XXX XXX XXXX" value="'+(p?p.phone:'')+'"></div>'
     + '</div>'
-    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="savePartner('+(p?p.id:'null')+')">Save Partner</button></div>',
+    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="savePartner(\''+(p?p.id:'null')+'\')">Enregistrer</button></div>',
     'modal-md');
   if (p) { document.getElementById('mpType').value = p.type; document.getElementById('mpStatus').value = p.status; }
 }
@@ -2004,11 +2054,29 @@ function editPartner(id) { openPartnerModal(id); }
 
 function savePartner(id) {
   var name = document.getElementById('mpName').value;
-  if (!name) { showToast('Partner name required','error'); return; }
-  var partner = {id:id||Date.now(),name:name,country:document.getElementById('mpCountry').value,type:document.getElementById('mpType').value,contact:document.getElementById('mpContact').value,email:document.getElementById('mpEmail').value,phone:document.getElementById('mpPhone').value,status:document.getElementById('mpStatus').value,trips:[],programs:0,revenue:0};
-  if (id) { var i=DB.partners.findIndex(function(p){return p.id===id;}); if(i>-1) DB.partners[i]=partner; }
-  else DB.partners.unshift(partner);
-  closeModal(); goPage('partners'); showToast('Partner saved','success');
+  if (!name) { showToast('Nom du partenaire requis','error'); return; }
+  var body = {
+    name:name, country:document.getElementById('mpCountry').value,
+    type:document.getElementById('mpType').value,
+    contact:document.getElementById('mpContact').value,
+    email:document.getElementById('mpEmail').value,
+    phone:document.getElementById('mpPhone').value,
+    status:document.getElementById('mpStatus').value
+  };
+  if (id && id !== 'null') {
+    api('PUT','/admin/partners/'+id,body).then(function(d){
+      if(d.error){showToast(d.error,'error');return;}
+      var i=DB.partners.findIndex(function(p){return p.id===id;});
+      if(i>-1) DB.partners[i]=d.partner;
+      closeModal(); goPage('partners'); showToast('Partenaire mis à jour','success');
+    }).catch(function(){showToast('Erreur réseau','error');});
+  } else {
+    api('POST','/admin/partners',body).then(function(d){
+      if(d.error){showToast(d.error,'error');return;}
+      DB.partners.unshift(d.partner);
+      closeModal(); goPage('partners'); showToast('Partenaire ajouté','success');
+    }).catch(function(){showToast('Erreur réseau','error');});
+  }
 }
 
 function openTestimonialModal(idx) {
@@ -2059,8 +2127,48 @@ function openUserModal() {
 function saveUser() {
   var name=document.getElementById('muName').value,email=document.getElementById('muEmail').value;
   if(!name||!email){showToast('Name and email required','error');return;}
-  DB.adminUsers.push({id:Date.now(),name:name,email:email,role:document.getElementById('muRole').value,status:'pending',lastLogin:'—'});
-  closeModal(); goPage('users'); showToast('Invitation sent to '+email,'success');
+  var parts=name.trim().split(' ');
+  var body={fname:parts[0]||name,lname:parts.slice(1).join(' ')||'',email:email,role:document.getElementById('muRole').value,password:'Roamers2024!'};
+  api('POST','/admin/team',body).then(function(d){
+    if(d.error){showToast(d.error,'error');return;}
+    DB.adminUsers.push({id:d.user.id,name:name,email:email,role:body.role,status:'active',lastLogin:'—'});
+    closeModal(); goPage('users'); showToast('Membre ajouté : '+email,'success');
+  }).catch(function(){showToast('Erreur réseau','error');});
+}
+
+function openEditUserModal(id) {
+  var u=DB.adminUsers.find(function(x){return x.id===id;});
+  if(!u)return;
+  openModal('<div class="modal-header"><h3>Modifier le membre</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
+    +'<div class="modal-body">'
+    +'<div class="fg-row"><div class="fg"><label class="fl">Nom complet *</label><input class="fi" id="muEditName" value="'+u.name+'"></div><div class="fg"><label class="fl">Email *</label><input class="fi" id="muEditEmail" type="email" value="'+u.email+'"></div></div>'
+    +'<div class="fg"><label class="fl">Rôle</label><select class="fi fi-select" id="muEditRole"><option value="editor">Editor — Contenu & media</option><option value="manager">Manager — Réservations & voyages</option><option value="admin">Admin — Accès complet</option></select></div>'
+    +'</div>'
+    +'<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="updateUser(\''+id+'\')">Enregistrer</button></div>',
+    'modal-sm');
+  setTimeout(function(){var el=document.getElementById('muEditRole');if(el)el.value=u.role;},0);
+}
+
+function updateUser(id) {
+  var name=document.getElementById('muEditName').value,email=document.getElementById('muEditEmail').value;
+  if(!name||!email){showToast('Nom et email requis','error');return;}
+  var role=document.getElementById('muEditRole').value;
+  var parts=name.trim().split(' ');
+  api('PATCH','/admin/team/'+id,{fname:parts[0],lname:parts.slice(1).join(' '),email:email,role:role}).then(function(d){
+    if(d.error){showToast(d.error,'error');return;}
+    var u=DB.adminUsers.find(function(x){return x.id===id;});
+    if(u){u.name=name;u.email=email;u.role=role;}
+    closeModal(); goPage('users'); showToast('Utilisateur mis à jour','success');
+  }).catch(function(){showToast('Erreur réseau','error');});
+}
+
+function deleteUser(id) {
+  if(!confirm('Supprimer ce membre ? Cette action est irréversible.'))return;
+  api('DELETE','/admin/team/'+id).then(function(d){
+    if(d.error){showToast(d.error,'error');return;}
+    DB.adminUsers=DB.adminUsers.filter(function(x){return x.id!==id;});
+    goPage('users'); showToast('Utilisateur supprimé','success');
+  }).catch(function(){showToast('Erreur réseau','error');});
 }
 
 /* ═══════════════════════════════════════════════
@@ -2080,9 +2188,10 @@ function confirmBooking(id) {
 }
 
 function sendWhatsAppAuto(b) {
-  var msg = encodeURIComponent('Hello '+b.customer+'! Your booking (Ref: '+b.id+') for '+b.tripTitle+' on '+b.date+' has been confirmed. Total: '+fmt(b.total)+' MAD. Welcome to Roamers Community!');
+  if (!b.phone || b.phone === '—' || !b.phone.replace(/\D/g,'')) return;
+  var msg = encodeURIComponent('Bonjour '+b.customer+' ! Votre réservation (Réf: '+b.id+') pour '+b.tripTitle+' le '+b.date+' a été confirmée. Total : '+fmt(b.total)+' MAD. Bienvenue chez Roamers Community !');
   setTimeout(function(){
-    if (confirm('Send WhatsApp confirmation to '+b.customer+'?'))
+    if (confirm('Envoyer confirmation WhatsApp à '+b.customer+' ?'))
       window.open('https://wa.me/'+b.phone.replace(/\D/g,'')+'?text='+msg, '_blank');
   }, 400);
 }
@@ -2106,6 +2215,30 @@ function deleteItem(collection, id) {
     }).catch(function(){ showToast('Erreur réseau','error'); });
     return;
   }
+  if (collection === 'activities') {
+    api('DELETE','/admin/activities/'+id).then(function(d){
+      if(d.error){showToast(d.error,'error');return;}
+      DB.activities=DB.activities.filter(function(x){return x.id!==id;});
+      goPage(APP.page); showToast('Activité supprimée','success');
+    }).catch(function(){showToast('Erreur réseau','error');});
+    return;
+  }
+  if (collection === 'partners') {
+    api('DELETE','/admin/partners/'+id).then(function(d){
+      if(d.error){showToast(d.error,'error');return;}
+      DB.partners=DB.partners.filter(function(x){return x.id!==id;});
+      goPage(APP.page); showToast('Partenaire supprimé','success');
+    }).catch(function(){showToast('Erreur réseau','error');});
+    return;
+  }
+  if (collection === 'messages') {
+    api('DELETE','/admin/messages/'+id).then(function(d){
+      if(d.error){showToast(d.error,'error');return;}
+      DB.messages=DB.messages.filter(function(x){return x.id!==id;});
+      goPage(APP.page); showToast('Message supprimé','success');
+    }).catch(function(){showToast('Erreur réseau','error');});
+    return;
+  }
   DB[collection] = DB[collection].filter(function(x){ return x.id !== id; });
   goPage(APP.page);
   showToast('Item deleted','success');
@@ -2113,7 +2246,13 @@ function deleteItem(collection, id) {
 
 function toggleActivity(id, el) {
   var a = DB.activities.find(function(x){ return x.id===id; });
-  if (a) { a.status = a.status==='active'?'inactive':'active'; el.classList.toggle('red-on'); showToast('Activity '+a.status,'success'); }
+  if (!a) return;
+  var newStatus = a.status==='active'?'inactive':'active';
+  api('PUT','/admin/activities/'+id,{status:newStatus}).then(function(d){
+    if(d.error){showToast(d.error,'error');return;}
+    a.status=newStatus; el.classList.toggle('red-on');
+    showToast('Activité '+(newStatus==='active'?'activée':'désactivée'),'success');
+  }).catch(function(){showToast('Erreur réseau','error');});
 }
 
 function toggleFeatured(id) {
@@ -2122,19 +2261,21 @@ function toggleFeatured(id) {
 }
 
 function saveCMS() {
-  DB.cms.hero.title = document.getElementById('heroTitle').value;
-  DB.cms.hero.subtitle = document.getElementById('heroSub').value;
-  DB.cms.hero.cta = document.getElementById('heroCTA').value;
-  DB.cms.about.title = document.getElementById('aboutTitle').value;
-  DB.cms.about.body = document.getElementById('aboutBody').value;
-  DB.cms.seo.title = document.getElementById('seoTitle').value;
-  DB.cms.seo.description = document.getElementById('seoDesc').value;
-  DB.cms.seo.keywords = document.getElementById('seoKW').value;
-  showToast('All CMS changes saved','success');
+  function gv(id){ var el=document.getElementById(id); return el?el.value:null; }
+  if(gv('heroTitle')!==null) DB.cms.hero.title=gv('heroTitle');
+  if(gv('heroSub')!==null)   DB.cms.hero.subtitle=gv('heroSub');
+  if(gv('heroCTA')!==null)   DB.cms.hero.cta=gv('heroCTA');
+  if(gv('aboutTitle')!==null) DB.cms.about.title=gv('aboutTitle');
+  if(gv('aboutBody')!==null)  DB.cms.about.body=gv('aboutBody');
+  if(gv('seoTitle')!==null)   DB.cms.seo.title=gv('seoTitle');
+  if(gv('seoDesc')!==null)    DB.cms.seo.description=gv('seoDesc');
+  if(gv('seoKW')!==null)      DB.cms.seo.keywords=gv('seoKW');
+  showToast('Contenu CMS sauvegardé','success');
 }
 
 function sendWhatsApp(phone, name) {
-  window.open('https://wa.me/'+phone.replace(/\D/g,'')+'?text='+encodeURIComponent('Hello '+name+', this is Roamers Community!'), '_blank');
+  if (!phone || phone === '—' || !phone.replace(/\D/g,'')) { showToast('Numéro WhatsApp non disponible','warn'); return; }
+  window.open('https://wa.me/'+phone.replace(/\D/g,'')+'?text='+encodeURIComponent('Bonjour '+name+', c\'est Roamers Community !'), '_blank');
 }
 
 function sendEmail(email) { window.location.href = 'mailto:'+email; }
@@ -2521,6 +2662,110 @@ function exportTeamCSV() {
   });
   var csv=[cols].concat(rows).map(function(r){return r.map(function(c){return '"'+c+'"';}).join(',');}).join('\n');
   var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='team-requests-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
+}
+
+/* ══════════════════════════════════════════════════
+   PAGE: MESSAGES
+══════════════════════════════════════════════════ */
+function renderMessages() {
+  var total  = DB.messages.length;
+  var unread = DB.messages.filter(function(m){return m.status==='unread';}).length;
+  var read   = DB.messages.filter(function(m){return m.status==='read';}).length;
+
+  function statusBadgeMsg(s){
+    return s==='unread'
+      ? '<span class="badge badge-pending">Non lu</span>'
+      : '<span class="badge badge-confirmed">Lu</span>';
+  }
+
+  var html = '<div class="page-header"><div><h1>Messages 💬</h1><p>Messages reçus via le formulaire de contact du site</p></div>'
+    +'<div class="ph-actions"><button class="btn btn-secondary" onclick="exportCSV(\'messages\')">⬇ Export CSV</button><button class="btn btn-primary" onclick="reloadMessages()">↻ Actualiser</button></div></div>'
+
+  +'<div class="grid-4" style="margin-bottom:20px">'
+  + miniStat('Total','📬',total,'var(--blue-l)')
+  + miniStat('Non lus','🔴',unread,'var(--red-l)')
+  + miniStat('Lus','✅',read,'var(--green-l)')
+  + miniStat('Cette semaine','📅',DB.messages.filter(function(m){var d=new Date(m.created);var w=new Date();w.setDate(w.getDate()-7);return d>=w;}).length,'var(--purple-l)')
+  +'</div>'
+
+  +'<div class="tbl-wrap"><div class="tbl-toolbar">'
+  +'<div class="tbl-search"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6" cy="6" r="4" stroke="#94A3B8" stroke-width="1.3"/><path d="M9.5 9.5l2 2" stroke="#94A3B8" stroke-width="1.3" stroke-linecap="round"/></svg><input type="text" placeholder="Rechercher un message…" oninput="filterTable(this.value,\'msgTable\')"></div>'
+  +'<div style="display:flex;gap:7px;align-items:center">'
+  +'<select class="fi fi-select" style="width:auto;font-size:12px" onchange="filterTableByStatus(this.value,\'msgTable\')"><option value="">Tous</option><option value="unread">Non lus</option><option value="read">Lus</option></select>'
+  +'<span class="tbl-count">'+total+' messages</span>'
+  +'</div></div>'
+
+  +'<table id="msgTable"><thead><tr><th>Date</th><th>Expéditeur</th><th>Email / Tél</th><th>Sujet</th><th>Message</th><th>Statut</th><th>Actions</th></tr></thead><tbody>';
+
+  if (!total) {
+    html += '<tr><td colspan="7"><div class="empty-state"><p>Aucun message reçu pour le moment</p><span>Les messages soumis via le formulaire de contact apparaîtront ici</span></div></td></tr>';
+  } else {
+    html += DB.messages.map(function(m){
+      var name = m.fname ? (m.fname+(m.lname?' '+m.lname:'')) : (m.name||'—');
+      var preview = (m.message||'').slice(0,80) + ((m.message||'').length>80?'…':'');
+      return '<tr data-search="'+name+' '+(m.email||'')+' '+(m.subject||'')+' '+(m.message||'')+' '+m.status+'" style="'+(m.status==='unread'?'font-weight:600':'')+'">'
+        +'<td style="font-size:12px;white-space:nowrap">'+fmtDate(m.created)+'</td>'
+        +'<td><div style="display:flex;align-items:center;gap:8px"><div class="avatar av-sm" style="background:'+hashColor(name)+'">'+initials(name)+'</div><span>'+name+'</span></div></td>'
+        +'<td><div class="text-xs">'+m.email+'</div><div class="text-muted text-xs">'+(m.phone||'—')+'</div></td>'
+        +'<td style="font-size:12px;max-width:160px">'+(m.subject||'<span class="text-muted">—</span>')+'</td>'
+        +'<td style="font-size:12px;color:var(--text2);max-width:240px">'+preview+'</td>'
+        +'<td>'+statusBadgeMsg(m.status)+'</td>'
+        +'<td><div class="tbl-actions">'
+          +'<button class="btn btn-secondary btn-sm btn-icon" onclick="viewMessage(\''+m.id+'\')" title="Voir">👁</button>'
+          +'<a href="mailto:'+m.email+'" class="btn btn-ghost btn-sm btn-icon" title="Répondre par email" style="text-decoration:none">✉️</a>'
+          +(m.phone&&m.phone!=='—'?'<a href="https://wa.me/'+(m.phone||'').replace(/[^0-9]/g,'')+'" target="_blank" class="btn btn-success btn-sm btn-icon" title="WhatsApp" style="text-decoration:none">💬</a>':'')
+          +'<button class="btn btn-danger btn-sm btn-icon" onclick="deleteItem(\'messages\',\''+m.id+'\')" title="Supprimer">🗑</button>'
+        +'</div></td>'
+      +'</tr>';
+    }).join('');
+  }
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function viewMessage(id) {
+  var m = DB.messages.find(function(x){return x.id===id;});
+  if(!m) return;
+  var name = m.fname ? (m.fname+(m.lname?' '+m.lname:'')) : (m.name||'—');
+  // Mark as read
+  if (m.status==='unread') {
+    api('PATCH','/admin/messages/'+id,{status:'read'}).then(function(){
+      m.status='read';
+      var mb=document.getElementById('msgsBadge');
+      var unreadCnt=DB.messages.filter(function(x){return x.status==='unread';}).length;
+      if(mb){mb.textContent=unreadCnt;mb.style.display=unreadCnt?'inline-block':'none';}
+    }).catch(function(){});
+  }
+  openModal('<div class="modal-header"><h3>Message de '+name+'</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
+    +'<div class="modal-body">'
+    +'<div class="grid-2" style="gap:12px;margin-bottom:16px">'
+      +'<div style="background:var(--surface3);border-radius:var(--r);padding:12px"><div class="text-xs text-muted">Expéditeur</div><div style="font-weight:700;margin-top:3px">'+name+'</div></div>'
+      +'<div style="background:var(--surface3);border-radius:var(--r);padding:12px"><div class="text-xs text-muted">Date</div><div style="font-weight:600;margin-top:3px">'+fmtDate(m.created)+'</div></div>'
+      +'<div style="background:var(--surface3);border-radius:var(--r);padding:12px"><div class="text-xs text-muted">Email</div><div style="font-weight:600;margin-top:3px;color:var(--blue)">'+m.email+'</div></div>'
+      +'<div style="background:var(--surface3);border-radius:var(--r);padding:12px"><div class="text-xs text-muted">Téléphone</div><div style="font-weight:600;margin-top:3px">'+(m.phone||'—')+'</div></div>'
+    +'</div>'
+    +(m.subject?'<div class="fg"><label class="fl">Sujet</label><div style="background:var(--surface2);border-radius:var(--r-sm);padding:10px;font-size:14px;font-weight:600">'+m.subject+'</div></div>':'')
+    +'<div class="fg"><label class="fl">Message</label><div style="background:var(--surface2);border-radius:var(--r);padding:14px;font-size:13px;line-height:1.7;white-space:pre-wrap">'+m.message+'</div></div>'
+    +'</div>'
+    +'<div class="modal-footer">'
+      +'<button class="btn btn-ghost" onclick="closeModal()">Fermer</button>'
+      +(m.phone&&m.phone!=='—'?'<a href="https://wa.me/'+(m.phone||'').replace(/[^0-9]/g,'')+'" target="_blank" class="btn btn-success" style="text-decoration:none">💬 WhatsApp</a>':'')
+      +'<a href="mailto:'+m.email+'?subject=Re: '+(m.subject||'votre message')+'" class="btn btn-primary" style="text-decoration:none">✉️ Répondre</a>'
+    +'</div>',
+    'modal-lg');
+}
+
+function reloadMessages() {
+  api('GET','/admin/messages').then(function(d){
+    if(d.messages){
+      DB.messages=d.messages;
+      var unread=d.messages.filter(function(m){return m.status==='unread';}).length;
+      var mb=document.getElementById('msgsBadge');
+      if(mb){mb.textContent=unread;mb.style.display=unread?'inline-block':'none';}
+      goPage('messages'); showToast('Messages actualisés');
+    }
+  }).catch(function(){showToast('Erreur de chargement','error');});
 }
 
 function renderNotifList() {

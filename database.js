@@ -39,7 +39,10 @@ const db = {
   plans:       createTable('plans'),
   teams:       createTable('teams'),
   contacts:    createTable('contacts'),
-  experiences: createTable('experiences')
+  experiences: createTable('experiences'),
+  activities:  createTable('activities'),
+  partners:    createTable('partners'),
+  settings:    createTable('settings')
 };
 
 // Seed experiences on first boot
@@ -91,6 +94,24 @@ const db = {
     });
   });
   console.log('  ✓ Seeded ' + seed.length + ' experiences');
+})();
+
+// Seed activities on first boot
+(function() {
+  if (db.activities.count() > 0) return;
+  var { v4: uuidv4 } = require('uuid');
+  var now = new Date().toISOString();
+  [
+    {title:'Camel Trekking at Sunset',category:'adventure',duration:'2h',price:350,status:'active',desc:'Classic Sahara camel experience at golden hour'},
+    {title:'Traditional Cooking Class',category:'culture',duration:'3h',price:280,status:'active',desc:'Learn to cook tagine and couscous with a local family'},
+    {title:'Outdoor Leadership Workshop',category:'corporate',duration:'4h',price:600,status:'active',desc:'Facilitated team leadership session in nature'},
+    {title:'Medina Guided Walk — Fes',category:'culture',duration:'3h',price:200,status:'active',desc:'Expert-led walking tour through Fes el-Bali'},
+    {title:'Sandboarding & 4x4 Dune Adventure',category:'adventure',duration:'3h',price:450,status:'active',desc:'Adrenaline-packed dune bashing and sandboarding'},
+    {title:'Yoga & Meditation at Sunrise',category:'wellness',duration:'1.5h',price:180,status:'inactive',desc:'Morning wellness session on the Sahara dunes'},
+    {title:'CSR Community Service Day',category:'corporate',duration:'8h',price:400,status:'active',desc:'Give back to local Berber communities — team bonding with impact'},
+    {title:'Surf Lesson — Taghazout',category:'adventure',duration:'2h',price:320,status:'active',desc:'Beginner-friendly Atlantic surf lesson with certified instructor'}
+  ].forEach(function(a){ db.activities.insert(Object.assign({id:uuidv4(), created:now}, a)); });
+  console.log('  ✓ Seeded activities');
 })();
 
 // Seed admin on first boot
