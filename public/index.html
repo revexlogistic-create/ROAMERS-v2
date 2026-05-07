@@ -3547,6 +3547,9 @@ function pgDests(){
 
 /* PAGE: TEAM */
 function pgTeam(){
+  /* Reset form state on every visit */
+  TB_DATA = {tbsize:'',tbdur:'',tbloc:'',tbprog:[],tbobj:[],tbbudget:''};
+  TB_STEP = 0;
   var PROGRAMS=[
     {id:'outdoor',   icon:'🏔️', label:'Défi Outdoor',        desc:'Challenges, parcours, orienteering'},
     {id:'leadership',icon:'🎯', label:'Leadership & Communication', desc:'Ateliers facilités certifiés'},
@@ -3993,6 +3996,43 @@ function submitTBForm(){
 
 /* ── Team Building form helpers ── */
 var TB_DATA = {tbsize:'',tbdur:'',tbloc:'',tbprog:[],tbobj:[],tbbudget:''};
+var TB_STEP = 0;
+
+function tbShake(el){
+  if(!el) return;
+  var frames=[0,6,-6,4,-4,2,-2,0],i=0;
+  (function tick(){el.style.transform='translateX('+frames[i]+'px)';if(++i<frames.length)setTimeout(tick,40);else el.style.transform='';})();
+}
+
+function tbRequireField(id){
+  var el=document.getElementById(id);
+  if(!el) return true;
+  var ok=el.value && el.value.trim();
+  if(!ok){el.style.borderColor='var(--red)';el.style.boxShadow='0 0 0 3px rgba(184,23,46,.12)';tbShake(el.closest('.fg')||el);}
+  else{el.style.borderColor='';el.style.boxShadow='';}
+  return !!ok;
+}
+
+function tbValidateStep(from){
+  if(from===0){
+    var ok=tbRequireField('tbCompany')&tbRequireField('tbIndustry')&tbRequireField('tbFn')&tbRequireField('tbLn')&tbRequireField('tbEmail')&tbRequireField('tbPhone');
+    if(!ok){toast('Remplissez les champs obligatoires (*)','warn');return false;}
+  }
+  if(from===1){
+    var m=[];
+    if(!TB_DATA.tbsize){m.push('la taille du groupe');tbShake(document.getElementById('tbSizePicker'));}
+    if(!TB_DATA.tbdur){m.push('la durée');tbShake(document.getElementById('tbDurPicker'));}
+    if(!TB_DATA.tbloc){m.push('le cadre');tbShake(document.getElementById('tbLocPicker'));}
+    if(m.length){toast('Sélectionnez : '+m.join(', '),'warn');return false;}
+  }
+  if(from===2){
+    var m2=[];
+    if(!(TB_DATA.tbobj&&TB_DATA.tbobj.length)){m2.push('un objectif');tbShake(document.getElementById('tbObjPicker'));}
+    if(!TB_DATA.tbbudget){m2.push('un budget');tbShake(document.getElementById('tbBudgetPicker'));}
+    if(m2.length){toast('Sélectionnez : '+m2.join(' et '),'warn');return false;}
+  }
+  return true;
+}
 
 function tbPick(field, val){
   var multi = ['tbprog','tbobj'];
@@ -4016,6 +4056,9 @@ function tbPick(field, val){
 }
 
 function tbGoStep(n){
+  /* Validate when going forward */
+  if(n > TB_STEP && !tbValidateStep(TB_STEP)) return;
+  TB_STEP = n;
   for(var i=0;i<5;i++){var s=document.getElementById('tbForm'+i);if(s)s.style.display='none';}
   var step=document.getElementById('tbForm'+n);
   if(step)step.style.display='block';
