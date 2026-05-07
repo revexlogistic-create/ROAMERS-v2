@@ -636,6 +636,41 @@ main#app{padding-top:72px}
   .g4{grid-template-columns:1fr 1fr}
   .sec{padding:64px 5%}
   .auth-right-inner{padding:28px 20px}
+  .fr{grid-template-columns:1fr}
+}
+
+/* ── Team Building responsive grids ─────────── */
+.tb-g2{display:grid;grid-template-columns:1fr 1fr}
+.tb-g3{display:grid;grid-template-columns:repeat(3,1fr)}
+.tb-g4{display:grid;grid-template-columns:repeat(4,1fr)}
+.tb-g2d{display:grid;grid-template-columns:1fr 1fr}
+.tb-obj{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.tb-bud{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tb-need{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.tb-sum{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tb-devis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tb-cnt{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tb-trust{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.tb-nav{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center}
+.tb-nav-r{display:flex;justify-content:flex-end}
+@media(max-width:900px){
+  .tb-g2{grid-template-columns:1fr}
+  .tb-g4{grid-template-columns:repeat(2,1fr)}
+  .tb-trust{grid-template-columns:repeat(2,1fr);gap:14px}
+  .tb-devis{grid-template-columns:1fr}
+  .tb-cnt{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:600px){
+  .tb-g3{grid-template-columns:repeat(2,1fr)}
+  .tb-g2d{grid-template-columns:1fr}
+  .tb-obj{grid-template-columns:1fr}
+  .tb-need{grid-template-columns:1fr}
+  .tb-sum{grid-template-columns:1fr}
+  .tb-bud{grid-template-columns:repeat(2,1fr)}
+  .tb-cnt{grid-template-columns:repeat(2,1fr)}
+  .tb-nav-r{justify-content:stretch}
+  .tb-nav-r .btn{width:100%}
+  .tb-nav .btn{flex:1;min-width:0;justify-content:center}
 }
 
 /* ═══════════════════════════════════════════════
@@ -3575,9 +3610,9 @@ function pgTeam(){
         +'<div style="display:inline-flex;align-items:center;gap:7px;background:rgba(217,119,6,.2);border:1px solid rgba(217,119,6,.35);border-radius:100px;padding:5px 15px;font-size:11px;font-weight:700;letter-spacing:.15em;color:#FCD34D;text-transform:uppercase;margin-bottom:16px">🤝 Team Building B2B</div>'
         +'<h1 style="font-family:\'Cormorant Garamond\',serif;font-size:clamp(38px,5.5vw,68px);color:#fff;line-height:.95;margin-bottom:14px">Forgez votre équipe.<br><em style="color:var(--sand)">Le Maroc fait le reste.</em></h1>'
         +'<p style="font-size:clamp(14px,1.6vw,17px);color:rgba(255,255,255,.62);max-width:540px;line-height:1.75;margin-bottom:28px">Sortez des salles de conférence. La vraie cohésion se construit sous le ciel ouvert, autour d\'un feu de camp, au sommet d\'une montagne. Faites confiance à Roamers Community pour créer l\'expérience de team building dont vos équipes se souviendront toujours.</p>'
-        +'<div style="display:flex;gap:24px;flex-wrap:wrap">'
-          +[['120+','Entreprises'],['5 000+','Collaborateurs engagés'],['98%','Taux de satisfaction'],['48h','Délai de réponse']].map(function(s){
-            return '<div style="text-align:center"><div style="font-family:\'Bebas Neue\',cursive;font-size:32px;color:var(--sand);line-height:1">'+s[0]+'</div><div style="font-size:11px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.07em;margin-top:2px">'+s[1]+'</div></div>';
+        +'<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px 20px;max-width:480px">'
+          +[['120+','Entreprises'],['5 000+','Collaborateurs'],['98%','Satisfaction'],['48h','Réponse']].map(function(s){
+            return '<div style="text-align:center"><div style="font-family:\'Bebas Neue\',cursive;font-size:clamp(24px,3.5vw,32px);color:var(--sand);line-height:1">'+s[0]+'</div><div style="font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.07em;margin-top:3px">'+s[1]+'</div></div>';
           }).join('')
         +'</div>'
       +'</div>'
@@ -3585,24 +3620,29 @@ function pgTeam(){
   +'</div>'
 
   /* ── PROGRESS BAR ─────────────────────────────── */
-  +'<div style="background:var(--blk);padding:0 5%;position:sticky;top:68px;z-index:50;border-bottom:1px solid rgba(255,255,255,.06)">'
-    +'<div style="display:flex;align-items:stretch;max-width:900px">'
-      +[['1','Votre entreprise'],['2','Le programme'],['3','Objectifs & Budget'],['4','Contact & Envoi']].map(function(s,i){
-        return '<div id="tbStep'+i+'" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:13px 8px;font-size:12px;font-weight:600;color:'+(i===0?'var(--sand)':'rgba(255,255,255,.28)')+';border-bottom:2px solid '+(i===0?'#D97706':'transparent')+';cursor:pointer;transition:all .2s;white-space:nowrap" onclick="tbGoStep('+i+')">'
-          +'<span style="width:21px;height:21px;border-radius:50%;background:'+(i===0?'#D97706':'rgba(255,255,255,.1)')+';color:'+(i===0?'#fff':'rgba(255,255,255,.35)')+';font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+s[0]+'</span>'
-          +s[1]
-        +'</div>';
-      }).join('')
+  +'<div style="background:var(--blk);padding:0 5%;position:sticky;top:68px;z-index:50;border-bottom:1px solid rgba(255,255,255,.07)">'
+    +'<div style="max-width:900px;margin:0 auto;position:relative">'
+      +'<div style="position:absolute;top:20px;left:calc(12.5% + 12px);right:calc(12.5% + 12px);height:2px;background:rgba(255,255,255,.08);border-radius:2px"></div>'
+      +'<div id="tbStepTrack" style="position:absolute;top:20px;left:calc(12.5% + 12px);width:0%;height:2px;background:#D97706;border-radius:2px;transition:width .4s ease"></div>'
+      +'<div style="display:flex">'
+        +[['1','Entreprise'],['2','Programme'],['3','Objectifs'],['4','Envoi']].map(function(s,i){
+          var a=i===0;
+          return '<div id="tbStep'+i+'" onclick="tbGoStep('+i+')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 4px 11px;cursor:pointer;transition:all .2s">'
+            +'<span style="width:28px;height:28px;border-radius:50%;background:'+(a?'#D97706':'rgba(255,255,255,.07)')+';color:'+(a?'#fff':'rgba(255,255,255,.28)')+';font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid '+(a?'#D97706':'rgba(255,255,255,.1)')+';position:relative;z-index:1;transition:all .3s">'+s[0]+'</span>'
+            +'<div style="font-size:10px;font-weight:600;letter-spacing:.03em;color:'+(a?'#FCD34D':'rgba(255,255,255,.22)')+';white-space:nowrap;transition:color .3s">'+s[1]+'</div>'
+          +'</div>';
+        }).join('')
+      +'</div>'
     +'</div>'
   +'</div>'
 
   /* ── FORM ─────────────────────────────────────── */
-  +'<div style="background:var(--warm);padding:52px 5%">'
+  +'<div style="background:var(--warm);padding:clamp(28px,5vw,52px) 5%">'
   +'<div style="max-width:900px;margin:0 auto">'
 
     /* ── STEP 0: Company info ── */
     +'<div class="tb-step" id="tbForm0">'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-bottom:40px">'
+      +'<div class="tb-g2" style="gap:28px;margin-bottom:40px">'
         /* Company block */
         +'<div>'
           +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">'
@@ -3638,8 +3678,8 @@ function pgTeam(){
           +'</div>'
         +'</div>'
       +'</div>'
-      +'<div style="display:flex;justify-content:flex-end">'
-        +'<button class="btn btn-lg" onclick="tbGoStep(1)" style="background:#D97706;color:#fff;min-width:240px;padding:15px 28px;font-size:15px;border-radius:12px;font-weight:700">Suivant : Le programme →</button>'
+      +'<div class="tb-nav-r">'
+        +'<button class="btn btn-lg" onclick="tbGoStep(1)" style="background:#D97706;color:#fff;min-width:200px;padding:15px 28px;font-size:15px;border-radius:12px;font-weight:700">Suivant : Le programme →</button>'
       +'</div>'
     +'</div>'
 
@@ -3651,7 +3691,7 @@ function pgTeam(){
           +'<div style="width:34px;height:34px;border-radius:50%;background:#D97706;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:justify;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>'
           +'<div><div style="font-size:18px;font-weight:700">Taille du groupe participants</div><div style="font-size:12px;color:var(--mut);margin-top:1px">Nombre de collaborateurs attendus</div></div>'
         +'</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="tbSizePicker">'
+        +'<div class="tb-g3" id="tbSizePicker" style="gap:10px">'
           +SIZES.map(function(s){
             return '<div class="plan-opt" data-field="tbsize" data-val="'+s.id+'" onclick="tbPick(\'tbsize\',\''+s.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:13px;padding:15px;cursor:pointer;transition:all .2s;text-align:center">'
               +'<div style="font-size:26px;margin-bottom:6px">'+s.icon+'</div>'
@@ -3668,7 +3708,7 @@ function pgTeam(){
           +'<div style="width:34px;height:34px;border-radius:50%;background:#D97706;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>'
           +'<div><div style="font-size:18px;font-weight:700">Durée souhaitée</div></div>'
         +'</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="tbDurPicker">'
+        +'<div class="tb-g3" id="tbDurPicker" style="gap:10px">'
           +DURATIONS.map(function(d){
             return '<div class="plan-opt" data-field="tbdur" data-val="'+d.id+'" onclick="tbPick(\'tbdur\',\''+d.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:13px;padding:14px;cursor:pointer;transition:all .2s;text-align:center">'
               +'<div style="font-size:24px;margin-bottom:5px">'+d.icon+'</div>'
@@ -3684,7 +3724,7 @@ function pgTeam(){
           +'<div style="width:34px;height:34px;border-radius:50%;background:#D97706;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">5</div>'
           +'<div><div style="font-size:18px;font-weight:700">Cadre de l\'activité</div><div style="font-size:12px;color:var(--mut);margin-top:1px">Quel environnement pour votre team building ?</div></div>'
         +'</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px" id="tbLocPicker">'
+        +'<div class="tb-g4" id="tbLocPicker" style="gap:12px">'
           +LOCATIONS.map(function(l){
             return '<div class="plan-opt" data-field="tbloc" data-val="'+l.id+'" onclick="tbPick(\'tbloc\',\''+l.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:14px;overflow:hidden;cursor:pointer;transition:all .2s">'
               +'<div style="height:75px;overflow:hidden;position:relative"><img src="'+l.img+'" style="width:100%;height:100%;object-fit:cover;transition:transform .4s" onmouseover="this.style.transform=\'scale(1.07)\'" onmouseout="this.style.transform=\'scale(1)\'"><div style="position:absolute;inset:0;background:rgba(0,0,0,.25);display:flex;align-items:flex-end;padding:7px"><span style="font-size:20px">'+l.icon+'</span></div></div>'
@@ -3699,7 +3739,7 @@ function pgTeam(){
           +'<div style="width:34px;height:34px;border-radius:50%;background:#D97706;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">6</div>'
           +'<div><div style="font-size:18px;font-weight:700">Type de programme</div><div style="font-size:12px;color:var(--mut);margin-top:1px">Plusieurs choix possibles</div></div>'
         +'</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px" id="tbProgPicker">'
+        +'<div class="tb-g4" id="tbProgPicker" style="gap:10px">'
           +PROGRAMS.map(function(p){
             return '<div class="plan-opt" data-field="tbprog" data-val="'+p.id+'" onclick="tbPick(\'tbprog\',\''+p.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:13px;padding:14px 12px;cursor:pointer;transition:all .2s;text-align:center">'
               +'<div style="font-size:26px;margin-bottom:7px">'+p.icon+'</div>'
@@ -3715,15 +3755,15 @@ function pgTeam(){
           +'<div style="width:34px;height:34px;border-radius:50%;background:#D97706;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">7</div>'
           +'<div><div style="font-size:18px;font-weight:700">Dates envisagées</div></div>'
         +'</div>'
-        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
+        +'<div class="tb-g2d" style="gap:14px">'
           +'<div class="fg" style="margin-bottom:0"><label class="fl">Date souhaitée (début)</label><input type="date" class="fi" id="tbDateFrom" style="cursor:pointer"></div>'
           +'<div class="fg" style="margin-bottom:0"><label class="fl">Date de fin (si multi-jours)</label><input type="date" class="fi" id="tbDateTo" style="cursor:pointer"></div>'
         +'</div>'
         +'<div style="margin-top:10px"><label class="fi-check"><input type="checkbox" id="tbFlexDate" style="accent-color:#D97706;width:15px;height:15px;margin-right:7px">Dates flexibles — nous pouvons adapter selon nos plannings respectifs</label></div>'
       +'</div>'
-      +'<div style="display:flex;justify-content:space-between;gap:12px">'
-        +'<button class="btn btn-s btn-lg" onclick="tbGoStep(0)" style="min-width:140px">← Retour</button>'
-        +'<button class="btn btn-lg" onclick="tbGoStep(2)" style="background:#D97706;color:#fff;min-width:240px;padding:15px 28px;font-size:15px;border-radius:12px;font-weight:700">Suivant : Objectifs →</button>'
+      +'<div class="tb-nav">'
+        +'<button class="btn btn-s btn-lg" onclick="tbGoStep(0)">← Retour</button>'
+        +'<button class="btn btn-lg" onclick="tbGoStep(2)" style="background:#D97706;color:#fff;padding:15px 28px;font-size:15px;border-radius:12px;font-weight:700">Suivant : Objectifs →</button>'
       +'</div>'
     +'</div>'
 
@@ -3735,7 +3775,7 @@ function pgTeam(){
           +'<div style="width:34px;height:34px;border-radius:50%;background:#D97706;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">8</div>'
           +'<div><div style="font-size:18px;font-weight:700">Objectifs principaux</div><div style="font-size:12px;color:var(--mut);margin-top:1px">Qu\'attendez-vous de ce programme ?</div></div>'
         +'</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px" id="tbObjPicker">'
+        +'<div class="tb-obj" id="tbObjPicker">'
           +OBJECTIVES.map(function(o){
             return '<div class="plan-opt" data-field="tbobj" data-val="'+o.id+'" onclick="tbPick(\'tbobj\',\''+o.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:11px;padding:11px 14px;cursor:pointer;transition:all .2s;font-size:13px;font-weight:600;color:var(--mut)">'+o.label+'</div>';
           }).join('')
@@ -3747,7 +3787,7 @@ function pgTeam(){
           +'<div style="width:34px;height:34px;border-radius:50%;background:#D97706;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">9</div>'
           +'<div><div style="font-size:18px;font-weight:700">Budget estimé</div><div style="font-size:12px;color:var(--mut);margin-top:1px">Par participant, hors déplacements</div></div>'
         +'</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="tbBudgetPicker">'
+        +'<div class="tb-bud" id="tbBudgetPicker">'
           +BUDGETS.map(function(b){
             return '<div class="plan-opt" data-field="tbbudget" data-val="'+b.id+'" onclick="tbPick(\'tbbudget\',\''+b.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:13px;padding:14px;cursor:pointer;transition:all .2s;text-align:center;font-size:14px;font-weight:700;color:var(--txt)">'+b.label+'</div>';
           }).join('')
@@ -3759,7 +3799,7 @@ function pgTeam(){
           +'<div style="width:34px;height:34px;border-radius:50%;background:#D97706;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">10</div>'
           +'<div><div style="font-size:18px;font-weight:700">Contraintes & besoins spéciaux</div></div>'
         +'</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:14px">'
+        +'<div class="tb-need" style="margin-bottom:14px">'
           +[['diet','🥗 Régimes alimentaires (végé, halal, allergies)'],['mobility','♿ Accessibilité mobilité réduite'],['lang','🌍 Groupe multilingue (préciser ci-dessous)'],['invoice','📄 Facturation entreprise requise'],['cert','📜 Attestation de participation souhaitée'],['photo','📸 Couverture photo/vidéo professionnelle'],['debrief','📊 Rapport de facilitation post-programme'],['transfer','🚌 Transport depuis ville à organiser']].map(function(n){
             return '<label class="fi-check" style="background:#fff;border:1.5px solid var(--bdr);border-radius:10px;padding:11px 13px;cursor:pointer;display:flex;align-items:center;gap:9px;transition:all .15s;font-size:13px;font-weight:500" onmouseover="this.style.borderColor=\'#D97706\'" onmouseout="if(!this.querySelector(\'input\').checked)this.style.borderColor=\'var(--bdr)\'">'
               +'<input type="checkbox" id="tbneed_'+n[0]+'" style="accent-color:#D97706;width:15px;height:15px;flex-shrink:0">'+n[1]
@@ -3768,9 +3808,9 @@ function pgTeam(){
         +'</div>'
         +'<div class="fg" style="margin-bottom:0"><label class="fl">Informations complémentaires</label><textarea class="fi fi-area" id="tbNotes" rows="4" placeholder="Décrivez vos attentes spécifiques, contraintes culturelles, contexte particulier (ex : anniversaire entreprise, fusion d\'équipes, période de stress intense…)" style="min-height:100px"></textarea></div>'
       +'</div>'
-      +'<div style="display:flex;justify-content:space-between;gap:12px">'
-        +'<button class="btn btn-s btn-lg" onclick="tbGoStep(1)" style="min-width:140px">← Retour</button>'
-        +'<button class="btn btn-lg" onclick="tbGoStep(3)" style="background:#D97706;color:#fff;min-width:240px;padding:15px 28px;font-size:15px;border-radius:12px;font-weight:700">Suivant : Récapitulatif →</button>'
+      +'<div class="tb-nav">'
+        +'<button class="btn btn-s btn-lg" onclick="tbGoStep(1)">← Retour</button>'
+        +'<button class="btn btn-lg" onclick="tbGoStep(3)" style="background:#D97706;color:#fff;padding:15px 28px;font-size:15px;border-radius:12px;font-weight:700">Suivant : Récapitulatif →</button>'
       +'</div>'
     +'</div>'
 
@@ -3779,12 +3819,12 @@ function pgTeam(){
       /* Summary card */
       +'<div style="background:linear-gradient(135deg,#0F172A 0%,#1a0800 100%);border-radius:20px;padding:28px 30px;margin-bottom:24px">'
         +'<div style="font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#FCD34D;margin-bottom:16px">🤝 Récapitulatif de votre demande de devis</div>'
-        +'<div id="tbSummary" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"></div>'
+        +'<div id="tbSummary" class="tb-sum"></div>'
       +'</div>'
       /* Devis info */
       +'<div style="background:#fff;border:1px solid var(--bdr);border-radius:18px;padding:24px 26px;margin-bottom:22px">'
         +'<div style="font-size:16px;font-weight:700;margin-bottom:14px">📋 Ce que vous recevrez dans votre devis</div>'
-        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+        +'<div class="tb-devis">'
           +[['📅','Programme détaillé jour/j','Déroulé complet et minutage'],['💰','Tarification transparente','Coût total par participant'],['🏨','Hébergements sélectionnés','Selon standing souhaité'],['🚌','Logistique transport','Depuis votre ville de départ'],['🎯','Objectifs pédagogiques','Liés à vos attentes RH'],['📊','Rapport post-programme','Inclus sur demande']].map(function(i){
             return '<div style="display:flex;align-items:flex-start;gap:9px;padding:10px 12px;background:var(--cream);border-radius:10px"><span style="font-size:18px;flex-shrink:0">'+i[0]+'</span><div><div style="font-size:12px;font-weight:700;color:var(--txt)">'+i[1]+'</div><div style="font-size:11px;color:var(--mut);margin-top:1px">'+i[2]+'</div></div></div>';
           }).join('')
@@ -3794,9 +3834,9 @@ function pgTeam(){
       /* Consent */
       +'<div style="margin-bottom:20px"><label style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;font-size:13px;color:var(--mut);line-height:1.55"><input type="checkbox" id="tbConsent" style="accent-color:#D97706;width:15px;height:15px;flex-shrink:0;margin-top:2px">En soumettant ce formulaire, j\'accepte d\'être contacté(e) par Roamers Community par email ou WhatsApp pour la préparation de ce devis.</label></div>'
       /* Submit */
-      +'<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">'
-        +'<button class="btn btn-s btn-lg" onclick="tbGoStep(2)" style="min-width:140px">← Retour</button>'
-        +'<button class="btn btn-lg" onclick="submitTBForm()" style="background:linear-gradient(135deg,#D97706,#B45309);color:#fff;min-width:280px;padding:16px 28px;font-size:16px;font-weight:700;border-radius:14px;box-shadow:0 6px 24px rgba(217,119,6,.35)">🤝 Demander mon devis →</button>'
+      +'<div class="tb-nav">'
+        +'<button class="btn btn-s btn-lg" onclick="tbGoStep(2)">← Retour</button>'
+        +'<button class="btn btn-lg" onclick="submitTBForm()" style="background:linear-gradient(135deg,#D97706,#B45309);color:#fff;padding:16px 28px;font-size:16px;font-weight:700;border-radius:14px;box-shadow:0 6px 24px rgba(217,119,6,.35)">🤝 Demander mon devis →</button>'
       +'</div>'
     +'</div>'
 
@@ -3810,14 +3850,14 @@ function pgTeam(){
           +'<span style="font-size:22px">📋</span>'
           +'<div style="text-align:left"><div style="font-size:12px;font-weight:700;color:#D97706">Référence de votre demande</div><div id="tbRef" style="font-family:\'Bebas Neue\',cursive;font-size:28px;color:var(--txt);letter-spacing:.06em;line-height:1.1">RC-TB-XXXX</div></div>'
         +'</div>'
-        +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:560px;margin:0 auto 28px">'
+        +'<div class="tb-cnt" style="max-width:560px;margin:0 auto 28px">'
           +[['📧','Devis par email','Sous 48h ouvrées'],['💬','Appel WhatsApp','Pour affiner le projet'],['📞','Réunion Zoom','Sur demande']].map(function(c){
             return '<div style="background:#fff;border:1px solid var(--bdr);border-radius:14px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:7px">'+c[0]+'</div><div style="font-size:13px;font-weight:700;margin-bottom:3px">'+c[1]+'</div><div style="font-size:11px;color:var(--mut)">'+c[2]+'</div></div>';
           }).join('')
         +'</div>'
-        +'<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap">'
-          +'<a href="https://wa.me/212600000000" target="_blank" class="btn btn-s">💬 WhatsApp direct</a>'
-          +'<button class="btn btn-s" onclick="go(\'home\')">← Retour à l\'accueil</button>'
+        +'<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding:0 5%">'
+          +'<a href="https://wa.me/212600000000" target="_blank" class="btn btn-s" style="flex:1;max-width:200px;justify-content:center">💬 WhatsApp direct</a>'
+          +'<button class="btn btn-s" onclick="go(\'home\')" style="flex:1;max-width:200px">← Retour à l\'accueil</button>'
         +'</div>'
       +'</div>'
     +'</div>'
@@ -3826,7 +3866,7 @@ function pgTeam(){
 
   /* ── TRUST BAR ────────────────────────────────── */
   +'<div style="background:var(--blk);padding:40px 5%">'
-    +'<div style="max-width:900px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:20px">'
+    +'<div class="tb-trust" style="max-width:900px;margin:0 auto">'
       +[['🏢','Entreprises clientes','OCP, Attijariwafa, Marsa Maroc…'],['🌍','Nationalités accueillies','Maroc, France, Chine, UK, USA'],['🏆','Satisfaction','98% de groupes ravis'],['🔒','Devis gratuit','Sans engagement, sous 48h']].map(function(c){
         return '<div style="text-align:center"><div style="font-size:28px;margin-bottom:8px">'+c[0]+'</div><div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:3px">'+c[1]+'</div><div style="font-size:11px;color:rgba(255,255,255,.4)">'+c[2]+'</div></div>';
       }).join('')
@@ -3867,11 +3907,19 @@ function tbGoStep(n){
   if(n===3)tbBuildSummary();
   ['tbStep0','tbStep1','tbStep2','tbStep3'].forEach(function(id,i){
     var el=document.getElementById(id);if(!el)return;
-    el.style.color=i===n?'var(--sand)':'rgba(255,255,255,.28)';
-    el.style.borderBottom='2px solid '+(i===n?'#D97706':'transparent');
+    var active=i===n, done=i<n;
     var dot=el.querySelector('span');
-    if(dot){dot.style.background=i<=n?'#D97706':'rgba(255,255,255,.1)';dot.style.color=i<=n?'#fff':'rgba(255,255,255,.35)';}
+    if(dot){
+      dot.style.background=active?'#D97706':done?'rgba(255,255,255,.18)':'rgba(255,255,255,.07)';
+      dot.style.color=active?'#fff':done?'rgba(255,255,255,.8)':'rgba(255,255,255,.28)';
+      dot.style.borderColor=active?'#D97706':done?'rgba(255,255,255,.3)':'rgba(255,255,255,.1)';
+      dot.textContent=done?'✓':''+(i+1);
+    }
+    var lbl=el.querySelector('div');
+    if(lbl) lbl.style.color=active?'#FCD34D':done?'rgba(255,255,255,.5)':'rgba(255,255,255,.22)';
   });
+  var track=document.getElementById('tbStepTrack');
+  if(track) track.style.width=['0%','33.5%','67%','100%'][n]||'0%';
   if(step){var y=step.getBoundingClientRect().top+window.scrollY-130;window.scrollTo({top:Math.max(0,y),behavior:'smooth'});}
 }
 
@@ -3974,11 +4022,19 @@ function tbGoStep(n){
   if(n===3)tbBuildSummary();
   ['tbStep0','tbStep1','tbStep2','tbStep3'].forEach(function(id,i){
     var el=document.getElementById(id);if(!el)return;
-    el.style.color=i===n?'var(--sand)':'rgba(255,255,255,.28)';
-    el.style.borderBottom='2px solid '+(i===n?'#D97706':'transparent');
+    var active=i===n, done=i<n;
     var dot=el.querySelector('span');
-    if(dot){dot.style.background=i<=n?'#D97706':'rgba(255,255,255,.1)';dot.style.color=i<=n?'#fff':'rgba(255,255,255,.35)';}
+    if(dot){
+      dot.style.background=active?'#D97706':done?'rgba(255,255,255,.18)':'rgba(255,255,255,.07)';
+      dot.style.color=active?'#fff':done?'rgba(255,255,255,.8)':'rgba(255,255,255,.28)';
+      dot.style.borderColor=active?'#D97706':done?'rgba(255,255,255,.3)':'rgba(255,255,255,.1)';
+      dot.textContent=done?'✓':''+(i+1);
+    }
+    var lbl=el.querySelector('div');
+    if(lbl) lbl.style.color=active?'#FCD34D':done?'rgba(255,255,255,.5)':'rgba(255,255,255,.22)';
   });
+  var track=document.getElementById('tbStepTrack');
+  if(track) track.style.width=['0%','33.5%','67%','100%'][n]||'0%';
   if(step){var y=step.getBoundingClientRect().top+window.scrollY-130;window.scrollTo({top:Math.max(0,y),behavior:'smooth'});}
 }
 
