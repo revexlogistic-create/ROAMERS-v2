@@ -673,6 +673,20 @@ main#app{padding-top:72px}
   .tb-nav .btn{flex:1;min-width:0;justify-content:center}
 }
 
+/* ── Plan My Trip responsive ─────────────────── */
+@media(max-width:600px){
+  #moodPickerF,#whoPickerF,#groupPickerF,#durPickerF,#budgetPickerF{grid-template-columns:repeat(2,1fr)!important}
+  #segPickerF{grid-template-columns:1fr!important}
+  #planSummary{border-radius:14px!important}
+}
+@media(max-width:420px){
+  #moodPickerF,#whoPickerF{grid-template-columns:repeat(2,1fr)!important}
+  #groupPickerF,#durPickerF,#budgetPickerF{grid-template-columns:1fr 1fr!important}
+}
+.plan-contact-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+@media(max-width:700px){.plan-contact-bar{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:420px){.plan-contact-bar{grid-template-columns:1fr}}
+
 /* ═══════════════════════════════════════════════
    NATIVE MOBILE APP SHELL + PREMIUM DESIGN
    modern · glass · neo · Roamers brand (≤900px)
@@ -4689,11 +4703,12 @@ function submitPlanTrip(){
   if(!em||!em.includes('@')){toast('Email invalide','warn');return;}
   if(!ph){toast('Numero de telephone requis','warn');return;}
   if(consent&&!consent.checked){toast('Veuillez accepter les conditions de contact','warn');return;}
+  var city=(document.getElementById('planCity')||{value:''}).value||'';
   apiPost('/forms/plan',{
-    segment:PLAN_DATA.seg,types:PLAN_DATA.type||[],groupSize:PLAN_DATA.group,
+    segment:PLAN_DATA.seg,moods:PLAN_DATA.mood||[],who:PLAN_DATA.who,groupSize:PLAN_DATA.group,
     duration:PLAN_DATA.dur,budget:PLAN_DATA.budget,lang:PLAN_DATA.lang,
-    dateFrom:df,dateTo:dt,
-    fname:fn,lname:ln,email:em,phone:ph,nationality:nat,source:src,message:msg
+    dateFrom:df,dateTo:dt,departCity:city,
+    fname:fn,lname:ln,email:em,phone:ph,source:src,message:msg
   }).then(function(d){
     var ref=d.ref||('RC-PLAN-'+Math.random().toString(36).substr(2,4).toUpperCase());
     var refEl=document.getElementById('planRef');
@@ -4725,41 +4740,55 @@ function submitContact(){
 
 /* PAGE: PLAN MY TRIP */
 function pgPlan(){
+  /* Reset on every visit */
+  PLAN_DATA = {seg:'',mood:[],who:'',group:'',dur:'',budget:'',lang:'',dateFrom:'',dateTo:'',city:''};
+  PLAN_STEP  = 0;
+
   var SEGS=[
-    {id:'groupe',  icon:'🧭', label:'Voyage Groupe',    desc:'Départ fixe avec d\'autres voyageurs',          color:'#B8172E'},
-    {id:'weekend', icon:'🌙', label:'Weekend à Thème',  desc:'2–3 jours de dépaysement total',               color:'#7C3AED'},
-    {id:'express', icon:'⚡', label:'Activité Express', desc:'Une demi-journée ou journée complète',          color:'#16A34A'},
-    {id:'team',    icon:'🤝', label:'Team Building',    desc:'Cohésion d\'équipe en nature pour mon entreprise', color:'#D97706'}
+    {id:'groupe', icon:'🧭',label:'Voyage Groupe',   desc:'Départ fixe avec d\'autres voyageurs',      color:'#B8172E'},
+    {id:'weekend',icon:'🌙',label:'Weekend à Thème', desc:'2–3 jours de dépaysement total',            color:'#7C3AED'},
+    {id:'express',icon:'⚡',label:'Activité Express',desc:'Demi-journée ou journée complète',          color:'#16A34A'},
+    {id:'team',   icon:'🤝',label:'Team Building',   desc:'Cohésion d\'équipe pour mon entreprise',    color:'#D97706'}
   ];
-  var TYPES=[
-    {id:'desert',   icon:'🏜️', label:'Désert Saharien', desc:'Merzouga, Zagora, Erg Chebbi',         img:'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400&q=75'},
-    {id:'mountain', icon:'⛰️', label:'Montagne Atlas',  desc:'Toubkal, Ourika, Aït Ben Haddou',      img:'https://images.unsplash.com/photo-1548759806-821b06afb3bb?w=400&q=75'},
-    {id:'coastal',  icon:'🌊', label:'Côte Atlantique', desc:'Essaouira, Agadir, Taghazout',          img:'https://images.unsplash.com/photo-1568392200955-97c7e6e9eb6e?w=400&q=75'},
-    {id:'cultural', icon:'🏛️', label:'Villes & Culture','desc':'Marrakech, Fes, Chefchaouen',        img:'https://images.unsplash.com/photo-1572073263888-da4af9af2bf5?w=400&q=75'}
+  var MOODS=[
+    {id:'desert',  icon:'🏜️',label:'Désert & Sahara',   desc:'Merzouga · Zagora · Erg Chebbi',    color:'#D97706',img:'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=600&q=80'},
+    {id:'mountain',icon:'⛰️',label:'Atlas & Randonnée', desc:'Toubkal · Ourika · Aït Ben Haddou', color:'#059669',img:'https://images.unsplash.com/photo-1548759806-821b06afb3bb?w=600&q=80'},
+    {id:'coastal', icon:'🌊',label:'Côte Atlantique',   desc:'Essaouira · Agadir · Taghazout',    color:'#0284C7',img:'https://images.unsplash.com/photo-1568392200955-97c7e6e9eb6e?w=600&q=80'},
+    {id:'culture', icon:'🏛️',label:'Villes Impériales', desc:'Marrakech · Fes · Chefchaouen',     color:'#7C3AED',img:'https://images.unsplash.com/photo-1572073263888-da4af9af2bf5?w=600&q=80'},
+    {id:'nature',  icon:'🌿',label:'Oasis & Vallées',   desc:'Drâa · Dadès · Ziz',               color:'#16A34A',img:'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=600&q=80'},
+    {id:'surprise',icon:'✨',label:'Surprenez-moi',     desc:'On compose pour vous',              color:'#B8172E',img:'https://images.unsplash.com/photo-1507608869274-d3177c8bb4c7?w=600&q=80'}
+  ];
+  var WHOS=[
+    {id:'couple', icon:'💑',  label:'En couple',       desc:'Romance & évasion à deux'},
+    {id:'family', icon:'👨‍👩‍👧', label:'En famille',      desc:'Aventure multi-générations'},
+    {id:'friends',icon:'🧑‍🤝‍🧑',label:'Entre amis',     desc:'Road-trip & souvenirs inoubliables'},
+    {id:'solo',   icon:'🧳',  label:'En solo',         desc:'Liberté totale & rencontres'},
+    {id:'corp',   icon:'🏢',  label:'Corporate',       desc:'Séminaire & team building'},
+    {id:'school', icon:'🎓',  label:'Scolaire / Asso', desc:'Sorties pédagogiques encadrées'}
   ];
   var DURATIONS=[
-    {id:'half',  label:'Demi-journée', icon:'☀️'},
-    {id:'full',  label:'1 journée',    icon:'🌤️'},
-    {id:'wknd',  label:'2–3 jours',    icon:'🌙'},
-    {id:'week',  label:'4–7 jours',    icon:'🗓️'},
-    {id:'long',  label:'8+ jours',     icon:'✈️'},
-    {id:'flex',  label:'Flexible',     icon:'🔄'}
+    {id:'half',label:'Demi-journée',icon:'☀️'},
+    {id:'full',label:'1 journée',   icon:'🌤️'},
+    {id:'wknd',label:'2–3 jours',   icon:'🌙'},
+    {id:'week',label:'4–7 jours',   icon:'🗓️'},
+    {id:'long',label:'8+ jours',    icon:'✈️'},
+    {id:'flex',label:'Flexible',    icon:'🔄'}
   ];
   var BUDGETS=[
-    {id:'eco',     label:'< 500 MAD/pers.',   icon:'🌱'},
-    {id:'mid',     label:'500–1500 MAD',      icon:'🌿'},
-    {id:'comfort', label:'1500–3000 MAD',     icon:'⭐'},
-    {id:'premium', label:'3000–5000 MAD',     icon:'✨'},
-    {id:'luxury',  label:'5000+ MAD',         icon:'💎'},
-    {id:'discuss', label:'À discuter',        icon:'💬'}
+    {id:'eco',    label:'< 500 MAD/pers.',icon:'🌱'},
+    {id:'mid',    label:'500–1500 MAD',   icon:'🌿'},
+    {id:'comfort',label:'1500–3000 MAD',  icon:'⭐'},
+    {id:'premium',label:'3000–5000 MAD',  icon:'✨'},
+    {id:'luxury', label:'5000+ MAD',      icon:'💎'},
+    {id:'discuss',label:'À discuter',     icon:'💬'}
   ];
   var GROUPS=[
-    {id:'solo',   label:'Solo',          icon:'🧑',  n:'1 personne'},
-    {id:'couple', label:'En couple',     icon:'💑',  n:'2 personnes'},
-    {id:'small',  label:'Petit groupe',  icon:'👨‍👩‍👧', n:'3–6 personnes'},
-    {id:'medium', label:'Groupe moyen',  icon:'👥',  n:'7–15 personnes'},
-    {id:'large',  label:'Grand groupe',  icon:'🏢',  n:'16–50 personnes'},
-    {id:'corp',   label:'Corporate',     icon:'🤝',  n:'50+ personnes'}
+    {id:'solo',  label:'Solo',         icon:'🧑', n:'1 personne'},
+    {id:'couple',label:'En couple',    icon:'💑', n:'2 personnes'},
+    {id:'small', label:'Petit groupe', icon:'👨‍👩‍👧',n:'3–6 personnes'},
+    {id:'medium',label:'Groupe moyen', icon:'👥', n:'7–15 personnes'},
+    {id:'large', label:'Grand groupe', icon:'🏢', n:'16–50 personnes'},
+    {id:'corp',  label:'Corporate',    icon:'🤝', n:'50+ personnes'}
   ];
   var LANGS=[
     {id:'fr',label:'Français',icon:'🇫🇷'},
@@ -4771,31 +4800,37 @@ function pgPlan(){
   ];
 
   return ''
-  /* ── HERO ─────────────────────────────────────────── */
-  +'<div style="position:relative;overflow:hidden">'
-    +'<div style="position:absolute;inset:0;background:url(\'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=1400&q=85\') center/cover;transform:scale(1.03)"></div>'
-    +'<div style="position:relative;z-index:1;width:100%;min-height:260px;padding:calc(var(--topbar-h) + var(--safe-top) + 10px) 4% 20px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center">'
-      +'<div class="hero-glass">'
-        +'<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(184,23,46,.2);border:1px solid rgba(217,184,122,.3);border-radius:100px;padding:5px 16px;font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--sand);text-transform:uppercase;margin-bottom:12px">✦ Plan My Trip</div>'
-        +'<h1 style="font-family:\'Cormorant Garamond\',serif;font-size:clamp(26px,5vw,60px);color:#fff;line-height:.95;margin-bottom:10px">Planifions votre<br><em style="color:var(--sand)">aventure marocaine.</em></h1>'
-        +'<p style="font-size:clamp(13px,1.6vw,15px);color:rgba(255,255,255,.8);max-width:540px;line-height:1.6;margin-bottom:14px">Remplissez ce formulaire en 3 minutes. Devis personnalisé sous 24h — sans engagement.</p>'
-        +'<div style="display:flex;gap:14px;flex-wrap:wrap">'
-          +[['⚡','Sous 24h'],['💬','Devis gratuit'],['🔒','Sans engagement'],['🌍','Experts locaux']].map(function(t){
-            return '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.85)"><span>'+t[0]+'</span>'+t[1]+'</div>';
+  /* ── HERO ──────────────────────────────── */
+  +'<div style="position:relative;overflow:hidden;background:#080808">'
+    +'<div style="position:absolute;inset:0;background:url(\'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=1400&q=85\') center/cover;opacity:.55;transform:scale(1.03)"></div>'
+    +'<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(8,8,8,.1) 0%,rgba(8,8,8,.72) 100%)"></div>'
+    +'<div style="position:relative;z-index:2;max-width:860px;margin:0 auto;padding:calc(var(--topbar-h) + var(--safe-top) + 32px) 5% 44px;box-sizing:border-box">'
+      +'<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(184,23,46,.25);border:1px solid rgba(217,184,122,.4);border-radius:100px;padding:6px 18px;font-size:11px;font-weight:700;letter-spacing:.18em;color:#FCD34D;text-transform:uppercase;margin-bottom:20px">✦ Plan My Trip</div>'
+      +'<h1 style="font-family:\'Cormorant Garamond\',serif;font-size:clamp(32px,6vw,68px);color:#fff;line-height:.92;margin:0 0 16px;font-weight:600">Vous imaginez.<br><em style="color:var(--sand);font-style:italic">On construit.</em></h1>'
+      +'<p style="font-size:clamp(14px,1.8vw,16px);color:rgba(255,255,255,.75);max-width:520px;line-height:1.65;margin:0 0 22px">3 minutes pour nous décrire votre rêve marocain. Notre équipe vous prépare un programme sur mesure — réponse sous 24h, sans engagement.</p>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:26px">'
+        +[['⚡','Réponse sous 24h'],['🎯','100% personnalisé'],['🔒','Sans engagement'],['🏆','Experts certifiés']].map(function(b){
+          return '<div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);border-radius:100px;padding:7px 15px"><span style="font-size:14px">'+b[0]+'</span><span style="font-size:12px;font-weight:600;color:rgba(255,255,255,.9)">'+b[1]+'</span></div>';
+        }).join('')
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:12px">'
+        +'<div style="display:flex">'
+          +['😊','😍','🥰','😎'].map(function(e,i){
+            return '<div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);border:2px solid rgba(8,8,8,.8);display:flex;align-items:center;justify-content:center;font-size:16px;margin-left:'+(i?'-8px':'0')+'">'+e+'</div>';
           }).join('')
         +'</div>'
+        +'<div style="font-size:12px;color:rgba(255,255,255,.65);line-height:1.5"><strong style="color:#FCD34D">+480 voyageurs</strong> nous ont fait confiance en 2025</div>'
       +'</div>'
     +'</div>'
   +'</div>'
 
-  /* ── PROGRESS BAR ────────────────────────────────── */
+  /* ── STEPPER ────────────────────────────── */
   +'<div style="background:var(--blk);padding:0 5%;position:sticky;top:68px;z-index:50;border-bottom:1px solid rgba(255,255,255,.07)">'
     +'<div style="max-width:860px;margin:0 auto;position:relative">'
-      /* track line */
       +'<div style="position:absolute;top:20px;left:calc(12.5% + 12px);right:calc(12.5% + 12px);height:2px;background:rgba(255,255,255,.08);border-radius:2px"></div>'
       +'<div id="pStepTrack" style="position:absolute;top:20px;left:calc(12.5% + 12px);width:0%;height:2px;background:var(--red);border-radius:2px;transition:width .4s ease"></div>'
       +'<div style="display:flex">'
-        +[['1','Projet'],['2','Détails'],['3','Coordonnées'],['4','Envoi']].map(function(s,i){
+        +[['1','Votre voyage'],['2','Votre profil'],['3','Coordonnées'],['4','Envoyé !']].map(function(s,i){
           var a=i===0;
           return '<div id="pStep'+i+'" onclick="goStep('+i+')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 4px 11px;cursor:pointer;transition:all .2s">'
             +'<span style="width:28px;height:28px;border-radius:50%;background:'+(a?'var(--red)':'rgba(255,255,255,.07)')+';color:'+(a?'#fff':'rgba(255,255,255,.28)')+';font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid '+(a?'var(--red)':'rgba(255,255,255,.1)')+';position:relative;z-index:1;transition:all .3s">'+s[0]+'</span>'
@@ -4806,85 +4841,114 @@ function pgPlan(){
     +'</div>'
   +'</div>'
 
-  /* ── FORM BODY ───────────────────────────────────── */
+  /* ── FORM BODY ──────────────────────────── */
   +'<div style="background:var(--warm);padding:48px 5%">'
     +'<div style="max-width:860px;margin:0 auto">'
 
-      /* STEP 0: Segment + Type + Destination */
+      /* STEP 0 ─ Mood + Who + Segment */
       +'<div class="plan-step" id="step0">'
+
+        /* Mood */
+        +'<div style="margin-bottom:46px">'
+          +'<div style="margin-bottom:22px">'
+            +'<div style="display:inline-block;background:var(--red);border-radius:8px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.1em;color:#fff;text-transform:uppercase;margin-bottom:10px">Étape 1 sur 3</div>'
+            +'<h2 style="font-size:clamp(20px,3vw,26px);font-weight:700;color:var(--txt);margin:0 0 6px">Quelle ambiance vous fait rêver ?</h2>'
+            +'<p style="font-size:13px;color:var(--mut);margin:0">Vous pouvez choisir plusieurs univers — on combinera le meilleur de chacun</p>'
+          +'</div>'
+          +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px" id="moodPickerF">'
+            +MOODS.map(function(m){
+              return '<div class="plan-opt" data-field="mood" data-val="'+m.id+'" onclick="planPick(\'mood\',\''+m.id+'\')" style="position:relative;border-radius:18px;overflow:hidden;cursor:pointer;height:160px;border:3px solid transparent;transition:all .25s;box-shadow:0 4px 18px rgba(0,0,0,.18)">'
+                +'<div style="position:absolute;inset:0;background:url(\''+m.img+'\') center/cover;transition:transform .4s"></div>'
+                +'<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(8,8,8,.85) 0%,rgba(8,8,8,.18) 60%)"></div>'
+                +'<div style="position:absolute;inset:0;padding:14px;display:flex;flex-direction:column;justify-content:flex-end">'
+                  +'<div style="font-size:24px;margin-bottom:5px">'+m.icon+'</div>'
+                  +'<div style="font-size:13px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:3px">'+m.label+'</div>'
+                  +'<div style="font-size:10px;color:rgba(255,255,255,.6);line-height:1.4">'+m.desc+'</div>'
+                +'</div>'
+                +'<div class="mood-check" style="position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .2s"></div>'
+              +'</div>';
+            }).join('')
+          +'</div>'
+        +'</div>'
+
+        /* Who */
+        +'<div style="margin-bottom:46px">'
+          +'<div style="margin-bottom:22px">'
+            +'<h2 style="font-size:clamp(20px,3vw,26px);font-weight:700;color:var(--txt);margin:0 0 6px">Vous voyagez avec qui ?</h2>'
+            +'<p style="font-size:13px;color:var(--mut);margin:0">Pour adapter l\'expérience et l\'hébergement à votre groupe</p>'
+          +'</div>'
+          +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="whoPickerF">'
+            +WHOS.map(function(w){
+              return '<div class="plan-opt" data-field="who" data-val="'+w.id+'" onclick="planPick(\'who\',\''+w.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:16px;padding:20px 14px;cursor:pointer;transition:all .2s;text-align:center">'
+                +'<div style="font-size:32px;margin-bottom:9px">'+w.icon+'</div>'
+                +'<div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:3px">'+w.label+'</div>'
+                +'<div style="font-size:11px;color:var(--mut);line-height:1.4">'+w.desc+'</div>'
+              +'</div>';
+            }).join('')
+          +'</div>'
+        +'</div>'
+
         /* Segment */
-        +'<div style="margin-bottom:40px">'
-          +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">'
-            +'<div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>'
-            +'<div><div style="font-size:20px;font-weight:700;color:var(--txt)">Quel type d\'aventure vous attire ?</div><div style="font-size:13px;color:var(--mut);margin-top:2px">Choisissez le style de voyage qui vous correspond le mieux</div></div>'
+        +'<div style="margin-bottom:36px">'
+          +'<div style="margin-bottom:22px">'
+            +'<h2 style="font-size:clamp(20px,3vw,26px);font-weight:700;color:var(--txt);margin:0 0 6px">Quel type de programme ?</h2>'
+            +'<p style="font-size:13px;color:var(--mut);margin:0">Sélectionnez la formule qui correspond le mieux à votre projet</p>'
           +'</div>'
           +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="segPickerF">'
             +SEGS.map(function(s){
-              return '<div class="plan-opt" data-field="seg" data-val="'+s.id+'" onclick="planPick(\'seg\',\''+s.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:18px;padding:20px 16px 18px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden">'
+              return '<div class="plan-opt" data-field="seg" data-val="'+s.id+'" onclick="planPick(\'seg\',\''+s.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:18px;padding:20px 18px 18px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden">'
                 +'<div style="position:absolute;top:0;left:0;right:0;height:4px;background:'+s.color+';border-radius:2px 2px 0 0"></div>'
-                +'<div style="width:52px;height:52px;border-radius:14px;background:'+s.color+'15;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:12px">'+s.icon+'</div>'
+                +'<div style="width:48px;height:48px;border-radius:12px;background:'+s.color+'18;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:11px">'+s.icon+'</div>'
                 +'<div style="font-size:14px;font-weight:700;color:var(--txt);margin-bottom:4px">'+s.label+'</div>'
                 +'<div style="font-size:11px;color:var(--mut);line-height:1.5">'+s.desc+'</div>'
               +'</div>';
             }).join('')
           +'</div>'
         +'</div>'
-        /* Destination Type */
-        +'<div style="margin-bottom:40px">'
-          +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">'
-            +'<div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>'
-            +'<div><div style="font-size:20px;font-weight:700;color:var(--txt)">Vers quel univers du Maroc ?</div><div style="font-size:13px;color:var(--mut);margin-top:2px">Vous pouvez choisir plusieurs destinations</div></div>'
-          +'</div>'
-          +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px" id="typePickerF">'
-            +TYPES.map(function(tp){
-              return '<div class="plan-opt" data-field="type" data-val="'+tp.id+'" onclick="planPick(\'type\',\''+tp.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:16px;overflow:hidden;cursor:pointer;transition:all .2s">'
-                +'<div style="height:80px;overflow:hidden;position:relative"><img src="'+tp.img+'" style="width:100%;height:100%;object-fit:cover;transition:transform .4s" onmouseover="this.style.transform=\'scale(1.08)\'" onmouseout="this.style.transform=\'scale(1)\'"><div style="position:absolute;inset:0;background:rgba(8,8,8,.25);display:flex;align-items:flex-end;padding:8px"><span style="font-size:22px">'+tp.icon+'</span></div></div>'
-                +'<div style="padding:11px 13px"><div style="font-size:13px;font-weight:700;color:var(--txt)">'+tp.label+'</div><div style="font-size:11px;color:var(--mut);margin-top:2px">'+tp.desc+'</div></div>'
-              +'</div>';
-            }).join('')
-          +'</div>'
+
+        +'<div style="display:flex;justify-content:flex-end">'
+          +'<button class="btn btn-r btn-lg" onclick="goStep(1)" style="min-width:250px;padding:16px 32px;font-size:15px;box-shadow:0 6px 24px rgba(184,23,46,.28)">Suivant : Détails du voyage →</button>'
         +'</div>'
-        /* Group size */
-        +'<div style="margin-bottom:40px">'
-          +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">'
-            +'<div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>'
-            +'<div><div style="font-size:20px;font-weight:700;color:var(--txt)">Taille de votre groupe ?</div><div style="font-size:13px;color:var(--mut);margin-top:2px">Pour adapter le programme et le transport</div></div>'
-          +'</div>'
+      +'</div>'
+
+      /* STEP 1 ─ Details */
+      +'<div class="plan-step" id="step1" style="display:none">'
+        +'<div style="margin-bottom:8px">'
+          +'<div style="display:inline-block;background:var(--red);border-radius:8px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.1em;color:#fff;text-transform:uppercase;margin-bottom:14px">Étape 2 sur 3</div>'
+          +'<h2 style="font-size:clamp(20px,3vw,26px);font-weight:700;color:var(--txt);margin:0 0 4px">Parlez-nous de votre voyage</h2>'
+          +'<p style="font-size:13px;color:var(--mut);margin:0 0 32px">Plus c\'est précis, plus notre programme sera personnalisé</p>'
+        +'</div>'
+
+        /* Group */
+        +'<div style="margin-bottom:36px">'
+          +'<h3 style="font-size:16px;font-weight:700;color:var(--txt);margin:0 0 14px">👥 Combien de personnes ?</h3>'
           +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="groupPickerF">'
             +GROUPS.map(function(g){
-              return '<div class="plan-opt" data-field="group" data-val="'+g.id+'" onclick="planPick(\'group\',\''+g.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:14px;padding:14px 16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:11px">'
-                +'<span style="font-size:24px">'+g.icon+'</span>'
+              return '<div class="plan-opt" data-field="group" data-val="'+g.id+'" onclick="planPick(\'group\',\''+g.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:14px;padding:14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:10px">'
+                +'<span style="font-size:22px;flex-shrink:0">'+g.icon+'</span>'
                 +'<div><div style="font-size:13px;font-weight:700;color:var(--txt)">'+g.label+'</div><div style="font-size:11px;color:var(--mut);margin-top:1px">'+g.n+'</div></div>'
               +'</div>';
             }).join('')
           +'</div>'
         +'</div>'
-        +'<div style="display:flex;justify-content:flex-end"><button class="btn btn-r btn-lg" onclick="goStep(1)" style="min-width:220px;padding:15px 28px;font-size:15px">Suivant : Les détails →</button></div>'
-      +'</div>'
 
-      /* STEP 1: Duration, Budget, Dates, Language */
-      +'<div class="plan-step" id="step1" style="display:none">'
         /* Duration */
         +'<div style="margin-bottom:36px">'
-          +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">'
-            +'<div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>'
-            +'<div><div style="font-size:20px;font-weight:700;color:var(--txt)">Durée souhaitée</div><div style="font-size:13px;color:var(--mut);margin-top:2px">Combien de temps avez-vous ?</div></div>'
-          +'</div>'
+          +'<h3 style="font-size:16px;font-weight:700;color:var(--txt);margin:0 0 14px">📅 Combien de temps ?</h3>'
           +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="durPickerF">'
             +DURATIONS.map(function(d){
               return '<div class="plan-opt" data-field="dur" data-val="'+d.id+'" onclick="planPick(\'dur\',\''+d.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:14px;padding:14px;cursor:pointer;transition:all .2s;text-align:center">'
-                +'<div style="font-size:26px;margin-bottom:6px">'+d.icon+'</div>'
+                +'<div style="font-size:24px;margin-bottom:6px">'+d.icon+'</div>'
                 +'<div style="font-size:13px;font-weight:700;color:var(--txt)">'+d.label+'</div>'
               +'</div>';
             }).join('')
           +'</div>'
         +'</div>'
+
         /* Budget */
         +'<div style="margin-bottom:36px">'
-          +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">'
-            +'<div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">5</div>'
-            +'<div><div style="font-size:20px;font-weight:700;color:var(--txt)">Budget approximatif</div><div style="font-size:13px;color:var(--mut);margin-top:2px">Par personne, hors vols internationaux</div></div>'
-          +'</div>'
+          +'<h3 style="font-size:16px;font-weight:700;color:var(--txt);margin:0 0 4px">💰 Budget approximatif ?</h3>'
+          +'<p style="font-size:12px;color:var(--mut);margin:0 0 14px">Par personne, hors vols internationaux</p>'
           +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="budgetPickerF">'
             +BUDGETS.map(function(b){
               return '<div class="plan-opt" data-field="budget" data-val="'+b.id+'" onclick="planPick(\'budget\',\''+b.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:14px;padding:14px;cursor:pointer;transition:all .2s;text-align:center">'
@@ -4894,99 +4958,83 @@ function pgPlan(){
             }).join('')
           +'</div>'
         +'</div>'
-        /* Dates row */
+
+        /* Dates */
         +'<div style="margin-bottom:36px">'
-          +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">'
-            +'<div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">6</div>'
-            +'<div><div style="font-size:20px;font-weight:700;color:var(--txt)">Dates envisagées</div><div style="font-size:13px;color:var(--mut);margin-top:2px">Même approximatives, ça nous aide à préparer le meilleur programme</div></div>'
-          +'</div>'
+          +'<h3 style="font-size:16px;font-weight:700;color:var(--txt);margin:0 0 14px">🗓️ Quand souhaitez-vous partir ?</h3>'
           +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
-            +'<div class="fg" style="margin-bottom:0"><label class="fl">Date de départ (estimée)</label><input type="date" class="fi" id="planDateFrom" min="2026-04-25" style="cursor:pointer"></div>'
+            +'<div class="fg" style="margin-bottom:0"><label class="fl">Date de départ (estimée)</label><input type="date" class="fi" id="planDateFrom" min="2026-01-01" style="cursor:pointer"></div>'
             +'<div class="fg" style="margin-bottom:0"><label class="fl">Date de retour (estimée)</label><input type="date" class="fi" id="planDateTo" style="cursor:pointer"></div>'
           +'</div>'
           +'<div style="margin-top:10px"><label class="fi-check"><input type="checkbox" id="planFlexDate" style="accent-color:var(--red);width:15px;height:15px;margin-right:7px">Dates flexibles — je peux adapter selon les disponibilités</label></div>'
         +'</div>'
+
         /* Language */
         +'<div style="margin-bottom:36px">'
-          +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">'
-            +'<div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">7</div>'
-            +'<div><div style="font-size:20px;font-weight:700;color:var(--txt)">Langue du guide</div><div style="font-size:13px;color:var(--mut);margin-top:2px">Nous avons des guides certifiés en 6 langues</div></div>'
-          +'</div>'
+          +'<h3 style="font-size:16px;font-weight:700;color:var(--txt);margin:0 0 14px">🌍 Langue du guide préférée</h3>'
           +'<div style="display:flex;gap:10px;flex-wrap:wrap" id="langPickerF">'
             +LANGS.map(function(l){
-              return '<div class="plan-opt" data-field="lang" data-val="'+l.id+'" onclick="planPick(\'lang\',\''+l.id+'\')" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:#fff;border:2px solid var(--bdr);border-radius:100px;cursor:pointer;transition:all .2s;font-size:13px;font-weight:600;color:var(--mut)">'
+              return '<div class="plan-opt" data-field="lang" data-val="'+l.id+'" onclick="planPick(\'lang\',\''+l.id+'\')" style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:#fff;border:2px solid var(--bdr);border-radius:100px;cursor:pointer;transition:all .2s;font-size:13px;font-weight:600;color:var(--mut)">'
                 +'<span style="font-size:18px">'+l.icon+'</span>'+l.label
               +'</div>';
             }).join('')
           +'</div>'
         +'</div>'
-        /* Special needs */
+
+        /* Needs */
         +'<div style="margin-bottom:36px">'
-          +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">'
-            +'<div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">8</div>'
-            +'<div><div style="font-size:20px;font-weight:700;color:var(--txt)">Besoins particuliers</div><div style="font-size:13px;color:var(--mut);margin-top:2px">Cochez tout ce qui vous concerne</div></div>'
-          +'</div>'
+          +'<h3 style="font-size:16px;font-weight:700;color:var(--txt);margin:0 0 14px">⚡ Besoins particuliers ?</h3>'
           +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">'
-            +[['vegeta','🥗 Régime végétarien/végane'],['allergy','⚠️ Allergies alimentaires'],['child','👶 Enfants dans le groupe'],['senior','👴 Personnes seniors (+65 ans)'],['reduced','♿ Mobilité réduite'],['photo','📸 Package photo professionnel'],['honeymoon','💑 Lune de miel / occasion spéciale'],['corporate_invoice','📄 Facture entreprise requise']].map(function(n){
+            +[['vegeta','🥗 Régime végétarien/végane'],['allergy','⚠️ Allergies alimentaires'],['child','👶 Enfants dans le groupe'],['senior','👴 Personnes seniors (+65 ans)'],['reduced','♿ Mobilité réduite'],['photo','📸 Package photo professionnel'],['honeymoon','💑 Lune de miel / occasion spéciale'],['invoice','📄 Facture entreprise requise']].map(function(n){
               return '<label class="fi-check" style="background:#fff;border:1.5px solid var(--bdr);border-radius:10px;padding:11px 14px;cursor:pointer;display:flex;align-items:center;gap:9px;transition:all .15s;font-size:13px;font-weight:500" onmouseover="this.style.borderColor=\'var(--red)\'" onmouseout="if(!this.querySelector(\'input\').checked)this.style.borderColor=\'var(--bdr)\'">'
                 +'<input type="checkbox" id="need_'+n[0]+'" style="accent-color:var(--red);width:15px;height:15px;flex-shrink:0">'+n[1]
               +'</label>';
             }).join('')
           +'</div>'
         +'</div>'
+
         +'<div style="display:flex;justify-content:space-between;gap:12px">'
           +'<button class="btn btn-s btn-lg" onclick="goStep(0)" style="min-width:140px">← Retour</button>'
-          +'<button class="btn btn-r btn-lg" onclick="goStep(2)" style="min-width:220px;padding:15px 28px;font-size:15px">Suivant : Vos coordonnées →</button>'
+          +'<button class="btn btn-r btn-lg" onclick="goStep(2)" style="min-width:250px;padding:16px 32px;font-size:15px;box-shadow:0 6px 24px rgba(184,23,46,.28)">Suivant : Vos coordonnées →</button>'
         +'</div>'
       +'</div>'
 
-      /* STEP 2: Personal info + Message */
+      /* STEP 2 ─ Contact + Message + Summary */
       +'<div class="plan-step" id="step2" style="display:none">'
-        +'<div style="margin-bottom:36px">'
-          +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">'
-            +'<div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">9</div>'
-            +'<div><div style="font-size:20px;font-weight:700;color:var(--txt)">Vos coordonnées</div><div style="font-size:13px;color:var(--mut);margin-top:2px">Pour vous envoyer votre programme personnalisé</div></div>'
-          +'</div>'
-          +'<div style="background:#fff;border-radius:18px;padding:28px 30px;box-shadow:0 2px 20px rgba(0,0,0,.06)">'
-            +'<div class="fr"><div class="fg"><label class="fl">Prénom *</label><input type="text" class="fi" id="planFn" placeholder="Mohamed" autocomplete="given-name"></div><div class="fg"><label class="fl">Nom *</label><input type="text" class="fi" id="planLn" placeholder="Alami" autocomplete="family-name"></div></div>'
-            +'<div class="fr"><div class="fg"><label class="fl">Email *</label><input type="email" class="fi" id="planEm" placeholder="vous@exemple.com" autocomplete="email"></div><div class="fg"><label class="fl">Téléphone / WhatsApp *</label><input type="tel" class="fi" id="planPh" placeholder="+212 6 00 00 00 00" autocomplete="tel"></div></div>'
-            +'<div class="fr"><div class="fg"><label class="fl">Nationalité</label><select class="fi" id="planNat"><option>Marocain(e)</option><option>Français(e)</option><option>Chinois(e)</option><option>Japonais(e)</option><option>Britannique</option><option>Américain(e)</option><option>Allemand(e)</option><option>Autre</option></select></div><div class="fg"><label class="fl">Comment avez-vous connu Roamers ?</label><select class="fi" id="planSource"><option value="">Choisir…</option><option>Instagram</option><option>Google</option><option>Recommandation</option><option>Facebook</option><option>Agence partenaire</option><option>Autre</option></select></div></div>'
-          +'</div>'
+        +'<div style="margin-bottom:8px">'
+          +'<div style="display:inline-block;background:var(--red);border-radius:8px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.1em;color:#fff;text-transform:uppercase;margin-bottom:14px">Étape 3 sur 3</div>'
+          +'<h2 style="font-size:clamp(20px,3vw,26px);font-weight:700;color:var(--txt);margin:0 0 4px">Qui êtes-vous ?</h2>'
+          +'<p style="font-size:13px;color:var(--mut);margin:0 0 28px">Pour vous envoyer votre programme personnalisé sous 24h</p>'
         +'</div>'
-        /* Message libre */
-        +'<div style="margin-bottom:36px">'
-          +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">'
-            +'<div style="width:36px;height:36px;border-radius:50%;background:var(--red);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">10</div>'
-            +'<div><div style="font-size:20px;font-weight:700;color:var(--txt)">Dites-nous tout</div><div style="font-size:13px;color:var(--mut);margin-top:2px">Vos envies, inspirations, contraintes, questions…</div></div>'
-          +'</div>'
-          +'<textarea class="fi fi-area" id="planMsg" rows="5" placeholder="Ex : Nous sommes 4 amis, on rêve de voir les dunes du Sahara et de dormir sous les étoiles. Nous avons des enfants de 8 et 12 ans. Notre budget est autour de 8000 MAD pour 3 nuits. On parle français et un peu d\'anglais. On peut partir fin mai ou début juin..." style="min-height:130px;border-radius:14px;font-size:14px;line-height:1.7"></textarea>'
-          /* Inspiration tags */
-          +'<div style="margin-top:10px"><div style="font-size:12px;font-weight:600;color:var(--mut);margin-bottom:8px;letter-spacing:.04em;text-transform:uppercase">Inspirations rapides — cliquez pour ajouter</div>'
+        +'<div style="background:#fff;border-radius:18px;padding:28px 28px 24px;box-shadow:0 2px 20px rgba(0,0,0,.06);margin-bottom:28px">'
+          +'<div class="fr"><div class="fg"><label class="fl">Prénom *</label><input type="text" class="fi" id="planFn" placeholder="Mohamed" autocomplete="given-name"></div><div class="fg"><label class="fl">Nom *</label><input type="text" class="fi" id="planLn" placeholder="Alami" autocomplete="family-name"></div></div>'
+          +'<div class="fr"><div class="fg"><label class="fl">Email *</label><input type="email" class="fi" id="planEm" placeholder="vous@exemple.com" autocomplete="email"></div><div class="fg"><label class="fl">Téléphone / WhatsApp *</label><input type="tel" class="fi" id="planPh" placeholder="+212 6 00 00 00 00" autocomplete="tel"></div></div>'
+          +'<div class="fr"><div class="fg"><label class="fl">Ville de départ</label><input type="text" class="fi" id="planCity" placeholder="Casablanca, Paris, Montréal…"></div><div class="fg"><label class="fl">Comment avez-vous connu Roamers ?</label><select class="fi" id="planSource"><option value="">Choisir…</option><option>Instagram</option><option>Google</option><option>Recommandation</option><option>Facebook</option><option>Agence partenaire</option><option>Autre</option></select></div></div>'
+        +'</div>'
+        +'<div style="margin-bottom:28px">'
+          +'<h3 style="font-size:16px;font-weight:700;color:var(--txt);margin:0 0 10px">💬 Partagez vos envies & inspirations</h3>'
+          +'<textarea class="fi fi-area" id="planMsg" rows="5" placeholder="Ex : On est 4 amis, on rêve de dormir sous les étoiles dans le Sahara. Budget 8000 MAD pour 3 nuits, disponibles fin mai ou début juin…" style="min-height:120px;border-radius:14px;font-size:14px;line-height:1.7"></textarea>'
+          +'<div style="margin-top:10px"><div style="font-size:11px;font-weight:600;color:var(--mut);margin-bottom:8px;letter-spacing:.04em;text-transform:uppercase">Inspirations rapides</div>'
           +'<div style="display:flex;flex-wrap:wrap;gap:7px">'
-            +['Nuit en bivouac Sahara','Sommet Toubkal','Surf à Taghazout','Médina de Fes','Yoga au lever du soleil','Cuisine marocaine','Randonnée Berbère','Rencontres locales authentiques','Village de Chefchaouen','Dîner sous les étoiles'].map(function(tag){
+            +['Nuit en bivouac Sahara','Sommet Toubkal','Surf à Taghazout','Médina de Fes','Yoga au lever du soleil','Cuisine marocaine','Randonnée Berbère','Rencontres locales','Dîner sous les étoiles'].map(function(tag){
               return '<button onclick="addInspTag(\''+tag+'\')" style="background:#fff;border:1px solid var(--bdr);border-radius:100px;padding:5px 12px;font-size:12px;font-weight:500;color:var(--mut);cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor=\'var(--red)\';this.style.color=\'var(--red)\'" onmouseout="this.style.borderColor=\'var(--bdr)\';this.style.color=\'var(--mut)\'">+ '+tag+'</button>';
             }).join('')
           +'</div></div>'
         +'</div>'
-
-        /* Summary preview */
-        +'<div style="background:linear-gradient(135deg,var(--blk) 0%,#1a0800 100%);border-radius:18px;padding:22px 24px;margin-bottom:28px" id="planSummary">'
+        +'<div style="background:linear-gradient(135deg,var(--blk) 0%,#1a0800 100%);border-radius:18px;padding:22px 24px;margin-bottom:24px" id="planSummary">'
           +'<div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--sand);margin-bottom:12px">✦ Récapitulatif de votre demande</div>'
           +'<div id="planSummaryContent" style="font-size:13px;color:rgba(255,255,255,.65);line-height:1.8">Complétez les étapes précédentes pour voir le récapitulatif.</div>'
         +'</div>'
-
-        /* Privacy */
-        +'<div style="margin-bottom:22px"><label style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;font-size:13px;color:var(--mut);line-height:1.55"><input type="checkbox" id="planConsent" style="accent-color:var(--red);width:15px;height:15px;flex-shrink:0;margin-top:2px">En soumettant ce formulaire, j\'accepte d\'être contacté(e) par Roamers Community par email ou WhatsApp pour répondre à ma demande. Aucun démarchage.</label></div>'
-
+        +'<div style="margin-bottom:24px"><label style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;font-size:13px;color:var(--mut);line-height:1.55"><input type="checkbox" id="planConsent" style="accent-color:var(--red);width:15px;height:15px;flex-shrink:0;margin-top:2px">J\'accepte d\'être contacté(e) par Roamers Community par email ou WhatsApp pour répondre à ma demande. Aucun démarchage.</label></div>'
         +'<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">'
           +'<button class="btn btn-s btn-lg" onclick="goStep(1)" style="min-width:140px">← Retour</button>'
-          +'<button class="btn btn-r btn-lg" onclick="submitPlanTrip()" style="min-width:260px;padding:16px 28px;font-size:15px;box-shadow:0 6px 24px rgba(184,23,46,.35)">🚀 Envoyer ma demande</button>'
+          +'<button class="btn btn-r btn-lg" onclick="submitPlanTrip()" style="min-width:270px;padding:16px 32px;font-size:15px;box-shadow:0 6px 28px rgba(184,23,46,.38)">🚀 Envoyer ma demande gratuite</button>'
         +'</div>'
       +'</div>'
 
-      /* STEP 3: Confirmation */
+      /* STEP 3 ─ Confirmation */
       +'<div class="plan-step" id="step3" style="display:none">'
-        +'<div style="text-align:center;padding:40px 20px 0">'
+        +'<div style="text-align:center;padding:40px 20px 10px">'
           +'<div style="width:80px;height:80px;background:linear-gradient(135deg,#22C55E,#16A34A);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:36px;box-shadow:0 8px 32px rgba(34,197,94,.3)">✓</div>'
           +'<h2 style="font-family:\'Cormorant Garamond\',serif;font-size:36px;color:var(--txt);margin-bottom:10px">Demande envoyée !</h2>'
           +'<p style="font-size:16px;color:var(--mut);max-width:460px;margin:0 auto 28px;line-height:1.7">Notre équipe analyse votre projet et vous prépare un programme personnalisé. Vous recevrez une réponse <strong>dans les 24 heures</strong>.</p>'
@@ -4999,10 +5047,10 @@ function pgPlan(){
               return '<div style="background:#fff;border:1px solid var(--bdr);border-radius:14px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:7px">'+c[0]+'</div><div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:3px">'+c[1]+'</div><div style="font-size:11px;color:var(--mut)">'+c[2]+'</div></div>';
             }).join('')
           +'</div>'
-          +'<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:8px">'
+          +'<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap">'
             +'<button class="btn btn-r" onclick="go(\'experiences\')">✦ Explorer les voyages</button>'
             +'<a href="https://wa.me/212600000000" target="_blank" class="btn btn-s">💬 WhatsApp direct</a>'
-            +'<button class="btn btn-s" onclick="go(\'home\')">← Retour à l\'accueil</button>'
+            +'<button class="btn btn-s" onclick="go(\'home\')">← Retour accueil</button>'
           +'</div>'
         +'</div>'
       +'</div>'
@@ -5010,9 +5058,9 @@ function pgPlan(){
     +'</div>'
   +'</div>'
 
-  /* ── CONTACT INFO BAR ─────────────────────────── */
-  +'<div style="background:var(--blk);padding:40px 5%"><div style="max-width:860px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:20px">'
-    +[['📞','Téléphone',''+212+' 6 00 00 00 00'],['✉️','Email','hello@roamerscommunity.ma'],['📍','Bureau','Casablanca, Maroc'],['🕐','Horaires','Lun–Sam : 9h – 19h']].map(function(c){
+  /* ── CONTACT BAR ────────────────────────── */
+  +'<div style="background:var(--blk);padding:40px 5%"><div class="plan-contact-bar" style="max-width:860px;margin:0 auto">'
+    +[['📞','Téléphone','+212 6 00 00 00 00'],['✉️','Email','hello@roamerscommunity.ma'],['📍','Bureau','Casablanca, Maroc'],['🕐','Horaires','Lun–Sam : 9h – 19h']].map(function(c){
       return '<div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;background:rgba(184,23,46,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0">'+c[0]+'</div><div><div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:3px">'+c[1]+'</div><div style="font-size:13px;font-weight:600;color:#fff">'+c[2]+'</div></div></div>';
     }).join('')
   +'</div></div>'
@@ -5020,31 +5068,43 @@ function pgPlan(){
   +foot();
 }
 
-/* Form helpers */
-var PLAN_DATA = {seg:'',type:[],group:'',dur:'',budget:'',lang:'',dateFrom:'',dateTo:''};
+/* ── Plan helpers ─────────────────────────────── */
+var PLAN_DATA = {seg:'',mood:[],who:'',group:'',dur:'',budget:'',lang:'',dateFrom:'',dateTo:'',city:''};
+var PLAN_STEP  = 0;
 
-function planPick(field, val){
-  var multiFields=['type'];
+function planShake(el){
+  if(!el)return;
+  var f=[0,6,-6,4,-4,2,-2,0],i=0;
+  (function t(){el.style.transform='translateX('+f[i]+'px)';if(++i<f.length)setTimeout(t,40);else el.style.transform='';})();
+}
+
+function planPick(field,val){
+  var multiFields=['mood'];
   if(multiFields.indexOf(field)!==-1){
     var arr=PLAN_DATA[field]||[];
     var idx=arr.indexOf(val);
-    if(idx===-1) arr.push(val); else arr.splice(idx,1);
+    if(idx===-1)arr.push(val);else arr.splice(idx,1);
     PLAN_DATA[field]=arr;
-  } else {
+  }else{
     PLAN_DATA[field]=val;
   }
-  /* Update visual */
-  var pickerId=field+'PickerF';
-  var picker=document.getElementById(pickerId);
+  var picker=document.getElementById(field+'PickerF');
   if(!picker)return;
   picker.querySelectorAll('.plan-opt').forEach(function(el){
     var elVal=el.dataset.val;
     var sel=multiFields.indexOf(field)!==-1?(PLAN_DATA[field]||[]).indexOf(elVal)!==-1:PLAN_DATA[field]===elVal;
-    el.style.borderColor=sel?'var(--red)':'var(--bdr)';
-    el.style.background=sel?'rgba(184,23,46,.06)':'#fff';
-    el.style.boxShadow=sel?'0 4px 16px rgba(184,23,46,.15)':'';
-    var titleEl=el.querySelector('div>div:first-child')||el.querySelector('div');
-    if(titleEl) titleEl.style.color=sel?'var(--red)':'var(--txt)';
+    if(field==='mood'){
+      el.style.borderColor=sel?'var(--red)':'transparent';
+      el.style.boxShadow=sel?'0 0 0 3px rgba(184,23,46,.4),0 8px 24px rgba(0,0,0,.25)':'0 4px 18px rgba(0,0,0,.18)';
+      var chk=el.querySelector('.mood-check');
+      if(chk){chk.style.background=sel?'var(--red)':'rgba(0,0,0,.45)';chk.style.borderColor=sel?'var(--red)':'rgba(255,255,255,.4)';chk.textContent=sel?'✓':'';}
+    }else{
+      el.style.borderColor=sel?'var(--red)':'var(--bdr)';
+      el.style.background=sel?'rgba(184,23,46,.05)':'#fff';
+      el.style.boxShadow=sel?'0 4px 16px rgba(184,23,46,.12)':'';
+      var title=el.querySelector('div>div:first-child')||el.querySelector('div');
+      if(title)title.style.color=sel?'var(--red)':'var(--txt)';
+    }
   });
   updatePlanSummary();
 }
@@ -5052,20 +5112,22 @@ function planPick(field, val){
 function updatePlanSummary(){
   var el=document.getElementById('planSummaryContent');
   if(!el)return;
-  var SEGS_={groupe:'🧭 Voyage Groupe',weekend:'🌙 Weekend à Thème',express:'⚡ Activité Express',mesure:'✂️ Sur Mesure',team:'🤝 Team Building'};
-  var TYPES_={desert:'🏜️ Désert',mountain:'⛰️ Montagne',coastal:'🌊 Côte Atlantique',cultural:'🏛️ Villes & Culture'};
+  var MOODS_={desert:'🏜️ Désert & Sahara',mountain:'⛰️ Atlas & Randonnée',coastal:'🌊 Côte Atlantique',culture:'🏛️ Villes Impériales',nature:'🌿 Oasis & Vallées',surprise:'✨ Surprise'};
+  var SEGS_={groupe:'🧭 Voyage Groupe',weekend:'🌙 Weekend à Thème',express:'⚡ Activité Express',team:'🤝 Team Building'};
+  var WHOS_={couple:'💑 En couple',family:'👨‍👩‍👧 En famille',friends:'🧑‍🤝‍🧑 Entre amis',solo:'🧳 En solo',corp:'🏢 Corporate',school:'🎓 Scolaire'};
   var GROUPS_={solo:'🧑 Solo',couple:'💑 Couple',small:'👨‍👩‍👧 3–6 pers.',medium:'👥 7–15 pers.',large:'🏢 16–50 pers.',corp:'🤝 Corporate'};
   var DURS_={half:'☀️ Demi-journée',full:'🌤️ 1 journée',wknd:'🌙 2–3 jours',week:'🗓️ 4–7 jours',long:'✈️ 8+ jours',flex:'🔄 Flexible'};
   var BUDGETS_={eco:'🌱 < 500 MAD',mid:'🌿 500–1500 MAD',comfort:'⭐ 1500–3000 MAD',premium:'✨ 3000–5000 MAD',luxury:'💎 5000+ MAD',discuss:'💬 À discuter'};
   var rows=[];
-  if(PLAN_DATA.seg) rows.push('<span style="color:#fff;font-weight:600">Segment :</span> '+SEGS_[PLAN_DATA.seg]);
-  if((PLAN_DATA.type||[]).length) rows.push('<span style="color:#fff;font-weight:600">Destinations :</span> '+(PLAN_DATA.type||[]).map(function(t){return TYPES_[t]||t;}).join(', '));
-  if(PLAN_DATA.group) rows.push('<span style="color:#fff;font-weight:600">Groupe :</span> '+GROUPS_[PLAN_DATA.group]);
-  if(PLAN_DATA.dur) rows.push('<span style="color:#fff;font-weight:600">Durée :</span> '+DURS_[PLAN_DATA.dur]);
-  if(PLAN_DATA.budget) rows.push('<span style="color:#fff;font-weight:600">Budget :</span> '+BUDGETS_[PLAN_DATA.budget]);
-  var df=document.getElementById('planDateFrom');var dt=document.getElementById('planDateTo');
-  if(df&&df.value) rows.push('<span style="color:#fff;font-weight:600">Dates :</span> '+df.value+(dt&&dt.value?' → '+dt.value:''));
-  el.innerHTML=rows.length?rows.map(function(r){return '<div style="padding:3px 0">'+r+'</div>';}).join('') :'Complétez les étapes précédentes pour voir le récapitulatif.';
+  if((PLAN_DATA.mood||[]).length)rows.push('<span style="color:#fff;font-weight:600">Ambiance :</span> '+(PLAN_DATA.mood||[]).map(function(m){return MOODS_[m]||m;}).join(', '));
+  if(PLAN_DATA.who)rows.push('<span style="color:#fff;font-weight:600">Voyage :</span> '+WHOS_[PLAN_DATA.who]);
+  if(PLAN_DATA.seg)rows.push('<span style="color:#fff;font-weight:600">Programme :</span> '+SEGS_[PLAN_DATA.seg]);
+  if(PLAN_DATA.group)rows.push('<span style="color:#fff;font-weight:600">Groupe :</span> '+GROUPS_[PLAN_DATA.group]);
+  if(PLAN_DATA.dur)rows.push('<span style="color:#fff;font-weight:600">Durée :</span> '+DURS_[PLAN_DATA.dur]);
+  if(PLAN_DATA.budget)rows.push('<span style="color:#fff;font-weight:600">Budget :</span> '+BUDGETS_[PLAN_DATA.budget]);
+  var df=document.getElementById('planDateFrom'),dt=document.getElementById('planDateTo');
+  if(df&&df.value)rows.push('<span style="color:#fff;font-weight:600">Dates :</span> '+df.value+(dt&&dt.value?' → '+dt.value:''));
+  el.innerHTML=rows.length?rows.map(function(r){return '<div style="padding:3px 0">'+r+'</div>';}).join(''):'Complétez les étapes précédentes pour voir le récapitulatif.';
 }
 
 function addInspTag(tag){
@@ -5076,18 +5138,27 @@ function addInspTag(tag){
 }
 
 function goStep(n){
-  /* Validate only going forward */
-  if(n===1 && !PLAN_DATA.seg){ toast('Choisissez un type de voyage','warn'); return; }
-  /* Hide all steps explicitly */
+  var cur=PLAN_STEP;
+  if(n>cur){
+    if(cur===0){
+      if(!(PLAN_DATA.mood&&PLAN_DATA.mood.length)){planShake(document.getElementById('moodPickerF'));toast('Choisissez au moins une ambiance','warn');return;}
+      if(!PLAN_DATA.who){planShake(document.getElementById('whoPickerF'));toast('Précisez avec qui vous voyagez','warn');return;}
+    }
+    if(cur===1){
+      var m=[];
+      if(!PLAN_DATA.group)m.push('la taille du groupe');
+      if(!PLAN_DATA.dur)m.push('la durée');
+      if(!PLAN_DATA.budget)m.push('le budget');
+      if(m.length){toast('Sélectionnez : '+m.join(', '),'warn');return;}
+    }
+  }
+  PLAN_STEP=n;
   for(var i=0;i<4;i++){var s=document.getElementById('step'+i);if(s)s.style.display='none';}
   var step=document.getElementById('step'+n);
-  if(step) step.style.display='block';
-  /* Update stepper */
+  if(step)step.style.display='block';
   ['pStep0','pStep1','pStep2','pStep3'].forEach(function(id,i){
-    var el=document.getElementById(id);
-    if(!el) return;
-    var active=i===n, done=i<n;
-    el.style.color=active?'var(--sand)':done?'rgba(255,255,255,.5)':'rgba(255,255,255,.22)';
+    var el=document.getElementById(id);if(!el)return;
+    var active=i===n,done=i<n;
     var dot=el.querySelector('span');
     if(dot){
       dot.style.background=active?'var(--red)':done?'rgba(255,255,255,.18)':'rgba(255,255,255,.07)';
@@ -5096,16 +5167,14 @@ function goStep(n){
       dot.textContent=done?'✓':''+(i+1);
     }
     var lbl=el.querySelector('div');
-    if(lbl) lbl.style.color=active?'var(--sand)':done?'rgba(255,255,255,.5)':'rgba(255,255,255,.22)';
+    if(lbl)lbl.style.color=active?'var(--sand)':done?'rgba(255,255,255,.5)':'rgba(255,255,255,.22)';
   });
   var track=document.getElementById('pStepTrack');
-  if(track) track.style.width=['0%','33.5%','67%','100%'][n]||'0%';
-  if(n===2) updatePlanSummary();
-  /* Scroll to form */
+  if(track)track.style.width=['0%','33.5%','67%','100%'][n]||'0%';
+  if(n===2)updatePlanSummary();
   var formEl=document.getElementById('step'+n);
   if(formEl){var y=formEl.getBoundingClientRect().top+window.scrollY-120;window.scrollTo({top:Math.max(0,y),behavior:'smooth'});}
 }
-
 
 
 /* PAGE: LOGIN */
