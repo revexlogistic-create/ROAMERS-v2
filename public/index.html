@@ -4258,14 +4258,20 @@ function pgPlan(){
   +'</div>'
 
   /* ── PROGRESS BAR ────────────────────────────────── */
-  +'<div style="background:var(--blk);padding:0 5%;position:sticky;top:68px;z-index:50;border-bottom:1px solid rgba(255,255,255,.06)">'
-    +'<div style="display:flex;align-items:stretch;max-width:860px">'
-      +[['1','Votre projet'],['2','Les détails'],['3','Vos coordonnées'],['4','Envoi']].map(function(s,i){
-        return '<div id="pStep'+i+'" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:14px 10px;font-size:12px;font-weight:600;color:'+(i===0?'var(--sand)':'rgba(255,255,255,.28)')+';border-bottom:2px solid '+(i===0?'var(--red)':'transparent')+';cursor:pointer;transition:all .2s;white-space:nowrap" onclick="goStep('+i+')">'
-          +'<span style="width:22px;height:22px;border-radius:50%;background:'+(i===0?'var(--red)':'rgba(255,255,255,.1)')+';color:'+(i===0?'#fff':'rgba(255,255,255,.4)')+';font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+s[0]+'</span>'
-          +s[1]
-        +'</div>';
-      }).join('')
+  +'<div style="background:var(--blk);padding:0 5%;position:sticky;top:68px;z-index:50;border-bottom:1px solid rgba(255,255,255,.07)">'
+    +'<div style="max-width:860px;margin:0 auto;position:relative">'
+      /* track line */
+      +'<div style="position:absolute;top:20px;left:calc(12.5% + 12px);right:calc(12.5% + 12px);height:2px;background:rgba(255,255,255,.08);border-radius:2px"></div>'
+      +'<div id="pStepTrack" style="position:absolute;top:20px;left:calc(12.5% + 12px);width:0%;height:2px;background:var(--red);border-radius:2px;transition:width .4s ease"></div>'
+      +'<div style="display:flex">'
+        +[['1','Projet'],['2','Détails'],['3','Coordonnées'],['4','Envoi']].map(function(s,i){
+          var a=i===0;
+          return '<div id="pStep'+i+'" onclick="goStep('+i+')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 4px 11px;cursor:pointer;transition:all .2s">'
+            +'<span style="width:28px;height:28px;border-radius:50%;background:'+(a?'var(--red)':'rgba(255,255,255,.07)')+';color:'+(a?'#fff':'rgba(255,255,255,.28)')+';font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid '+(a?'var(--red)':'rgba(255,255,255,.1)')+';position:relative;z-index:1;transition:all .3s">'+s[0]+'</span>'
+            +'<div style="font-size:10px;font-weight:600;letter-spacing:.03em;color:'+(a?'var(--sand)':'rgba(255,255,255,.22)')+';white-space:nowrap;transition:color .3s">'+s[1]+'</div>'
+          +'</div>';
+        }).join('')
+      +'</div>'
     +'</div>'
   +'</div>'
 
@@ -4283,9 +4289,11 @@ function pgPlan(){
           +'</div>'
           +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="segPickerF">'
             +SEGS.map(function(s){
-              return '<div class="plan-opt" data-field="seg" data-val="'+s.id+'" onclick="planPick(\'seg\',\''+s.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:16px;padding:18px 20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:14px">'
-                +'<div style="width:46px;height:46px;border-radius:12px;background:'+s.color+'18;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">'+s.icon+'</div>'
-                +'<div><div style="font-size:14px;font-weight:700;color:var(--txt)">'+s.label+'</div><div style="font-size:12px;color:var(--mut);margin-top:2px;line-height:1.4">'+s.desc+'</div></div>'
+              return '<div class="plan-opt" data-field="seg" data-val="'+s.id+'" onclick="planPick(\'seg\',\''+s.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:18px;padding:20px 16px 18px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden">'
+                +'<div style="position:absolute;top:0;left:0;right:0;height:4px;background:'+s.color+';border-radius:2px 2px 0 0"></div>'
+                +'<div style="width:52px;height:52px;border-radius:14px;background:'+s.color+'15;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:12px">'+s.icon+'</div>'
+                +'<div style="font-size:14px;font-weight:700;color:var(--txt);margin-bottom:4px">'+s.label+'</div>'
+                +'<div style="font-size:11px;color:var(--mut);line-height:1.5">'+s.desc+'</div>'
               +'</div>';
             }).join('')
           +'</div>'
@@ -4543,15 +4551,24 @@ function goStep(n){
   for(var i=0;i<4;i++){var s=document.getElementById('step'+i);if(s)s.style.display='none';}
   var step=document.getElementById('step'+n);
   if(step) step.style.display='block';
-  /* Update progress bar by explicit IDs */
+  /* Update stepper */
   ['pStep0','pStep1','pStep2','pStep3'].forEach(function(id,i){
     var el=document.getElementById(id);
     if(!el) return;
-    el.style.color=i===n?'var(--sand)':'rgba(255,255,255,.28)';
-    el.style.borderBottom='2px solid '+(i===n?'var(--red)':'transparent');
+    var active=i===n, done=i<n;
+    el.style.color=active?'var(--sand)':done?'rgba(255,255,255,.5)':'rgba(255,255,255,.22)';
     var dot=el.querySelector('span');
-    if(dot){dot.style.background=i<=n?'var(--red)':'rgba(255,255,255,.1)';dot.style.color=i<=n?'#fff':'rgba(255,255,255,.4)';}
+    if(dot){
+      dot.style.background=active?'var(--red)':done?'rgba(255,255,255,.18)':'rgba(255,255,255,.07)';
+      dot.style.color=active?'#fff':done?'rgba(255,255,255,.8)':'rgba(255,255,255,.28)';
+      dot.style.borderColor=active?'var(--red)':done?'rgba(255,255,255,.3)':'rgba(255,255,255,.1)';
+      dot.textContent=done?'✓':''+(i+1);
+    }
+    var lbl=el.querySelector('div');
+    if(lbl) lbl.style.color=active?'var(--sand)':done?'rgba(255,255,255,.5)':'rgba(255,255,255,.22)';
   });
+  var track=document.getElementById('pStepTrack');
+  if(track) track.style.width=['0%','33.5%','67%','100%'][n]||'0%';
   if(n===2) updatePlanSummary();
   /* Scroll to form */
   var formEl=document.getElementById('step'+n);
@@ -4673,14 +4690,20 @@ function pgPlan(){
   +'</div>'
 
   /* ── PROGRESS BAR ────────────────────────────────── */
-  +'<div style="background:var(--blk);padding:0 5%;position:sticky;top:68px;z-index:50;border-bottom:1px solid rgba(255,255,255,.06)">'
-    +'<div style="display:flex;align-items:stretch;max-width:860px">'
-      +[['1','Votre projet'],['2','Les détails'],['3','Vos coordonnées'],['4','Envoi']].map(function(s,i){
-        return '<div id="pStep'+i+'" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:14px 10px;font-size:12px;font-weight:600;color:'+(i===0?'var(--sand)':'rgba(255,255,255,.28)')+';border-bottom:2px solid '+(i===0?'var(--red)':'transparent')+';cursor:pointer;transition:all .2s;white-space:nowrap" onclick="goStep('+i+')">'
-          +'<span style="width:22px;height:22px;border-radius:50%;background:'+(i===0?'var(--red)':'rgba(255,255,255,.1)')+';color:'+(i===0?'#fff':'rgba(255,255,255,.4)')+';font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+s[0]+'</span>'
-          +s[1]
-        +'</div>';
-      }).join('')
+  +'<div style="background:var(--blk);padding:0 5%;position:sticky;top:68px;z-index:50;border-bottom:1px solid rgba(255,255,255,.07)">'
+    +'<div style="max-width:860px;margin:0 auto;position:relative">'
+      /* track line */
+      +'<div style="position:absolute;top:20px;left:calc(12.5% + 12px);right:calc(12.5% + 12px);height:2px;background:rgba(255,255,255,.08);border-radius:2px"></div>'
+      +'<div id="pStepTrack" style="position:absolute;top:20px;left:calc(12.5% + 12px);width:0%;height:2px;background:var(--red);border-radius:2px;transition:width .4s ease"></div>'
+      +'<div style="display:flex">'
+        +[['1','Projet'],['2','Détails'],['3','Coordonnées'],['4','Envoi']].map(function(s,i){
+          var a=i===0;
+          return '<div id="pStep'+i+'" onclick="goStep('+i+')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 4px 11px;cursor:pointer;transition:all .2s">'
+            +'<span style="width:28px;height:28px;border-radius:50%;background:'+(a?'var(--red)':'rgba(255,255,255,.07)')+';color:'+(a?'#fff':'rgba(255,255,255,.28)')+';font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid '+(a?'var(--red)':'rgba(255,255,255,.1)')+';position:relative;z-index:1;transition:all .3s">'+s[0]+'</span>'
+            +'<div style="font-size:10px;font-weight:600;letter-spacing:.03em;color:'+(a?'var(--sand)':'rgba(255,255,255,.22)')+';white-space:nowrap;transition:color .3s">'+s[1]+'</div>'
+          +'</div>';
+        }).join('')
+      +'</div>'
     +'</div>'
   +'</div>'
 
@@ -4698,9 +4721,11 @@ function pgPlan(){
           +'</div>'
           +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="segPickerF">'
             +SEGS.map(function(s){
-              return '<div class="plan-opt" data-field="seg" data-val="'+s.id+'" onclick="planPick(\'seg\',\''+s.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:16px;padding:18px 20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:14px">'
-                +'<div style="width:46px;height:46px;border-radius:12px;background:'+s.color+'18;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">'+s.icon+'</div>'
-                +'<div><div style="font-size:14px;font-weight:700;color:var(--txt)">'+s.label+'</div><div style="font-size:12px;color:var(--mut);margin-top:2px;line-height:1.4">'+s.desc+'</div></div>'
+              return '<div class="plan-opt" data-field="seg" data-val="'+s.id+'" onclick="planPick(\'seg\',\''+s.id+'\')" style="background:#fff;border:2px solid var(--bdr);border-radius:18px;padding:20px 16px 18px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden">'
+                +'<div style="position:absolute;top:0;left:0;right:0;height:4px;background:'+s.color+';border-radius:2px 2px 0 0"></div>'
+                +'<div style="width:52px;height:52px;border-radius:14px;background:'+s.color+'15;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:12px">'+s.icon+'</div>'
+                +'<div style="font-size:14px;font-weight:700;color:var(--txt);margin-bottom:4px">'+s.label+'</div>'
+                +'<div style="font-size:11px;color:var(--mut);line-height:1.5">'+s.desc+'</div>'
               +'</div>';
             }).join('')
           +'</div>'
@@ -4958,15 +4983,24 @@ function goStep(n){
   for(var i=0;i<4;i++){var s=document.getElementById('step'+i);if(s)s.style.display='none';}
   var step=document.getElementById('step'+n);
   if(step) step.style.display='block';
-  /* Update progress bar by explicit IDs */
+  /* Update stepper */
   ['pStep0','pStep1','pStep2','pStep3'].forEach(function(id,i){
     var el=document.getElementById(id);
     if(!el) return;
-    el.style.color=i===n?'var(--sand)':'rgba(255,255,255,.28)';
-    el.style.borderBottom='2px solid '+(i===n?'var(--red)':'transparent');
+    var active=i===n, done=i<n;
+    el.style.color=active?'var(--sand)':done?'rgba(255,255,255,.5)':'rgba(255,255,255,.22)';
     var dot=el.querySelector('span');
-    if(dot){dot.style.background=i<=n?'var(--red)':'rgba(255,255,255,.1)';dot.style.color=i<=n?'#fff':'rgba(255,255,255,.4)';}
+    if(dot){
+      dot.style.background=active?'var(--red)':done?'rgba(255,255,255,.18)':'rgba(255,255,255,.07)';
+      dot.style.color=active?'#fff':done?'rgba(255,255,255,.8)':'rgba(255,255,255,.28)';
+      dot.style.borderColor=active?'var(--red)':done?'rgba(255,255,255,.3)':'rgba(255,255,255,.1)';
+      dot.textContent=done?'✓':''+(i+1);
+    }
+    var lbl=el.querySelector('div');
+    if(lbl) lbl.style.color=active?'var(--sand)':done?'rgba(255,255,255,.5)':'rgba(255,255,255,.22)';
   });
+  var track=document.getElementById('pStepTrack');
+  if(track) track.style.width=['0%','33.5%','67%','100%'][n]||'0%';
   if(n===2) updatePlanSummary();
   /* Scroll to form */
   var formEl=document.getElementById('step'+n);
