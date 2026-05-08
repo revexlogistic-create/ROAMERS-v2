@@ -478,13 +478,15 @@ label.fl{display:block;font-size:11px;font-weight:600;letter-spacing:.05em;text-
 /* ── Auth guard ─────────────────────────────── */
 (function(){
   var tok = localStorage.getItem('rc_token');
-  if (!tok) { window.location.replace('index.html'); throw new Error('no auth'); }
+  if (!tok) { window.location.replace('admin-login.html'); throw new Error('no auth'); }
   try {
     var p = JSON.parse(atob(tok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
-    if (p.role !== 'admin') throw new Error('not admin');
+    if (p.role !== 'admin') { window.location.replace('admin-login.html'); throw new Error('not admin'); }
+    if (p.exp && p.exp * 1000 < Date.now()) { localStorage.removeItem('rc_token'); window.location.replace('admin-login.html'); throw new Error('expired'); }
     fetch('/api/auth/me', { headers:{ 'Authorization':'Bearer '+tok } })
       .then(function(r){ return r.json(); })
       .then(function(d){
+        if (d.error) { localStorage.removeItem('rc_token'); window.location.replace('admin-login.html'); return; }
         var u = d.user || {};
         var name = [u.fname, u.lname].filter(Boolean).join(' ') || u.email || 'Admin';
         var nm = document.querySelector('.sb-user-name');
@@ -492,13 +494,12 @@ label.fl{display:block;font-size:11px;font-weight:600;letter-spacing:.05em;text-
         if (nm) nm.textContent = name;
         if (av) av.textContent = name.split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase();
       }).catch(function(){});
-  } catch(e) { window.location.replace('index.html'); throw e; }
+  } catch(e) { if (e.message !== 'no auth') window.location.replace('admin-login.html'); throw e; }
 })();
 
 /* ── API helper ─────────────────────────────── */
-var _ADMIN_TOKEN = localStorage.getItem('rc_token');
 function api(method, path, body) {
-  var opts = { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _ADMIN_TOKEN } };
+  var opts = { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('rc_token') } };
   if (body !== undefined) opts.body = JSON.stringify(body);
   return fetch('/api' + path, opts).then(function(r){ return r.json(); });
 }
@@ -1153,7 +1154,7 @@ function renderAnalytics() {
   +'</div>'
 
   +'<div class="grid-2-1" style="margin-bottom:20px">'
-  +'<div class="card"><div class="card-header"><div class="card-title">CA mensuel 2024</div></div><div class="chart-wrap-lg"><canvas id="monthlyChart"></canvas></div></div>'
+  +'<div class="card"><div class="card-header"><div class="card-title">CA mensuel '+new Date().getFullYear()+'</div></div><div class="chart-wrap-lg"><canvas id="monthlyChart"></canvas></div></div>'
   +'<div class="card"><div class="card-header"><div class="card-title">Répartition par Segment</div></div><div class="chart-wrap"><canvas id="catChart"></canvas></div></div>'
   +'</div>'
 
@@ -1322,9 +1323,23 @@ function initOverviewCharts() {
   setTimeout(function(){
     var rc = document.getElementById('revenueChart');
     if (rc) {
+      var MONTHS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+      var now = new Date();
+      var labels = [], data = [];
+      for (var i = 5; i >= 0; i--) {
+        var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        labels.push(MONTHS[d.getMonth()]);
+        var yr = d.getFullYear(), mo = d.getMonth();
+        var rev = DB.bookings.filter(function(b){
+          if (b.status === 'cancelled') return false;
+          var bd = new Date(b.created);
+          return bd.getFullYear() === yr && bd.getMonth() === mo;
+        }).reduce(function(s,b){ return s + (b.total||0); }, 0);
+        data.push(rev);
+      }
       APP.chartInstances.revenue = new Chart(rc, {
         type:'bar',
-        data:{labels:['Oct','Nov','Dec','Jan','Feb','Mar'],datasets:[{label:'Revenue (MAD)',data:[42000,58000,95000,67000,88000,162200],backgroundColor:'rgba(184,23,46,.85)',borderRadius:6}]},
+        data:{labels:labels,datasets:[{label:'Revenue (MAD)',data:data,backgroundColor:'rgba(184,23,46,.85)',borderRadius:6}]},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:function(v){return (v/1000)+'k';}}}}}
       });
     }
@@ -1441,10 +1456,44 @@ function filterAdminTripType(type, btn){
 
 function initAnalyticsCharts() {
   setTimeout(function(){
+    var MONTHS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    var now = new Date();
+    var curYear = now.getFullYear();
+
     var mc = document.getElementById('monthlyChart');
-    if (mc) APP.chartInstances.monthly = new Chart(mc, {type:'line',data:{labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],datasets:[{label:'Revenue',data:[67000,88000,162200,54000,98000,145000,187000,92000,73000,42000,58000,95000],borderColor:'#B8172E',backgroundColor:'rgba(184,23,46,.08)',fill:true,tension:.4,pointBackgroundColor:'#B8172E',pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:function(v){return (v/1000)+'k MAD';}}}}}});
+    if (mc) {
+      var monthlyData = MONTHS.map(function(_,mo){
+        return DB.bookings.filter(function(b){
+          if (b.status === 'cancelled') return false;
+          var bd = new Date(b.created);
+          return bd.getFullYear() === curYear && bd.getMonth() === mo;
+        }).reduce(function(s,b){ return s+(b.total||0); }, 0);
+      });
+      APP.chartInstances.monthly = new Chart(mc, {
+        type:'line',
+        data:{labels:MONTHS,datasets:[{label:'Revenue (MAD)',data:monthlyData,borderColor:'#B8172E',backgroundColor:'rgba(184,23,46,.08)',fill:true,tension:.4,pointBackgroundColor:'#B8172E',pointRadius:4}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:function(v){return (v/1000)+'k MAD';}}}}}
+      });
+    }
+
     var cc = document.getElementById('catChart');
-    if (cc) APP.chartInstances.cat = new Chart(cc, {type:'doughnut',data:{labels:['Voyage Groupe','Weekend à Thème','Activité Express','Sur Mesure','Team Building'],datasets:[{data:[32,18,15,20,15],backgroundColor:['#B8172E','#7C3AED','#16A34A','#2563EB','#D97706'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},cutout:'60%'}});
+    if (cc) {
+      var segCounts = {};
+      DB.bookings.forEach(function(b){
+        var t = DB.trips.find(function(x){return x.id===b.tripId;});
+        var seg = (t && t.segment) || 'other';
+        segCounts[seg] = (segCounts[seg]||0) + 1;
+      });
+      var segLabels = ['groupe','weekend','express','mesure','team'];
+      var segNames  = ['Voyage Groupe','Weekend à Thème','Activité Express','Sur Mesure','Team Building'];
+      var segColors = ['#B8172E','#7C3AED','#16A34A','#2563EB','#D97706'];
+      var catData = segLabels.map(function(s){ return segCounts[s]||0; });
+      APP.chartInstances.cat = new Chart(cc, {
+        type:'doughnut',
+        data:{labels:segNames,datasets:[{data:catData,backgroundColor:segColors,borderWidth:0}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},cutout:'60%'}
+      });
+    }
   }, 80);
 }
 
@@ -2006,13 +2055,7 @@ function openCustomerModal() {
     'modal-md');
 }
 
-function saveCustomer() {
-  var name = document.getElementById('mcName').value;
-  var email = document.getElementById('mcEmail').value;
-  if (!name || !email) { showToast('Name and email required','error'); return; }
-  DB.customers.unshift({id:Date.now(),name:name,email:email,phone:document.getElementById('mcPhone').value,nationality:document.getElementById('mcNat').value,country:document.getElementById('mcCountry').value,trips:0,spent:0,status:document.getElementById('mcStatus').value,joined:new Date().toISOString().split('T')[0]});
-  closeModal(); goPage('customers'); showToast('Customer added','success');
-}
+function saveCustomer() { showToast("Les clients s'inscrivent via le site.", "info"); closeModal(); }
 
 function viewCustomer(id) {
   var c = DB.customers.find(function(x){ return x.id===id; });
@@ -2811,9 +2854,10 @@ function showToast(msg, type) {
 }
 
 function logout() {
-  if (confirm('Sign out of admin panel?')) {
+  if (confirm('Se déconnecter du panneau d\'administration ?')) {
     localStorage.removeItem('rc_token');
-    window.location.href = 'index.html';
+    localStorage.removeItem('rc_user');
+    window.location.replace('admin-login.html');
   }
 }
 

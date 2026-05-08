@@ -13,6 +13,11 @@ const morgan    = require('morgan');
 
 require('./database'); // init DB + seed
 
+if (!process.env.JWT_SECRET) {
+  console.error('\n  FATAL: JWT_SECRET environment variable is not set.\n  Set it in your .env file before starting the server.\n');
+  process.exit(1);
+}
+
 const app    = express();
 const PORT   = process.env.PORT || 3000;
 const PUBLIC = path.join(__dirname, 'public');
@@ -63,7 +68,7 @@ const server = app.listen(PORT, () => {
   console.log('  ╠══════════════════════════════════════════════════╣');
   console.log(`  ║  Local:   http://localhost:${PORT}                    ║`);
   console.log(`  ║  Health:  http://localhost:${PORT}/api/health         ║`);
-  console.log('  ║  Admin:   admin@roamerscommunity.ma / admin123   ║');
+  console.log(`  ║  Admin:   http://localhost:${PORT}/admin.html         ║`);
   console.log('  ║  Press Ctrl+C to stop                            ║');
   console.log('  ╚══════════════════════════════════════════════════╝\n');
 });

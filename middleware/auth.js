@@ -13,7 +13,7 @@ function auth(req, res, next) {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
     const user = db.users.find(function(u){ return u.id === payload.id; });
     if (!user) return res.status(401).json({ error: 'User not found' });
     req.user = user;
@@ -37,7 +37,7 @@ function optionalAuth(req, res, next) {
   const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (token) {
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
       req.user = db.users.find(function(u){ return u.id === payload.id; }) || null;
     } catch (_) { req.user = null; }
   } else {

@@ -1,16 +1,139 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Roamers Community — Admin</title>
+<title>Roamers — Connexion Admin</title>
+<link rel="icon" type="image/png" href="ROAMERS_LOGO.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--red:#B8172E;--red-d:#8A1021;--sidebar:#0F172A;--surface:#FFFFFF;--surface2:#F8FAFC;--border:#E2E8F0;--text:#0F172A;--text2:#475569;--text3:#94A3B8;--r:10px}
+html{font-size:14px;-webkit-font-smoothing:antialiased}
+body{font-family:'Inter',sans-serif;background:var(--sidebar);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:var(--surface);border-radius:18px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.brand{text-align:center;margin-bottom:32px}
+.brand-logo{width:52px;height:52px;background:var(--red);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.brand-logo img{width:32px;height:32px;object-fit:contain}
+.brand h1{font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px}
+.brand p{font-size:13px;color:var(--text3)}
+.fg{margin-bottom:16px}
+.fl{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;letter-spacing:.02em}
+.fi{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s}
+.fi:focus{border-color:var(--red)}
+.fi.err{border-color:#DC2626}
+.btn{display:block;width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s;text-align:center}
+.btn:hover{background:var(--red-d)}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.err-msg{color:#DC2626;font-size:12px;margin-top:8px;display:none}
+.footer-note{text-align:center;font-size:12px;color:var(--text3);margin-top:20px}
+.spinner{display:none;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
 </head>
 <body>
+<div class="card">
+  <div class="brand">
+    <div class="brand-logo"><img src="ROAMERS_LOGO.png" alt="Roamers"></div>
+    <h1>Espace Administration</h1>
+    <p>Roamers Community — Accès réservé</p>
+  </div>
+
+  <div class="fg">
+    <label class="fl" for="email">Adresse email</label>
+    <input class="fi" type="email" id="email" placeholder="admin@roamerscommunity.ma" autocomplete="email">
+  </div>
+  <div class="fg">
+    <label class="fl" for="pwd">Mot de passe</label>
+    <input class="fi" type="password" id="pwd" placeholder="••••••••" autocomplete="current-password">
+  </div>
+
+  <div class="err-msg" id="errMsg">Email ou mot de passe incorrect.</div>
+
+  <button class="btn" id="loginBtn" onclick="doLogin()">
+    <span id="btnText">Se connecter</span>
+    <div class="spinner" id="spinner"></div>
+  </button>
+
+  <p class="footer-note">Accès réservé à l'équipe Roamers</p>
+</div>
+
 <script>
-// This page is no longer used as a standalone login.
-// Admin login is handled via the main site login (index.html → /login).
-// Redirect anyone who lands here directly to the main login page.
-window.location.replace('index.html');
+(function(){
+  var tok = localStorage.getItem('rc_token');
+  if (!tok) return;
+  try {
+    var p = JSON.parse(atob(tok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+    if (p.role === 'admin' && p.exp * 1000 > Date.now()) {
+      window.location.replace('admin.html');
+    }
+  } catch(e) { localStorage.removeItem('rc_token'); }
+})();
+
+document.getElementById('email').addEventListener('keydown', function(e){ if(e.key==='Enter') document.getElementById('pwd').focus(); });
+document.getElementById('pwd').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+
+function doLogin() {
+  var email = document.getElementById('email').value.trim();
+  var pwd   = document.getElementById('pwd').value;
+  var btn   = document.getElementById('loginBtn');
+  var err   = document.getElementById('errMsg');
+  var txt   = document.getElementById('btnText');
+  var spin  = document.getElementById('spinner');
+
+  err.style.display = 'none';
+  document.getElementById('email').classList.remove('err');
+  document.getElementById('pwd').classList.remove('err');
+
+  if (!email || !pwd) {
+    err.textContent = 'Veuillez remplir tous les champs.';
+    err.style.display = 'block';
+    if (!email) document.getElementById('email').classList.add('err');
+    if (!pwd)   document.getElementById('pwd').classList.add('err');
+    return;
+  }
+
+  btn.disabled = true;
+  txt.style.display = 'none';
+  spin.style.display = 'block';
+
+  fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, password: pwd })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.token && d.user && d.user.role === 'admin') {
+      localStorage.setItem('rc_token', d.token);
+      localStorage.setItem('rc_user', JSON.stringify(d.user));
+      window.location.replace('admin.html');
+    } else if (d.token && d.user) {
+      err.textContent = 'Accès refusé — compte non administrateur.';
+      err.style.display = 'block';
+      reset();
+    } else {
+      err.textContent = d.error || 'Email ou mot de passe incorrect.';
+      err.style.display = 'block';
+      document.getElementById('pwd').classList.add('err');
+      reset();
+    }
+  })
+  .catch(function() {
+    err.textContent = 'Erreur réseau. Vérifiez votre connexion.';
+    err.style.display = 'block';
+    reset();
+  });
+}
+
+function reset() {
+  var btn  = document.getElementById('loginBtn');
+  var txt  = document.getElementById('btnText');
+  var spin = document.getElementById('spinner');
+  btn.disabled = false;
+  txt.style.display = 'inline';
+  spin.style.display = 'none';
+}
 </script>
 </body>
 </html>
