@@ -590,7 +590,10 @@ function loadAll(cb) {
     if(d.partners) DB.partners = d.partners;
   }).catch(function(){}).then(done);
   api('GET','/admin/settings').then(function(d){
-    if(d.settings) DB.settings = d.settings;
+    if(d.settings) {
+      DB.settings = d.settings;
+      if(d.settings.cms) DB.cms = JSON.parse(JSON.stringify(Object.assign({}, DB.cms, d.settings.cms)));
+    }
   }).catch(function(){}).then(done);
 }
 
@@ -1806,7 +1809,6 @@ function openTripModal(id) {
     +'</div>'
     +'<div class="modal-footer">'
       +'<button class="btn btn-secondary" onclick="closeModal()">Annuler</button>'
-      +'<button class="btn btn-secondary" style="margin-right:auto" onclick="showToast(\'Aperçu : bientôt disponible\',\'info\')">👁 Aperçu</button>'
       +'<button class="btn btn-primary" onclick="saveTrip('+(t?t.id:'null')+')" style="min-width:180px;padding:10px 20px">'
         +(t ? '💾 Enregistrer les modifications' : '🚀 Publier le voyage')
       +'</button>'
@@ -2143,17 +2145,32 @@ function saveTestimonial(idx) {
 }
 
 function openUploadModal() {
-  openModal('<div class="modal-header"><h3>Upload Media Files</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
+  openModal('<div class="modal-header"><h3>Ajouter une image</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
     + '<div class="modal-body">'
-    + '<div class="upload-zone" onclick="showToast(\'File upload requires backend integration\',\'info\')" ondragover="this.style.borderColor=\'var(--red)\'" ondragleave="this.style.borderColor=\'\'">'
-      + '<svg width="40" height="40" viewBox="0 0 40 40" fill="none"><path d="M20 28V12M20 12l-6 6M20 12l6 6" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"/><path d="M8 30h24" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"/></svg>'
-      + '<p>Click to upload or drag and drop</p><span>PNG, JPG, MP4 · Max 50MB per file</span>'
+    + '<div style="background:var(--blue-l);border-radius:var(--r-sm);padding:12px 14px;font-size:13px;color:var(--blue);margin-bottom:16px">💡 Les images sont gérées via URL externe (Unsplash, CDN, Google Drive, etc.).</div>'
+    + '<div class="fg"><label class="fl">URL de l'image *</label><input class="fi" id="uploadUrl" placeholder="https://images.unsplash.com/..." oninput="previewUploadImg(this.value)"></div>'
+    + '<div id="uploadImgPreview" style="display:none;margin-top:10px;border-radius:var(--r-sm);overflow:hidden;max-height:180px"><img id="uploadImgEl" style="width:100%;object-fit:cover;max-height:180px" alt="preview"></div>'
+    + '<div class="fg"><label class="fl">Catégorie</label><select class="fi fi-select" id="uploadCat"><option value="trips">Voyages</option><option value="destinations">Destinations</option><option value="homepage">Accueil</option></select></div>'
     + '</div>'
-    + '<div class="fg" style="margin-top:16px"><label class="fl">Category</label><select class="fi fi-select"><option>trips</option><option>destinations</option><option>homepage</option></select></div>'
-    + '<div class="fg"><label class="fl">Associated Trip (optional)</label><select class="fi fi-select"><option value="">None</option>'+DB.trips.map(function(t){return '<option>'+t.title+'</option>';}).join('')+'</select></div>'
-    + '</div>'
-    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="showToast(\'Upload requires backend integration\',\'info\');closeModal()">Upload Files</button></div>',
+    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="saveUploadedUrl()">Ajouter</button></div>',
     'modal-md');
+}
+
+function previewUploadImg(url) {
+  var box = document.getElementById('uploadImgPreview');
+  var img = document.getElementById('uploadImgEl');
+  if (!url || !box || !img) return;
+  img.src = url; box.style.display = 'block';
+  img.onerror = function() { box.style.display = 'none'; };
+}
+
+function saveUploadedUrl() {
+  var url = (document.getElementById('uploadUrl') || {}).value;
+  if (!url) { showToast('URL requise', 'error'); return; }
+  var cat = (document.getElementById('uploadCat') || {}).value || 'trips';
+  var name = url.split('/').pop().split('?')[0] || 'image-' + Date.now() + '.jpg';
+  DB.mediaFiles.unshift({ id: Date.now(), name: name, type: 'image', category: cat, trip: '', url: url, featured: false, size: '—' });
+  closeModal(); goPage('media'); showToast('Image ajoutée à la médiathèque', 'success');
 }
 
 function openUserModal() {
@@ -2313,7 +2330,10 @@ function saveCMS() {
   if(gv('seoTitle')!==null)   DB.cms.seo.title=gv('seoTitle');
   if(gv('seoDesc')!==null)    DB.cms.seo.description=gv('seoDesc');
   if(gv('seoKW')!==null)      DB.cms.seo.keywords=gv('seoKW');
-  showToast('Contenu CMS sauvegardé','success');
+  api('PUT','/admin/settings',{cms:DB.cms}).then(function(d){
+    if(d.settings) DB.settings=d.settings;
+    showToast('Contenu CMS sauvegardé','success');
+  }).catch(function(){ showToast('Erreur lors de la sauvegarde','error'); });
 }
 
 function sendWhatsApp(phone, name) {
