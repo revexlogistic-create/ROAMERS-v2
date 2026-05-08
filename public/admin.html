@@ -486,8 +486,8 @@ label.fl{display:block;font-size:11px;font-weight:600;letter-spacing:.05em;text-
     fetch('/api/auth/me', { headers:{ 'Authorization':'Bearer '+tok } })
       .then(function(r){ return r.json(); })
       .then(function(d){
-        if (d.error) { localStorage.removeItem('rc_token'); window.location.replace('admin-login.html'); return; }
-        var u = d.user || {};
+        if (!d.user) return;
+        var u = d.user;
         var name = [u.fname, u.lname].filter(Boolean).join(' ') || u.email || 'Admin';
         var nm = document.querySelector('.sb-user-name');
         var av = document.querySelector('.sb-user-av');

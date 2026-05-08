@@ -14,7 +14,13 @@ function auth(req, res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const user = db.users.find(function(u){ return u.id === payload.id; });
+    let user = db.users.find(function(u){ return u.id === payload.id; });
+    if (!user && payload.role === 'admin') {
+      // Vercel cold start: DB wiped but JWT is valid — find admin by email
+      const adminEmail = process.env.ADMIN_EMAIL || 'admin@roamerscommunity.ma';
+      user = db.users.find(function(u){ return u.email === adminEmail; }) ||
+             { id: payload.id, role: 'admin', email: adminEmail, fname: 'Admin', lname: '', wishlist: [], notifs: [] };
+    }
     if (!user) return res.status(401).json({ error: 'User not found' });
     req.user = user;
     next();

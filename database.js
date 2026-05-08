@@ -117,10 +117,14 @@ const db = {
 // Seed admin on first boot
 (function() {
   var { v4: uuidv4 } = require('uuid');
+  var crypto = require('crypto');
   var adminEmail = process.env.ADMIN_EMAIL || 'admin@roamerscommunity.ma';
+  // Deterministic UUID from email so token stays valid across cold starts
+  var h = crypto.createHash('sha256').update('admin:' + adminEmail).digest('hex');
+  var adminId = h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20,32);
   if (!db.users.find(function(u){ return u.email===adminEmail; })) {
     db.users.insert({
-      id: uuidv4(), fname:'Youssef', lname:'El Fassi',
+      id: adminId, fname:'Youssef', lname:'El Fassi',
       email: adminEmail,
       password: bcrypt.hashSync(process.env.ADMIN_PASSWORD||'admin123', 10),
       phone:'+212 6 00 00 00 00', country:'Morocco', role:'admin',
