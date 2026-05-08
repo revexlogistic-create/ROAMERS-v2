@@ -11,7 +11,7 @@ const compress  = require('compression');
 const rateLimit = require('express-rate-limit');
 const morgan    = require('morgan');
 
-require('./database'); // init DB + seed
+const db = require('./database');
 
 if (!process.env.JWT_SECRET) {
   console.error('\n  FATAL: JWT_SECRET environment variable is not set.\n  Set it in your .env file before starting the server.\n');
@@ -35,6 +35,15 @@ if (!isProd) app.use(morgan('dev'));
 const apiLim  = rateLimit({ windowMs: 15*60*1000, max: 300 });
 const authLim = rateLimit({ windowMs: 15*60*1000, max: 20, message: { error: 'Too many attempts' } });
 const frmLim  = rateLimit({ windowMs: 60*60*1000, max: 15, message: { error: 'Too many submissions' } });
+
+/* DB init middleware — runs once per Lambda cold start, all requests wait */
+let _dbReady = null;
+app.use(function(req, res, next) {
+  if (!_dbReady) _dbReady = db._init().catch(function(err) { _dbReady = null; throw err; });
+  _dbReady.then(next).catch(function(err) {
+    res.status(503).json({ error: 'Database unavailable: ' + err.message });
+  });
+});
 
 app.use('/api/', apiLim);
 app.use('/api/auth',        authLim, require('./routes/auth'));
