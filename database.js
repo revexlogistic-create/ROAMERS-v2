@@ -216,14 +216,21 @@ function _seedActivities(db) {
 }
 
 function _seedAdmin(db) {
-  var adminEmail = process.env.ADMIN_EMAIL || 'admin@roamerscommunity.ma';
+  var adminEmail    = process.env.ADMIN_EMAIL    || 'admin@roamerscommunity.ma';
+  var adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword) {
+    console.error('\n  FATAL: ADMIN_PASSWORD environment variable is not set.\n  Set it in your .env file.\n');
+    process.exit(1);
+  }
   if (!db.users.find(function(u){ return u.email===adminEmail; })) {
     db.users.insert({
       id: adminUUID(adminEmail),
       fname:'Youssef', lname:'El Fassi', email:adminEmail,
-      password: bcrypt.hashSync(process.env.ADMIN_PASSWORD||'admin123', 10),
+      password:     bcrypt.hashSync(adminPassword, 12),
       phone:'+212 6 00 00 00 00', country:'Morocco', role:'admin',
-      bio:'', joined:new Date().toISOString(), wishlist:[], notifs:[]
+      bio:'', joined:new Date().toISOString(), wishlist:[], notifs:[],
+      tokenVersion: 0,
+      loginFailCount: 0, loginLockUntil: null
     });
     console.log('  ✓ Admin seeded:', adminEmail);
   }

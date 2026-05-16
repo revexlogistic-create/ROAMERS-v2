@@ -55,13 +55,24 @@ function validateBody(b, partial) {
 
 /* ── PUBLIC ─────────────────────────────────── */
 
-router.get('/', function(req, res) {
+router.get('/', require('../middleware/auth').optionalAuth, function(req, res) {
   let items = db.experiences.all();
-  if (req.query.includeDrafts !== '1') {
+
+  /* includeDrafts=1 only honoured for authenticated admins (issue #22) */
+  var showDrafts = req.query.includeDrafts === '1' &&
+                   req.user && req.user.role === 'admin';
+  if (!showDrafts) {
     items = items.filter(function(e){ return e.status !== 'draft'; });
   }
-  if (req.query.segment) items = items.filter(function(e){ return e.segment === req.query.segment; });
-  if (req.query.type)    items = items.filter(function(e){ return e.type === req.query.type; });
+
+  /* Validate segment/type filters against allowlists to prevent NoSQL-style injection */
+  if (req.query.segment && ALLOWED_SEGMENTS.includes(req.query.segment)) {
+    items = items.filter(function(e){ return e.segment === req.query.segment; });
+  }
+  if (req.query.type && ALLOWED_TYPES.includes(req.query.type)) {
+    items = items.filter(function(e){ return e.type === req.query.type; });
+  }
+
   items.sort(function(a,b){
     var so = (a.sortOrder||0) - (b.sortOrder||0);
     if (so !== 0) return so;

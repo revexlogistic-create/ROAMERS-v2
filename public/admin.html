@@ -613,12 +613,47 @@ var DB = {
   settings: {},
   notifications: [],
   cms: {
-    hero:{title:'Explore Morocco. Feel it. Live it.',subtitle:'From Sahara sunrises to Atlas peaks — immersive adventures built for those who want more than a postcard.',cta:'Discover Experiences',enabled:true},
-    about:{title:'We built a community, not an agency.',body:'Roamers Community was founded by passionate Moroccan explorers who believed travel could create genuine human connection and support local communities.',enabled:true},
+    hero:{
+      title:'Explorez le Maroc<br><em class="s">autrement.</em>',
+      subtitle:'5 façons de vivre le Maroc. Des déserts infinis aux sommets de l\'Atlas — expériences de groupe, weekends thématiques, activités express et voyages sur mesure.',
+      cta:'✦ Explorer tous les voyages',
+      stat1Val:'500+', stat1Lbl:'Voyages organisés',
+      stat2Val:'16',   stat2Lbl:'Expériences',
+      stat3Val:'98%',  stat3Lbl:'Satisfaction'
+    },
+    why:{
+      title:'Pas un simple voyage.',
+      titleEm:'Une transformation.',
+      cards:[
+        {icon:'🧭',title:'Guides locaux experts',desc:'Des Marocains qui connaissent chaque histoire derrière chaque pierre — et les raccourcis que les touristes ne trouvent jamais.'},
+        {icon:'✂️',title:'100% sur mesure',desc:'Pas d\'itinéraires génériques. Chaque expérience est conçue autour de vos objectifs, votre rythme et vos passions.'},
+        {icon:'🌱',title:'Impact social réel',desc:'Votre aventure finance directement l\'emploi local, les coopératives et le développement de communautés rurales.'},
+        {icon:'🛡️',title:'Sécurisé et sans souci',desc:'Logistique complète, assurances, permis et support 24/7. Vous explorez librement — nous gérons tout le reste.'}
+      ],
+      stat1Val:'500+', stat1Lbl:'Voyages organisés',
+      stat2Val:'16',   stat2Lbl:'Expériences catalogue',
+      stat3Val:'120+', stat3Lbl:'Groupes entreprise',
+      stat4Val:'98%',  stat4Lbl:'Satisfaction client'
+    },
+    tb:{
+      eyebrow:'Pour les entreprises',
+      title:'Le team building<br>qui <em class="r">fonctionne vraiment.</em>',
+      desc:'Désert, montagne, côte ou médina — 4 univers, une seule mission : créer une cohésion d\'équipe durable à travers des défis en pleine nature au Maroc.',
+      prog1:'🏜️ Bivouac Désert',
+      prog2:'⛰️ Défi Montagne',
+      prog3:'🌊 Voile & Leadership',
+      prog4:'🏛️ Médina & Cohésion'
+    },
+    footer:{
+      tagline:'Morocco leading experiential travel community — where adventure meets culture and every journey creates real impact.',
+      copyright:'2024 Roamers Community. All rights reserved.',
+      marquee:'OCP GROUP,ATTIJARIWAFA,MAROC TELECOM,ALLIANCE ACCESS CN,INWI,CIH BANK,BMCE BANK,MEDITEL,LABEL VIE'
+    },
+    about:{title:'We built a community, not an agency.',body:'Roamers Community was founded by passionate Moroccan explorers who believed travel could create genuine human connection and support local communities.'},
     testimonials:[
-      {name:'Karim Bensouda',role:'HR Director, OCP Group',text:'The desert retreat reshaped how our team works together. Flawless execution.',rating:5,featured:true},
-      {name:'Wei Zhang',role:'Tour Operator, Shanghai',text:'Best-organized tour we have experienced in Africa. We are going back next year.',rating:5,featured:true},
-      {name:'Sophie Martin',role:'Travel Blogger, Lyon',text:'Atlas Mountains trek was in my top 3 trips of 50+ countries. Incredible guides.',rating:5,featured:false}
+      {name:'Karim Bensouda',role:'DRH, OCP Group',text:'Notre équipe de 45 est venue au Maroc sans attentes particulières. Ce que nous avons vécu a été transformateur — le bivouac désert a redéfini notre façon de travailler ensemble.',rating:5,featured:true,seg:'team',img:'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=80&q=70'},
+      {name:'Wei Zhang',role:'Tour Operator, Shanghai',text:'En tant qu\'opérateur de voyage chinois, la logistique était ma grande inquiétude. Roamers a fourni un guide mandarin et c\'est l\'un des circuits les mieux organisés que nous ayons vécus en Afrique.',rating:5,featured:true,seg:'groupe',img:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=70'},
+      {name:'Sophie Martin',role:'Travel Blogger, Lyon',text:'J\'ai voyagé dans 50+ pays. Le trek Atlas avec Roamers est dans mon top 3. Nos guides étaient des historiens, des conteurs et des experts montagne réunis en une seule personne.',rating:5,featured:true,seg:'weekend',img:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=70'}
     ],
     seo:{title:'Roamers Community — Morocco Adventure Booking',description:'Morocco\'s premier experiential travel platform. Book desert treks, mountain adventures, and cultural tours.',keywords:'morocco travel,sahara trek,atlas mountains,marrakech tour,team building morocco'}
   },
@@ -1002,17 +1037,19 @@ function filterMedia(cat, btn){
    PAGE: CMS
 ══════════════════════════════════════════════════ */
 function renderCMS() {
-  var cms=DB.cms;
   var cmsTabs=[
-    {id:'pages',label:'🏠 Pages'},
-    {id:'segments',label:'🗺️ Segments'},
-    {id:'testimonials',label:'💬 Témoignages'},
-    {id:'seo',label:'🔍 SEO'}
+    {id:'hero',   label:'🏠 Hero'},
+    {id:'why',    label:'💪 Pourquoi nous'},
+    {id:'tb',     label:'🤝 Team Building'},
+    {id:'reviews',label:'💬 Témoignages'},
+    {id:'general',label:'🦶 Général'},
+    {id:'seo',    label:'🔍 SEO'}
   ];
-  return '<div class="page-header"><div><h1>Contenu du site (CMS)</h1><p>Gérez la page d\'accueil, les segments, les témoignages et le SEO</p></div>'
+  return '<div class="page-header"><div><h1>Contenu du site (CMS)</h1><p>Modifiez tous les textes affichés sur le site — changements en temps réel après enregistrement</p></div>'
     +'<div class="ph-actions"><button class="btn btn-primary" onclick="saveCMS()">💾 Enregistrer</button></div></div>'
+  +'<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#1D4ED8;display:flex;align-items:center;gap:8px">🌐 Tous les textes ci-dessous s\'affichent directement sur le site public après enregistrement.</div>'
   +'<div class="tabs" style="margin-bottom:20px">'+cmsTabs.map(function(t,i){return '<div class="tab'+(i===0?' active':'')+'" onclick="switchCmsTab(\''+t.id+'\',this)">'+t.label+'</div>';}).join('')+'</div>'
-  +'<div id="cmsContent">'+renderCmsTab('pages')+'</div>';
+  +'<div id="cmsContent">'+renderCmsTab('hero')+'</div>';
 }
 
 function switchCmsTab(tab, el){
@@ -1022,58 +1059,134 @@ function switchCmsTab(tab, el){
   if(c) c.innerHTML=renderCmsTab(tab);
 }
 
+function _cmsField(label, id, val, type, hint){
+  var inp = (type==='textarea')
+    ?'<textarea class="fi fi-area" id="'+id+'" style="min-height:60px">'+val+'</textarea>'
+    :'<input class="fi" id="'+id+'" value="'+_esc(val)+'">';
+  return '<div class="fg'+(type==='half'?' fg-half':'')+'">'
+    +'<label class="fl">'+label+'</label>'+inp
+    +(hint?'<div style="font-size:11px;color:var(--text3);margin-top:3px">'+hint+'</div>':'')
+  +'</div>';
+}
+
 function renderCmsTab(tab){
   var cms=DB.cms;
-  if(tab==='pages'){
-    return '<div class="card" style="margin-bottom:16px"><div class="card-header"><div><div class="card-title">🏠 Section Hero (bannière principale)</div></div><div class="toggle red-on" onclick="this.classList.toggle(\'red-on\')" title="Activer/désactiver"></div></div>'
-      +'<div class="fg-row"><div class="fg"><label class="fl">Titre principal</label><input class="fi" id="heroTitle" value="'+cms.hero.title+'"></div><div class="fg"><label class="fl">Texte du bouton CTA</label><input class="fi" id="heroCTA" value="'+cms.hero.cta+'"></div></div>'
-      +'<div class="fg"><label class="fl">Sous-titre</label><textarea class="fi fi-area" id="heroSub" style="min-height:64px">'+cms.hero.subtitle+'</textarea></div></div>'
-      +'<div class="card" style="margin-bottom:16px"><div class="card-header"><div class="card-title">ℹ️ Section À Propos</div><div class="toggle red-on" onclick="this.classList.toggle(\'red-on\')"></div></div>'
-      +'<div class="fg"><label class="fl">Titre</label><input class="fi" id="aboutTitle" value="'+cms.about.title+'"></div>'
-      +'<div class="fg" style="margin-bottom:0"><label class="fl">Contenu</label><textarea class="fi fi-area" id="aboutBody">'+cms.about.body+'</textarea></div></div>';
+  /* ── HERO ── */
+  if(tab==='hero'){
+    return '<div class="card" style="margin-bottom:16px">'
+      +'<div class="card-header"><div class="card-title">🏠 Bannière principale (Hero)</div></div>'
+      +'<div class="fg-row">'
+        +_cmsField('Titre (HTML autorisé)','cmsHeroTitle',cms.hero.title,'text','Utilisez <br> pour sauter une ligne, <em class="s">…</em> pour l\'italique doré')
+        +_cmsField('Bouton CTA','cmsHeroCta',cms.hero.cta,'text')
+      +'</div>'
+      +_cmsField('Sous-titre','cmsHeroSub',cms.hero.subtitle,'textarea')
+    +'</div>'
+    +'<div class="card">'
+      +'<div class="card-header"><div class="card-title">📊 Statistiques du Hero (3 chiffres)</div></div>'
+      +'<div class="fg-row">'
+        +_cmsField('Valeur 1','cmsSt1V',cms.hero.stat1Val,'text')
+        +_cmsField('Label 1','cmsSt1L',cms.hero.stat1Lbl,'text')
+        +_cmsField('Valeur 2','cmsSt2V',cms.hero.stat2Val,'text')
+        +_cmsField('Label 2','cmsSt2L',cms.hero.stat2Lbl,'text')
+        +_cmsField('Valeur 3','cmsSt3V',cms.hero.stat3Val,'text')
+        +_cmsField('Label 3','cmsSt3L',cms.hero.stat3Lbl,'text')
+      +'</div>'
+    +'</div>';
   }
-  if(tab==='segments'){
-    return '<div class="card"><div class="card-header"><div class="card-title">🗺️ Segments visibles sur le site</div><div style="font-size:12px;color:var(--text3)">Activez ou désactivez chaque segment</div></div>'
-      +'<div style="display:flex;flex-direction:column;gap:0">'
-      +ADMIN_SEGS.map(function(s){
-        var cnt=DB.trips.filter(function(t){return t.segment===s.id;}).length+(s.id==='express'?DB.activities.length:0);
-        return '<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)">'
-          +'<div style="width:38px;height:38px;border-radius:10px;background:'+s.color+'18;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">'+s.icon+'</div>'
-          +'<div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--text)">'+s.label+'</div><div style="font-size:12px;color:var(--text3);margin-top:2px">'+cnt+' expérience'+(cnt!==1?'s':'')+' · segment <code style="font-size:11px;background:var(--surface3);padding:1px 5px;border-radius:4px">'+s.id+'</code></div></div>'
-          +'<div class="toggle red-on" onclick="this.classList.toggle(\'red-on\')"></div>'
-          +'<button class="btn btn-secondary btn-sm" onclick="ST.expSeg=\''+s.id+'\'" style="font-size:11px">Voir les voyages</button>'
-        +'</div>';
-      }).join('')
-      +'</div></div>'
-      +'<div class="card" style="margin-top:16px"><div class="card-header"><div class="card-title">🗺️ Types de destination visibles</div></div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 0">'
-      +ADMIN_TYPES.map(function(tp){
-        var cnt=DB.trips.filter(function(t){return t.type===tp.id;}).length;
-        return '<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface3);border-radius:var(--r)"><span style="font-size:24px">'+tp.icon+'</span><div style="flex:1"><div style="font-size:13px;font-weight:700">'+tp.label+'</div><div style="font-size:11px;color:var(--text3)">'+cnt+' voyage'+(cnt!==1?'s':'')+'</div></div><div class="toggle red-on" onclick="this.classList.toggle(\'red-on\')"></div></div>';
-      }).join('')
-      +'</div></div>';
+  /* ── WHY ROAMERS ── */
+  if(tab==='why'){
+    var wh=cms.why; var wc=wh.cards||[];
+    return '<div class="card" style="margin-bottom:16px">'
+      +'<div class="card-header"><div class="card-title">💪 Section "Pourquoi Roamers ?"</div></div>'
+      +'<div class="fg-row">'
+        +_cmsField('Titre','cmsWhyTitle',wh.title,'text')
+        +_cmsField('Titre (partie en italique)','cmsWhyTitleEm',wh.titleEm,'text')
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px">'
+        +wc.map(function(c,i){
+          return '<div style="background:var(--surface3);border-radius:var(--r);padding:14px">'
+            +'<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px">Carte '+(i+1)+' '+c.icon+'</div>'
+            +_cmsField('Icône','cmsWhy'+(i+1)+'Icon',c.icon,'text')
+            +_cmsField('Titre','cmsWhy'+(i+1)+'Title',c.title,'text')
+            +_cmsField('Description','cmsWhy'+(i+1)+'Desc',c.desc,'textarea')
+          +'</div>';
+        }).join('')
+      +'</div>'
+    +'</div>'
+    +'<div class="card">'
+      +'<div class="card-header"><div class="card-title">📊 Grandes statistiques (4 chiffres)</div></div>'
+      +'<div class="fg-row">'
+        +_cmsField('Valeur 1','cmsWst1V',wh.stat1Val,'text')
+        +_cmsField('Label 1','cmsWst1L',wh.stat1Lbl,'text')
+        +_cmsField('Valeur 2','cmsWst2V',wh.stat2Val,'text')
+        +_cmsField('Label 2','cmsWst2L',wh.stat2Lbl,'text')
+        +_cmsField('Valeur 3','cmsWst3V',wh.stat3Val,'text')
+        +_cmsField('Label 3','cmsWst3L',wh.stat3Lbl,'text')
+        +_cmsField('Valeur 4','cmsWst4V',wh.stat4Val,'text')
+        +_cmsField('Label 4','cmsWst4L',wh.stat4Lbl,'text')
+      +'</div>'
+    +'</div>';
   }
-  if(tab==='testimonials'){
+  /* ── TEAM BUILDING ── */
+  if(tab==='tb'){
+    var tb=cms.tb;
+    return '<div class="card" style="margin-bottom:16px">'
+      +'<div class="card-header"><div class="card-title">🤝 Section Team Building (page d\'accueil)</div></div>'
+      +_cmsField('Eyebrow (petit texte au-dessus du titre)','cmsTbEyebrow',tb.eyebrow,'text')
+      +_cmsField('Titre (HTML autorisé)','cmsTbTitle',tb.title,'text')
+      +_cmsField('Description','cmsTbDesc',tb.desc,'textarea')
+    +'</div>'
+    +'<div class="card">'
+      +'<div class="card-header"><div class="card-title">🏷️ 4 programmes (étiquettes)</div></div>'
+      +'<div class="fg-row">'
+        +_cmsField('Programme 1','cmsTbProg1',tb.prog1,'text')
+        +_cmsField('Programme 2','cmsTbProg2',tb.prog2,'text')
+        +_cmsField('Programme 3','cmsTbProg3',tb.prog3,'text')
+        +_cmsField('Programme 4','cmsTbProg4',tb.prog4,'text')
+      +'</div>'
+    +'</div>';
+  }
+  /* ── TESTIMONIALS ── */
+  if(tab==='reviews'){
     return '<div class="card"><div class="card-header"><div class="card-title">💬 Témoignages ('+cms.testimonials.length+')</div><button class="btn btn-primary btn-sm" onclick="openTestimonialModal()">+ Ajouter</button></div>'
-      +'<table><thead><tr><th>Nom</th><th>Rôle</th><th>Note</th><th>En vedette</th><th>Actions</th></tr></thead><tbody>'
+      +'<table><thead><tr><th>Nom</th><th>Rôle</th><th>Note</th><th>Segment</th><th>Actions</th></tr></thead><tbody>'
       +cms.testimonials.map(function(t,i){
-        return '<tr><td style="font-weight:600">'+t.name+'</td><td style="font-size:12px;color:var(--text3)">'+t.role+'</td><td><span style="color:#F5A623">'+'★'.repeat(t.rating)+'</span></td>'
-          +'<td><div class="toggle'+(t.featured?' red-on':'')+'" onclick="DB.cms.testimonials['+i+'].featured=!DB.cms.testimonials['+i+'].featured;this.classList.toggle(\'red-on\')"></div></td>'
-          +'<td><div class="tbl-actions"><button class="btn btn-secondary btn-sm btn-icon" onclick="openTestimonialModal('+i+')">✏️</button><button class="btn btn-danger btn-sm btn-icon" onclick="DB.cms.testimonials.splice('+i+',1);switchCmsTab(\'testimonials\',document.querySelector(\'.tab.active\'))">🗑</button></div></td>'
+        return '<tr>'
+          +'<td style="font-weight:600">'+t.name+'</td>'
+          +'<td style="font-size:12px;color:var(--text3)">'+t.role+'</td>'
+          +'<td><span style="color:#F5A623">'+'★'.repeat(t.rating)+'</span></td>'
+          +'<td><code style="font-size:11px;background:var(--surface3);padding:1px 6px;border-radius:4px">'+t.seg+'</code></td>'
+          +'<td><div class="tbl-actions">'
+            +'<button class="btn btn-secondary btn-sm btn-icon" onclick="openTestimonialModal('+i+')">✏️</button>'
+            +'<button class="btn btn-danger btn-sm btn-icon" onclick="DB.cms.testimonials.splice('+i+',1);switchCmsTab(\'reviews\',document.querySelector(\'.tab.active\'))">🗑</button>'
+          +'</div></td>'
         +'</tr>';
       }).join('')
       +'</tbody></table></div>';
   }
+  /* ── GENERAL (footer, marquee, about) ── */
+  if(tab==='general'){
+    var ft=cms.footer;
+    return '<div class="card" style="margin-bottom:16px">'
+      +'<div class="card-header"><div class="card-title">🦶 Footer</div></div>'
+      +_cmsField('Tagline (phrase sous le logo)','cmsFooterTagline',ft.tagline,'textarea')
+      +_cmsField('Copyright','cmsFooterCopyright',ft.copyright,'text')
+      +_cmsField('Partenaires défilants (séparés par des virgules)','cmsMarquee',ft.marquee,'text','Ex: OCP GROUP,ATTIJARIWAFA,MAROC TELECOM')
+    +'</div>'
+    +'<div class="card">'
+      +'<div class="card-header"><div class="card-title">ℹ️ À Propos</div></div>'
+      +_cmsField('Titre','cmsAboutTitle',cms.about.title,'text')
+      +_cmsField('Contenu','cmsAboutBody',cms.about.body,'textarea')
+    +'</div>';
+  }
+  /* ── SEO ── */
   if(tab==='seo'){
     return '<div class="card"><div class="card-header"><div class="card-title">🔍 Paramètres SEO</div></div>'
-      +'<div class="fg"><label class="fl">Titre de la page (meta title)</label><input class="fi" id="seoTitle" value="'+cms.seo.title+'"><div style="font-size:11px;color:var(--text3);margin-top:3px">'+cms.seo.title.length+'/60 caractères</div></div>'
+      +'<div class="fg"><label class="fl">Meta title</label><input class="fi" id="seoTitle" value="'+_esc(cms.seo.title)+'"><div style="font-size:11px;color:var(--text3);margin-top:3px">'+cms.seo.title.length+'/60 caractères</div></div>'
       +'<div class="fg"><label class="fl">Meta description</label><textarea class="fi fi-area" id="seoDesc" style="min-height:64px">'+cms.seo.description+'</textarea><div style="font-size:11px;color:var(--text3);margin-top:3px">'+cms.seo.description.length+'/160 caractères</div></div>'
-      +'<div class="fg"><label class="fl">Mots-clés</label><input class="fi" id="seoKW" value="'+cms.seo.keywords+'"></div>'
-      +'<div style="background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.18);border-radius:var(--r-sm);padding:11px 13px;font-size:12px;color:var(--blue)">'
-        +'<strong>Mots-clés recommandés :</strong> voyage maroc, désert sahara marrakech, weekend maroc, team building maroc, activités express marrakech, sur mesure maroc'
-      +'</div>'
-      +'<div style="margin-top:14px"><button class="btn btn-primary" onclick="saveCMS()">Enregistrer le SEO</button></div>'
-      +'</div>';
+      +'<div class="fg"><label class="fl">Mots-clés</label><input class="fi" id="seoKW" value="'+_esc(cms.seo.keywords)+'"></div>'
+      +'<div style="background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.18);border-radius:var(--r-sm);padding:11px 13px;font-size:12px;color:var(--blue)"><strong>Recommandés :</strong> voyage maroc, désert sahara marrakech, weekend maroc, team building maroc, activités express marrakech, sur mesure maroc</div>'
+    +'</div>';
   }
   return '';
 }
@@ -1246,11 +1359,13 @@ function renderSettings() {
 
   +'<div class="grid-2">'
   +'<div>'
-  + settingsCard('🏢 Informations entreprise',[
+  +'<div class="alert" style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#1D4ED8;display:flex;align-items:center;gap:8px">🌐 <strong>Ces informations s\'affichent en temps réel sur le site web</strong> — footer, page Contact, bouton WhatsApp, pages Plan My Trip.</div>'
+  + settingsCard('🏢 Informations de contact — site web',[
       {label:'Nom de l\'entreprise',     id:'settCompanyName',  val:s.settCompanyName||'Roamers Community'},
-      {label:'Email principal',          id:'settCompanyEmail', val:s.settCompanyEmail||'hello@roamerscommunity.ma'},
-      {label:'Téléphone / WhatsApp',     id:'settCompanyPhone', val:s.settCompanyPhone||'+212 6 00 00 00 00'},
-      {label:'Adresse',                  id:'settCompanyAddr',  val:s.settCompanyAddr||'Casablanca, Maroc'},
+      {label:'Email affiché',            id:'settCompanyEmail', val:s.settCompanyEmail||'hello@roamerscommunity.ma'},
+      {label:'Téléphone / WhatsApp affiché', id:'settCompanyPhone', val:s.settCompanyPhone||'+212 6 00 00 00 00'},
+      {label:'Adresse affichée',         id:'settCompanyAddr',  val:s.settCompanyAddr||'Casablanca, Maroc'},
+      {label:'Horaires d\'ouverture',    id:'settHours',        val:s.settHours||'Lun–Sam : 9h – 19h'},
       {label:'Site web',                 id:'settCompanySite',  val:s.settCompanySite||'https://roamerscommunity.ma'}
     ])
   + settingsCard('💬 Intégration WhatsApp',[
@@ -1288,12 +1403,196 @@ function renderSettings() {
     return '<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)"><div style="flex:1"><div style="font-size:13px;font-weight:600">'+i[0]+'</div><div style="font-size:12px;color:var(--text3)">'+i[1]+'</div></div><div class="toggle'+(i[2]?' red-on':'')+'" onclick="this.classList.toggle(\'red-on\')"></div></div>';
   }).join('')
   +'</div>'
-  +'</div></div>';
+  +'</div></div>'
+  +_renderMediaCard(s);
+}
+
+/* ── helper: escape attribute value ── */
+function _esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+
+/* ── build one upload dropzone widget ── */
+function _upZone(fieldId, val, maxW, ratio, label, phText){
+  var hasImg = !!val;
+  var isB64  = val && val.startsWith('data:');
+  var fname  = hasImg ? (isB64 ? '✓ Image chargée' : '✓ URL configurée') : 'ou glisser-déposer';
+  return '<div>'
+    /* clickable / droppable preview zone */
+    +'<div id="zone_'+fieldId+'" '
+      +'style="position:relative;aspect-ratio:'+ratio+';border-radius:8px;overflow:hidden;'
+        +'background:var(--surface3);border:2px dashed var(--border);margin-bottom:7px;cursor:pointer;transition:border-color .15s" '
+      +'onclick="document.getElementById(\'fileIn_'+fieldId+'\').click()" '
+      +'ondragover="dzOver(event,\''+fieldId+'\')" '
+      +'ondragleave="dzOut(event,\''+fieldId+'\')" '
+      +'ondrop="dzDrop(event,\''+fieldId+'\','+maxW+')">'
+      +'<img id="prev_'+fieldId+'" src="'+_esc(val)+'" '
+        +'style="width:100%;height:100%;object-fit:cover;pointer-events:none;'+(hasImg?'':'display:none')+'" '
+        +'onerror="this.style.display=\'none\';document.getElementById(\'ph_'+fieldId+'\').style.display=\'flex\'">'
+      +'<div id="ph_'+fieldId+'" '
+        +'style="position:absolute;inset:0;display:'+(hasImg?'none':'flex')+';flex-direction:column;'
+          +'align-items:center;justify-content:center;gap:6px;color:var(--text3);font-size:12px;pointer-events:none;text-align:center;padding:8px">'
+        +'<span style="font-size:28px">📂</span>'
+        +'<span>'+phText+'</span>'
+        +'<span style="font-size:10px;opacity:.6">PNG · JPG · WebP — max 8 Mo</span>'
+      +'</div>'
+      /* clear button */
+      +'<button id="clearBtn_'+fieldId+'" onclick="event.stopPropagation();clearImg(\''+fieldId+'\')" '
+        +'style="position:absolute;top:7px;right:7px;width:24px;height:24px;border-radius:50%;'
+          +'background:rgba(0,0,0,.6);color:#fff;font-size:12px;'
+          +'display:'+(hasImg?'flex':'none')+';align-items:center;justify-content:center;'
+          +'cursor:pointer;border:none;line-height:1;z-index:2" '
+        +'title="Supprimer l\'image">✕</button>'
+    +'</div>'
+    /* upload button row */
+    +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<label for="fileIn_'+fieldId+'" '
+        +'style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:6px 13px;'
+          +'border-radius:6px;background:var(--surface3);border:1px solid var(--border);'
+          +'font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;transition:background .15s" '
+        +'onmouseover="this.style.background=\'var(--border)\'" '
+        +'onmouseout="this.style.background=\'var(--surface3)\'">'
+        +'📂 Choisir</label>'
+      +'<input type="file" id="fileIn_'+fieldId+'" accept="image/*" style="display:none" '
+        +'onchange="handleImgUpload(event,\''+fieldId+'\','+maxW+')">'
+      +'<span id="fname_'+fieldId+'" style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+fname+'</span>'
+    +'</div>'
+    /* hidden input — saveSettings() reads .value from here */
+    +'<input type="hidden" id="'+fieldId+'" value="'+_esc(val)+'">'
+  +'</div>';
+}
+
+function _renderMediaCard(s){
+  var segs=[
+    {id:'settImgGroupe',  label:'🧭 Voyage Groupe',    val:s.settImgGroupe||'',  maxW:700},
+    {id:'settImgWeekend', label:'🌙 Weekend à Thème',  val:s.settImgWeekend||'', maxW:700},
+    {id:'settImgExpress', label:'⚡ Activité Express',  val:s.settImgExpress||'', maxW:700},
+    {id:'settImgMesure',  label:'✂️ Sur Mesure',        val:s.settImgMesure||'',  maxW:700},
+    {id:'settImgTeam',    label:'🤝 Team Building',     val:s.settImgTeam||'',    maxW:700}
+  ];
+  return '<div class="card" style="margin-bottom:14px">'
+    +'<div class="card-header" style="display:flex;align-items:center;justify-content:space-between">'
+      +'<div class="card-title">🖼️ Visuels du site — Bannières & Segments</div>'
+      +'<span style="font-size:11px;color:var(--text3)">Upload direct — compressé automatiquement</span>'
+    +'</div>'
+    +'<div style="padding:16px">'
+      +'<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:12px;color:#1D4ED8;display:flex;align-items:center;gap:8px">🌐 Ces images remplacent les visuels par défaut du site en temps réel — hero d\'accueil, cartes des univers et bannières des pages.</div>'
+
+      +'<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">📸 Hero d\'accueil</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border)">'
+        +'<div>'
+          +'<label class="fl" style="margin-bottom:8px">Image de fond</label>'
+          +_upZone('settHeroImg', s.settHeroImg||'', 1400, '16/7', 'Image de fond', 'Cliquer ou glisser une image')
+        +'</div>'
+        +'<div>'
+          +'<label class="fl" style="margin-bottom:8px">Vidéo de fond <span style="font-size:10px;color:var(--text3)">(prioritaire sur l\'image)</span></label>'
+          +'<div id="heroVideoCont" style="position:relative;aspect-ratio:16/7;border-radius:8px;overflow:hidden;background:var(--surface3);border:1px solid var(--border);margin-bottom:7px">'
+            +(s.settHeroVideo
+              ?'<video src="'+_esc(s.settHeroVideo)+'" style="width:100%;height:100%;object-fit:cover" controls muted></video>'
+              :'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--text3);font-size:12px;height:100%">🎬 Aucune vidéo<br><span style="font-size:10px;opacity:.7">Format MP4 recommandé</span></div>')
+          +'</div>'
+          +'<input class="fi" id="settHeroVideo" value="'+_esc(s.settHeroVideo||'')+'" placeholder="https://cdn.example.com/hero.mp4" oninput="prevVid(this)">'
+          +'<div style="font-size:11px;color:var(--text3);margin-top:5px">URL vidéo — Muette, en boucle, autoplay. Remplace l\'image si renseignée.</div>'
+        +'</div>'
+      +'</div>'
+
+      +'<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">🗂️ Images des 5 univers</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">'
+        +segs.map(function(seg){
+          return '<div>'
+            +'<label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">'+seg.label+'</label>'
+            +_upZone(seg.id, seg.val, seg.maxW, '3/2', seg.label, 'Cliquer ou<br>glisser')
+          +'</div>';
+        }).join('')
+      +'</div>'
+    +'</div>'
+  +'</div>';
+}
+
+/* ── Resize image via Canvas → base64 JPEG, store in hidden input ── */
+function handleImgUpload(evt, fieldId, maxW){
+  var file = evt.target ? evt.target.files[0] : evt;
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ showToast('Format invalide (PNG, JPG, WebP uniquement)','error'); return; }
+  if(file.size > 8*1024*1024){ showToast('Image trop grande — max 8 Mo','error'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var img = new Image();
+    img.onload = function(){
+      var canvas = document.createElement('canvas');
+      var scale  = Math.min(1, maxW / img.width);
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      var quality = maxW >= 1200 ? 0.82 : 0.78;
+      var b64 = canvas.toDataURL('image/jpeg', quality);
+      /* store */
+      var hidden = document.getElementById(fieldId);
+      if(hidden) hidden.value = b64;
+      /* update preview */
+      var prev     = document.getElementById('prev_'+fieldId);
+      var ph       = document.getElementById('ph_'+fieldId);
+      var clearBtn = document.getElementById('clearBtn_'+fieldId);
+      var fnameEl  = document.getElementById('fname_'+fieldId);
+      if(prev){ prev.src = b64; prev.style.display = ''; }
+      if(ph)   ph.style.display = 'none';
+      if(clearBtn){ clearBtn.style.display = 'flex'; }
+      if(fnameEl)  fnameEl.textContent = '✓ ' + file.name + ' (' + Math.round(b64.length/1024) + ' Ko)';
+      /* update zone border */
+      var zone = document.getElementById('zone_'+fieldId);
+      if(zone) zone.style.borderColor = 'var(--green)';
+      setTimeout(function(){ if(zone) zone.style.borderColor='var(--border)'; }, 1800);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImg(fieldId){
+  var hidden   = document.getElementById(fieldId);
+  var prev     = document.getElementById('prev_'+fieldId);
+  var ph       = document.getElementById('ph_'+fieldId);
+  var clearBtn = document.getElementById('clearBtn_'+fieldId);
+  var fnameEl  = document.getElementById('fname_'+fieldId);
+  var fileIn   = document.getElementById('fileIn_'+fieldId);
+  if(hidden)   hidden.value = '';
+  if(prev){    prev.src = ''; prev.style.display = 'none'; }
+  if(ph)       ph.style.display = 'flex';
+  if(clearBtn) clearBtn.style.display = 'none';
+  if(fnameEl)  fnameEl.textContent = 'ou glisser-déposer';
+  if(fileIn)   fileIn.value = '';
+}
+
+function dzOver(evt, fieldId){
+  evt.preventDefault();
+  var zone = document.getElementById('zone_'+fieldId);
+  if(zone){ zone.style.borderColor='var(--blue)'; zone.style.background='rgba(37,99,235,.06)'; }
+}
+function dzOut(evt, fieldId){
+  evt.preventDefault();
+  var zone = document.getElementById('zone_'+fieldId);
+  if(zone){ zone.style.borderColor='var(--border)'; zone.style.background='var(--surface3)'; }
+}
+function dzDrop(evt, fieldId, maxW){
+  evt.preventDefault();
+  dzOut(evt, fieldId);
+  var file = evt.dataTransfer && evt.dataTransfer.files[0];
+  if(!file) return;
+  handleImgUpload(file, fieldId, maxW);
+}
+
+function prevVid(el){
+  var url=(el.value||'').trim();
+  var cont=document.getElementById('heroVideoCont');
+  if(!cont)return;
+  cont.innerHTML=url
+    ?'<video src="'+url+'" style="width:100%;height:100%;object-fit:cover" controls muted></video>'
+    :'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--text3);font-size:12px;height:100%">🎬 Aucune vidéo<br><span style="font-size:10px;opacity:.7">Format MP4 recommandé</span></div>';
 }
 
 function saveSettings() {
-  var fields = ['settCompanyName','settCompanyEmail','settCompanyPhone','settCompanyAddr','settCompanySite',
-                'settWhatsappNum','settWhatsappTpl','settCurrency','settVAT','settDeposit','settBookingEmail'];
+  var fields = ['settCompanyName','settCompanyEmail','settCompanyPhone','settCompanyAddr','settCompanySite','settHours',
+                'settWhatsappNum','settWhatsappTpl','settCurrency','settVAT','settDeposit','settBookingEmail',
+                'settHeroImg','settHeroVideo',
+                'settImgGroupe','settImgWeekend','settImgExpress','settImgMesure','settImgTeam'];
   var s = {};
   fields.forEach(function(id){ var el=document.getElementById(id); if(el) s[id]=el.value; });
 
@@ -1860,9 +2159,11 @@ function saveTrip(id) {
   var title = (document.getElementById('mTripTitle')||{value:''}).value.trim();
   var seg   = (document.getElementById('mTripSeg')  ||{value:''}).value;
   var type  = (document.getElementById('mTripType') ||{value:''}).value;
-  if (!title) { showToast('Le titre est obligatoire','error'); return; }
-  if (!seg)   { showToast('Choisissez un segment (univers)','error'); return; }
-  if (!type)  { showToast('Choisissez un type de destination','error'); return; }
+  var price = parseInt((document.getElementById('mTripPrice')||{value:''}).value)||0;
+  if (!title)    { showToast('Le titre est obligatoire','error'); return; }
+  if (!seg)      { showToast('Choisissez un segment (univers)','error'); return; }
+  if (!type)     { showToast('Choisissez un type de destination','error'); return; }
+  if (price <= 0){ showToast('Le prix adulte est obligatoire (ex : 1800 MAD)','error'); return; }
 
   var statusEl = document.querySelector('input[name="tripStatus"]:checked');
   var existing = id ? DB.trips.find(function(t){return t.id===id;}) : null;
@@ -1883,7 +2184,7 @@ function saveTrip(id) {
     badge:       (document.getElementById('mTripBadge') ||{value:''}).value,
     tags:        ((document.getElementById('mTripTags') ||{value:''}).value).split(',').map(function(s){return s.trim();}).filter(Boolean),
     desc:        (document.getElementById('mTripDesc')  ||{value:''}).value,
-    price:       parseInt((document.getElementById('mTripPrice')||{value:0}).value)||0,
+    price:       price,
     priceChild:  parseInt((document.getElementById('mTripPriceChild')||{value:''}).value)||null,
     capacity:    parseInt((document.getElementById('mTripCap')||{value:20}).value)||20,
     minP:        parseInt((document.getElementById('mTripMin')||{value:1}).value)||1,
@@ -2322,17 +2623,55 @@ function toggleFeatured(id) {
 
 function saveCMS() {
   function gv(id){ var el=document.getElementById(id); return el?el.value:null; }
-  if(gv('heroTitle')!==null) DB.cms.hero.title=gv('heroTitle');
-  if(gv('heroSub')!==null)   DB.cms.hero.subtitle=gv('heroSub');
-  if(gv('heroCTA')!==null)   DB.cms.hero.cta=gv('heroCTA');
-  if(gv('aboutTitle')!==null) DB.cms.about.title=gv('aboutTitle');
-  if(gv('aboutBody')!==null)  DB.cms.about.body=gv('aboutBody');
-  if(gv('seoTitle')!==null)   DB.cms.seo.title=gv('seoTitle');
-  if(gv('seoDesc')!==null)    DB.cms.seo.description=gv('seoDesc');
-  if(gv('seoKW')!==null)      DB.cms.seo.keywords=gv('seoKW');
+  /* Hero */
+  if(gv('cmsHeroTitle')!==null) DB.cms.hero.title    = gv('cmsHeroTitle');
+  if(gv('cmsHeroCta')!==null)   DB.cms.hero.cta      = gv('cmsHeroCta');
+  if(gv('cmsHeroSub')!==null)   DB.cms.hero.subtitle = gv('cmsHeroSub');
+  if(gv('cmsSt1V')!==null) DB.cms.hero.stat1Val = gv('cmsSt1V');
+  if(gv('cmsSt1L')!==null) DB.cms.hero.stat1Lbl = gv('cmsSt1L');
+  if(gv('cmsSt2V')!==null) DB.cms.hero.stat2Val = gv('cmsSt2V');
+  if(gv('cmsSt2L')!==null) DB.cms.hero.stat2Lbl = gv('cmsSt2L');
+  if(gv('cmsSt3V')!==null) DB.cms.hero.stat3Val = gv('cmsSt3V');
+  if(gv('cmsSt3L')!==null) DB.cms.hero.stat3Lbl = gv('cmsSt3L');
+  /* Why Roamers */
+  if(gv('cmsWhyTitle')!==null)   DB.cms.why.title   = gv('cmsWhyTitle');
+  if(gv('cmsWhyTitleEm')!==null) DB.cms.why.titleEm = gv('cmsWhyTitleEm');
+  [1,2,3,4].forEach(function(i){
+    if(!DB.cms.why.cards[i-1]) DB.cms.why.cards[i-1]={};
+    if(gv('cmsWhy'+i+'Icon')!==null)  DB.cms.why.cards[i-1].icon  = gv('cmsWhy'+i+'Icon');
+    if(gv('cmsWhy'+i+'Title')!==null) DB.cms.why.cards[i-1].title = gv('cmsWhy'+i+'Title');
+    if(gv('cmsWhy'+i+'Desc')!==null)  DB.cms.why.cards[i-1].desc  = gv('cmsWhy'+i+'Desc');
+  });
+  if(gv('cmsWst1V')!==null) DB.cms.why.stat1Val = gv('cmsWst1V');
+  if(gv('cmsWst1L')!==null) DB.cms.why.stat1Lbl = gv('cmsWst1L');
+  if(gv('cmsWst2V')!==null) DB.cms.why.stat2Val = gv('cmsWst2V');
+  if(gv('cmsWst2L')!==null) DB.cms.why.stat2Lbl = gv('cmsWst2L');
+  if(gv('cmsWst3V')!==null) DB.cms.why.stat3Val = gv('cmsWst3V');
+  if(gv('cmsWst3L')!==null) DB.cms.why.stat3Lbl = gv('cmsWst3L');
+  if(gv('cmsWst4V')!==null) DB.cms.why.stat4Val = gv('cmsWst4V');
+  if(gv('cmsWst4L')!==null) DB.cms.why.stat4Lbl = gv('cmsWst4L');
+  /* Team Building */
+  if(gv('cmsTbEyebrow')!==null) DB.cms.tb.eyebrow = gv('cmsTbEyebrow');
+  if(gv('cmsTbTitle')!==null)   DB.cms.tb.title   = gv('cmsTbTitle');
+  if(gv('cmsTbDesc')!==null)    DB.cms.tb.desc    = gv('cmsTbDesc');
+  if(gv('cmsTbProg1')!==null)   DB.cms.tb.prog1   = gv('cmsTbProg1');
+  if(gv('cmsTbProg2')!==null)   DB.cms.tb.prog2   = gv('cmsTbProg2');
+  if(gv('cmsTbProg3')!==null)   DB.cms.tb.prog3   = gv('cmsTbProg3');
+  if(gv('cmsTbProg4')!==null)   DB.cms.tb.prog4   = gv('cmsTbProg4');
+  /* Footer & General */
+  if(gv('cmsFooterTagline')!==null)   DB.cms.footer.tagline   = gv('cmsFooterTagline');
+  if(gv('cmsFooterCopyright')!==null) DB.cms.footer.copyright = gv('cmsFooterCopyright');
+  if(gv('cmsMarquee')!==null)         DB.cms.footer.marquee   = gv('cmsMarquee');
+  if(gv('cmsAboutTitle')!==null) DB.cms.about.title = gv('cmsAboutTitle');
+  if(gv('cmsAboutBody')!==null)  DB.cms.about.body  = gv('cmsAboutBody');
+  /* SEO */
+  if(gv('seoTitle')!==null) DB.cms.seo.title       = gv('seoTitle');
+  if(gv('seoDesc')!==null)  DB.cms.seo.description = gv('seoDesc');
+  if(gv('seoKW')!==null)    DB.cms.seo.keywords    = gv('seoKW');
+  /* Save */
   api('PUT','/admin/settings',{cms:DB.cms}).then(function(d){
-    if(d.settings) DB.settings=d.settings;
-    showToast('Contenu CMS sauvegardé','success');
+    if(d.settings) DB.settings = d.settings;
+    showToast('Contenu CMS sauvegardé ✓','success');
   }).catch(function(){ showToast('Erreur lors de la sauvegarde','error'); });
 }
 

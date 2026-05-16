@@ -11,3 +11,6 @@ data/*.db-shm
 data/*.db-wal
 
 # data/seed-experiences.js is intentionally committed (needed at deploy time)
+
+.vercel
+idx_test.js

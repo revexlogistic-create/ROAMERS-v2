@@ -704,6 +704,18 @@ main#app{padding-top:72px}
 html,body{max-width:100vw;overflow-x:hidden}
 img,video{max-width:100%;height:auto}
 
+/* ── Experience & Activity slider rows (desktop base) ── */
+.exp-slider-row{
+  display:flex;gap:22px;overflow-x:auto;
+  padding:8px 5% 24px;
+  scroll-snap-type:x mandatory;
+  scrollbar-width:none;
+}
+.exp-slider-row::-webkit-scrollbar{display:none}
+.exp-slide-card{
+  flex:0 0 300px;max-width:300px;scroll-snap-align:start;
+}
+
 @media(max-width:900px){
   /* Disable tap highlight + double-tap zoom */
   *{ -webkit-tap-highlight-color: transparent }
@@ -968,17 +980,14 @@ img,video{max-width:100%;height:auto}
   [style*="grid-template-columns:1fr 400px"]{grid-template-columns:1fr !important}
   [style*="grid-template-columns:2fr 1fr 1fr"]{grid-template-columns:1fr 1fr !important;height:auto !important;grid-template-rows:auto !important}
 
-  /* SLIDER (used by experiences + activities pages) */
+  /* SLIDER (used by experiences + activities pages) — mobile overrides */
   .exp-slider-section{margin:14px 0 22px}
   .exp-slider-row{
-    display:flex;gap:14px;overflow-x:auto;
-    padding:6px 5% 18px;
-    scroll-snap-type:x mandatory;
-    -webkit-overflow-scrolling:touch;scrollbar-width:none
+    gap:14px;padding:6px 5% 18px;
+    -webkit-overflow-scrolling:touch
   }
-  .exp-slider-row::-webkit-scrollbar{display:none}
   .exp-slide-card{
-    flex:0 0 78%;max-width:320px;scroll-snap-align:start
+    flex:0 0 78%;max-width:320px
   }
   .exp-slider-head h3{font-size:20px}
 
@@ -1586,7 +1595,7 @@ em.s{
   </div>
 </div>
 
-<a href="https://wa.me/212600000000?text=Bonjour%20Roamers%20Community!" class="wa" target="_blank">
+<a id="floatingWA" href="https://wa.me/212600000000?text=Bonjour%20Roamers%20Community!" class="wa" target="_blank">
   <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
 </a>
 
@@ -1864,6 +1873,65 @@ var POSTS = [
   {id:'toubkal',cat:'Adventure',title:'Complete guide to climbing Toubkal — everything you need to know',exc:'North Africa highest peak is achievable for any fit adult. Here is how to do it safely.',img:'https://images.unsplash.com/photo-1542621334-a254cf47733d?w=700&q=80',read:'9 min',date:'December 20, 2023',author:'Hassan Roamer',avatar:'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&q=70',body:'<p>Jebel Toubkal. 4,167 metres. The highest point in Morocco, and the highest peak in the entire Atlas range. It is also one of the most accessible high-altitude treks in the world for non-technical climbers.</p><h3>Is it doable without mountaineering experience?</h3><p>Yes. Toubkal is a demanding hike, but not a technical climb. You will not need ropes, crampons, or ice axes except in winter. What you need is: reasonable cardiovascular fitness, good-quality hiking boots, and a guide who knows the mountain.</p><blockquote>Standing on the summit at sunrise, looking out over a sea of clouds with the Sahara visible to the south — that is a moment I replay in my head regularly. — Thomas, Roamers client, London</blockquote><h3>Best time to climb</h3><p>April through June and September through November are ideal — the weather is stable, the views are clear, and the mountain is neither too hot nor snow-covered. December through March requires winter equipment and more experience.</p>'},
   {id:'china-morocco',cat:'International',title:'Why China is falling in love with Morocco',exc:'Record numbers of Chinese tourists are discovering Morocco. We explain why.',img:'https://images.unsplash.com/photo-1572073263888-da4af9af2bf5?w=700&q=80',read:'8 min',date:'January 30, 2024',author:'Wei Roamer',avatar:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=70',body:'<p>2023 was a record year for Chinese arrivals in Morocco, with visitor numbers growing 340% compared to 2019. By 2025, industry analysts predict Morocco will be among the top 5 African destinations for Chinese outbound tourism.</p><h3>The exotic and the accessible</h3><p>For Chinese travelers, Morocco represents an almost mythical combination. The Sahara. The ancient medinas. The Atlantic coast. It feels genuinely foreign — unlike European city-breaks — yet has modern infrastructure and visa-free entry for Chinese citizens since 2016.</p><blockquote>Morocco has everything we want from a long-haul trip: dramatic landscapes, ancient history, incredible food, and genuine cultural difference. — Liu Jing, Shanghai tour operator</blockquote><h3>How Roamers facilitates Chinese groups</h3><p>We are Morocco specialist in Chinese visitor programs. Our Mandarin-speaking guides, partnerships with Beijing and Shanghai operators, and culturally calibrated itineraries have made us the go-to partner for groups of 10 to 200.</p>'}
 ];
+/* SITE CONFIG — contact info + CMS text loaded from admin settings */
+var SETTINGS = {
+  /* Contact */
+  name:     'Roamers Community',
+  phone:    '+212 6 00 00 00 00',
+  whatsapp: '212600000000',
+  email:    'hello@roamerscommunity.ma',
+  address:  'Casablanca, Maroc',
+  hours:    'Lun–Sam : 9h – 19h',
+  site:     'https://roamerscommunity.ma',
+  /* Media */
+  heroImg:'', heroVideo:'', imgGroupe:'', imgWeekend:'', imgExpress:'', imgMesure:'', imgTeam:'',
+  /* Hero */
+  cmsHeroTitle:  'Explorez le Maroc<br><em class="s">autrement.</em>',
+  cmsHeroSub:    '5 façons de vivre le Maroc. Des déserts infinis aux sommets de l\'Atlas — expériences de groupe, weekends thématiques, activités express et voyages sur mesure.',
+  cmsHeroCta:    '✦ Explorer tous les voyages',
+  cmsHeroSt1Val: '500+', cmsHeroSt1Lbl: 'Voyages organisés',
+  cmsHeroSt2Val: '16',   cmsHeroSt2Lbl: 'Expériences',
+  cmsHeroSt3Val: '98%',  cmsHeroSt3Lbl: 'Satisfaction',
+  /* Why Roamers */
+  cmsWhyTitle:   'Pas un simple voyage.',
+  cmsWhyTitleEm: 'Une transformation.',
+  cmsWhyCards: [
+    {icon:'🧭',title:'Guides locaux experts',desc:'Des Marocains qui connaissent chaque histoire derrière chaque pierre — et les raccourcis que les touristes ne trouvent jamais.'},
+    {icon:'✂️',title:'100% sur mesure',desc:'Pas d\'itinéraires génériques. Chaque expérience est conçue autour de vos objectifs, votre rythme et vos passions.'},
+    {icon:'🌱',title:'Impact social réel',desc:'Votre aventure finance directement l\'emploi local, les coopératives et le développement de communautés rurales.'},
+    {icon:'🛡️',title:'Sécurisé et sans souci',desc:'Logistique complète, assurances, permis et support 24/7. Vous explorez librement — nous gérons tout le reste.'}
+  ],
+  cmsWhySt1Val: '500+', cmsWhySt1Lbl: 'Voyages organisés',
+  cmsWhySt2Val: '16',   cmsWhySt2Lbl: 'Expériences catalogue',
+  cmsWhySt3Val: '120+', cmsWhySt3Lbl: 'Groupes entreprise',
+  cmsWhySt4Val: '98%',  cmsWhySt4Lbl: 'Satisfaction client',
+  /* Team Building */
+  cmsTbEyebrow: 'Pour les entreprises',
+  cmsTbTitle:   'Le team building<br>qui <em class="r">fonctionne vraiment.</em>',
+  cmsTbDesc:    'Désert, montagne, côte ou médina — 4 univers, une seule mission : créer une cohésion d\'équipe durable à travers des défis en pleine nature au Maroc.',
+  cmsTbProg1: '🏜️ Bivouac Désert', cmsTbProg2: '⛰️ Défi Montagne',
+  cmsTbProg3: '🌊 Voile & Leadership', cmsTbProg4: '🏛️ Médina & Cohésion',
+  /* Footer */
+  cmsFooterTagline:   'Morocco leading experiential travel community — where adventure meets culture and every journey creates real impact.',
+  cmsFooterCopyright: '2024 Roamers Community. All rights reserved.',
+  cmsMarquee: 'OCP GROUP,ATTIJARIWAFA,MAROC TELECOM,ALLIANCE ACCESS CN,INWI,CIH BANK,BMCE BANK,MEDITEL,LABEL VIE',
+  /* About */
+  cmsAboutTitle: 'We built a community, not an agency.',
+  cmsAboutBody:  'Roamers Community was founded by passionate Moroccan explorers who believed travel could create genuine human connection and support local communities.',
+  /* Testimonials */
+  cmsTestimonials: [
+    {name:'Karim Bensouda',role:'DRH, OCP Group',text:'Notre équipe de 45 est venue au Maroc sans attentes particulières. Ce que nous avons vécu a été transformateur — le bivouac désert a redéfini notre façon de travailler ensemble.',rating:5,featured:true,seg:'team',img:'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=80&q=70'},
+    {name:'Wei Zhang',role:'Tour Operator, Shanghai',text:'En tant qu\'opérateur de voyage chinois, la logistique était ma grande inquiétude. Roamers a fourni un guide mandarin et c\'est l\'un des circuits les mieux organisés que nous ayons vécus en Afrique.',rating:5,featured:true,seg:'groupe',img:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=70'},
+    {name:'Sophie Martin',role:'Travel Blogger, Lyon',text:'J\'ai voyagé dans 50+ pays. Le trek Atlas avec Roamers est dans mon top 3. Nos guides étaient des historiens, des conteurs et des experts montagne réunis en une seule personne.',rating:5,featured:true,seg:'weekend',img:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=70'}
+  ],
+  /* SEO */
+  seoTitle:       'Roamers Community — Morocco Adventure Booking',
+  seoDescription: 'Morocco\'s premier experiential travel platform. Book desert treks, mountain adventures, and cultural tours.',
+  seoKeywords:    'morocco travel,sahara trek,atlas mountains,marrakech tour,team building morocco'
+};
+/* helper: build a wa.me URL with optional pre-filled text */
+function waUrl(msg){ return 'https://wa.me/'+SETTINGS.whatsapp+(msg?'?text='+encodeURIComponent(msg):''); }
+
 /* STATE */
 var ST = {
   expSeg:'all', expType:'all',
@@ -1990,7 +2058,7 @@ function doAppSearch(q){
   if(!hits.length){res.innerHTML='<div class="srch-empty">Aucun résultat pour "'+q+'"</div>';return;}
   res.innerHTML=hits.map(function(e){
     var sub=(e.loc||e.destination||'')+(e.dur?' · '+e.dur:'')+(e.price?' · '+(e.price).toLocaleString()+' MAD':'');
-    return '<div class="srch-item" onclick="closeAppSearch();go(\'detail\',\''+e.id+'\')">'
+    return '<div class="srch-item" onclick="closeAppSearch();go(\'exp-detail\',\''+e.id+'\')">'
       +'<img src="'+(e.img||'')+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
       +'<div class="srch-item-body"><div class="srch-item-title">'+e.title+'</div><div class="srch-item-sub">'+sub+'</div></div>'
       +'</div>';
@@ -2407,7 +2475,7 @@ function renderBk(){
   } else if(b.step===4){
     var dep=new Date(b.date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
     var wmsg=encodeURIComponent('NEW BOOKING - ROAMERS COMMUNITY\nRef: '+b.ref+'\nTrip: '+b.exp.title+'\nDate: '+b.date+'\nGuests: '+b.adults+' adults'+(b.children?', '+b.children+' children':'')+'\nName: '+b.name+' '+b.last+'\nEmail: '+b.email+'\nPhone: '+b.phone+'\nTotal: '+p.total.toLocaleString()+' MAD');
-    body='<div class="mm" style="text-align:center;padding-top:4px"><div class="conf-icon">✓</div><h2 style="font-size:24px;margin-bottom:4px">Booking Received!</h2><p style="color:var(--mut);font-size:14px">Your reference:</p><div class="conf-ref">'+b.ref+'</div><p style="color:var(--mut);font-size:13px;margin-bottom:14px">We will contact you within 24 hours to confirm</p><table class="conf-tbl"><tr><td>Experience</td><td>'+b.exp.title+'</td></tr><tr><td>Location</td><td>'+b.exp.loc+'</td></tr><tr><td>Departure</td><td>'+dep+'</td></tr><tr><td>Duration</td><td>'+b.exp.dur+'</td></tr><tr><td>Guests</td><td>'+b.adults+' adult'+(b.adults>1?'s':'')+(b.children?' + '+b.children+' child'+(b.children>1?'ren':''):'')+' </td></tr><tr><td>Name</td><td>'+b.name+' '+b.last+'</td></tr><tr><td>Total</td><td style="color:var(--red);font-size:16px;font-weight:700">'+p.total.toLocaleString()+' MAD</td></tr></table><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:16px 0"><a href="https://wa.me/212600000000?text='+wmsg+'" target="_blank" class="btn btn-r">Share on WhatsApp</a><button class="btn btn-s" onclick="closeBk();go(\'dashboard\',\'trips\')">View My Trips</button></div><p style="font-size:12px;color:var(--mut)">Confirmation email sent to '+b.email+'</p></div>';
+    body='<div class="mm" style="text-align:center;padding-top:4px"><div class="conf-icon">✓</div><h2 style="font-size:24px;margin-bottom:4px">Booking Received!</h2><p style="color:var(--mut);font-size:14px">Your reference:</p><div class="conf-ref">'+b.ref+'</div><p style="color:var(--mut);font-size:13px;margin-bottom:14px">We will contact you within 24 hours to confirm</p><table class="conf-tbl"><tr><td>Experience</td><td>'+b.exp.title+'</td></tr><tr><td>Location</td><td>'+b.exp.loc+'</td></tr><tr><td>Departure</td><td>'+dep+'</td></tr><tr><td>Duration</td><td>'+b.exp.dur+'</td></tr><tr><td>Guests</td><td>'+b.adults+' adult'+(b.adults>1?'s':'')+(b.children?' + '+b.children+' child'+(b.children>1?'ren':''):'')+' </td></tr><tr><td>Name</td><td>'+b.name+' '+b.last+'</td></tr><tr><td>Total</td><td style="color:var(--red);font-size:16px;font-weight:700">'+p.total.toLocaleString()+' MAD</td></tr></table><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:16px 0"><a href="https://wa.me/'+SETTINGS.whatsapp+'?text='+wmsg+'" target="_blank" class="btn btn-r">Share on WhatsApp</a><button class="btn btn-s" onclick="closeBk();go(\'dashboard\',\'trips\')">View My Trips</button></div><p style="font-size:12px;color:var(--mut)">Confirmation email sent to '+b.email+'</p></div>';
   }
 
   document.getElementById('bkBody').innerHTML='<div class="mh">'+mini+prog+'</div>'+body;
@@ -2420,7 +2488,7 @@ function ecCard(e){
 }
 
 function foot(){
-  return '<footer style="background:#050505;padding:64px 5% 24px;color:rgba(255,255,255,.48)"><div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:44px;margin-bottom:48px"><div><img src="ROAMERS_LOGO.png" style="height:52px;margin-bottom:13px" onerror="this.style.display=\'none\'"><p style="font-size:13px;line-height:1.7;max-width:250px;margin-bottom:18px">Morocco leading experiential travel community — where adventure meets culture and every journey creates real impact.</p><div style="display:flex;gap:8px">'+['in','ig','fb','yt'].map(function(s){return '<a href="#" style="width:32px;height:32px;border:1px solid rgba(255,255,255,.1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.38);transition:all .2s" onmouseover="this.style.borderColor=\'var(--sand)\';this.style.color=\'var(--sand)\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,.1)\';this.style.color=\'rgba(255,255,255,.38)\'">'+s+'</a>';}).join('')+'</div></div><div><p style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;margin-bottom:14px">Experiences</p><div style="display:flex;flex-direction:column;gap:8px">'+[['All Experiences','experiences'],['Desert','experiences'],['Mountain','experiences'],['Cultural','experiences'],['Team Building','team']].map(function(x){return '<a href="#" onclick="go(\''+x[1]+'\');return false" style="font-size:13px;color:rgba(255,255,255,.38);transition:color .2s" onmouseover="this.style.color=\'var(--sand)\'" onmouseout="this.style.color=\'rgba(255,255,255,.38)\'">'+x[0]+'</a>';}).join('')+'</div></div><div><p style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;margin-bottom:14px">Company</p><div style="display:flex;flex-direction:column;gap:8px">'+[['About Us','about'],['Blog','blog'],['Contact','contact'],['My Dashboard','dashboard'],['Admin','admin']].map(function(x){return '<a href="#" onclick="go(\''+x[1]+'\');return false" style="font-size:13px;color:rgba(255,255,255,.38);transition:color .2s" onmouseover="this.style.color=\'var(--sand)\'" onmouseout="this.style.color=\'rgba(255,255,255,.38)\'">'+x[0]+'</a>';}).join('')+'</div></div><div><p style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;margin-bottom:14px">Contact</p><div style="font-size:13px;line-height:2.1;color:rgba(255,255,255,.4)">+212 6 00 00 00 00<br>hello@roamerscommunity.ma<br>Casablanca, Morocco</div><a href="https://wa.me/212600000000" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;padding:7px 14px;border-radius:100px;font-size:12px;font-weight:600;margin-top:14px">WhatsApp</a></div></div><div style="border-top:1px solid rgba(255,255,255,.05);padding-top:20px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:12px"><span>2024 Roamers Community. All rights reserved.</span><div style="display:flex;gap:18px"><a href="#" style="color:rgba(255,255,255,.26)">Privacy</a><a href="#" style="color:rgba(255,255,255,.26)">Terms</a></div></div></footer>';
+  return '<footer style="background:#050505;padding:64px 5% 24px;color:rgba(255,255,255,.48)"><div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:44px;margin-bottom:48px"><div><img src="ROAMERS_LOGO.png" style="height:52px;margin-bottom:13px" onerror="this.style.display=\'none\'"><p style="font-size:13px;line-height:1.7;max-width:250px;margin-bottom:18px">'+SETTINGS.cmsFooterTagline+'</p><div style="display:flex;gap:8px">'+['in','ig','fb','yt'].map(function(s){return '<a href="#" style="width:32px;height:32px;border:1px solid rgba(255,255,255,.1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.38);transition:all .2s" onmouseover="this.style.borderColor=\'var(--sand)\';this.style.color=\'var(--sand)\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,.1)\';this.style.color=\'rgba(255,255,255,.38)\'">'+s+'</a>';}).join('')+'</div></div><div><p style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;margin-bottom:14px">Experiences</p><div style="display:flex;flex-direction:column;gap:8px">'+[['All Experiences','experiences'],['Desert','experiences'],['Mountain','experiences'],['Cultural','experiences'],['Team Building','team']].map(function(x){return '<a href="#" onclick="go(\''+x[1]+'\');return false" style="font-size:13px;color:rgba(255,255,255,.38);transition:color .2s" onmouseover="this.style.color=\'var(--sand)\'" onmouseout="this.style.color=\'rgba(255,255,255,.38)\'">'+x[0]+'</a>';}).join('')+'</div></div><div><p style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;margin-bottom:14px">Company</p><div style="display:flex;flex-direction:column;gap:8px">'+[['About Us','about'],['Blog','blog'],['Contact','contact'],['My Dashboard','dashboard'],['Admin','admin']].map(function(x){return '<a href="#" onclick="go(\''+x[1]+'\');return false" style="font-size:13px;color:rgba(255,255,255,.38);transition:color .2s" onmouseover="this.style.color=\'var(--sand)\'" onmouseout="this.style.color=\'rgba(255,255,255,.38)\'">'+x[0]+'</a>';}).join('')+'</div></div><div><p style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;margin-bottom:14px">Contact</p><div style="font-size:13px;line-height:2.1;color:rgba(255,255,255,.4)">'+SETTINGS.phone+'<br>'+SETTINGS.email+'<br>'+SETTINGS.address+'</div><a href="'+waUrl()+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;padding:7px 14px;border-radius:100px;font-size:12px;font-weight:600;margin-top:14px">WhatsApp</a></div></div><div style="border-top:1px solid rgba(255,255,255,.05);padding-top:20px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:12px"><span>'+SETTINGS.cmsFooterCopyright+'</span><div style="display:flex;gap:18px"><a href="#" style="color:rgba(255,255,255,.26)">Privacy</a><a href="#" style="color:rgba(255,255,255,.26)">Terms</a></div></div></footer>';
 }
 
 /* HELPERS */
@@ -2513,11 +2581,11 @@ function initHeroCanvas(){
 function pgHome(){
 
   var SEGS = [
-    {id:'groupe',  label:'Voyage Groupe',    icon:'🧭', color:'#B8172E',  bg:'rgba(184,23,46,.9)',  desc:'Départs organisés, groupes fixes — vivez le Maroc ensemble.',  img:'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=700&q=80',  cnt: EXP.filter(function(e){return e.segment==='groupe';}).length},
-    {id:'weekend', label:'Weekend à Thème',  icon:'🌙', color:'#7C3AED',  bg:'rgba(124,58,237,.9)', desc:'2–3 jours de dépaysement total. L\'escapade parfaite.',           img:'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?w=700&q=80',  cnt: EXP.filter(function(e){return e.segment==='weekend';}).length},
-    {id:'express', label:'Activité Express', icon:'⚡', color:'#16A34A',  bg:'rgba(22,163,74,.9)',  desc:'Demi-journée ou journée. Plongez au cœur du Maroc en quelques heures.', img:'https://images.unsplash.com/photo-1532960401447-7dd05bef20b0?w=700&q=80', cnt: ACTS.length},
-    {id:'mesure',  label:'Sur Mesure',       icon:'✂️', color:'#2563EB',  bg:'rgba(37,99,235,.9)',  desc:'100% privé, 100% vous. On construit votre voyage de A à Z.',    img:'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=700&q=80',  cnt: EXP.filter(function(e){return e.segment==='mesure';}).length},
-    {id:'team',    label:'Team Building',    icon:'🤝', color:'#D97706',  bg:'rgba(217,119,6,.9)',  desc:'Cohésion, leadership et aventure. Approuvé par 120+ entreprises.', img:'https://images.unsplash.com/photo-1528605248644-14dd04022da1?w=700&q=80', cnt: EXP.filter(function(e){return e.segment==='team';}).length}
+    {id:'groupe',  label:'Voyage Groupe',    icon:'🧭', color:'#B8172E',  bg:'rgba(184,23,46,.9)',  desc:'Départs organisés, groupes fixes — vivez le Maroc ensemble.',  img:SETTINGS.imgGroupe||'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=700&q=80',  cnt: EXP.filter(function(e){return e.segment==='groupe';}).length},
+    {id:'weekend', label:'Weekend à Thème',  icon:'🌙', color:'#7C3AED',  bg:'rgba(124,58,237,.9)', desc:'2–3 jours de dépaysement total. L\'escapade parfaite.',           img:SETTINGS.imgWeekend||'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?w=700&q=80',  cnt: EXP.filter(function(e){return e.segment==='weekend';}).length},
+    {id:'express', label:'Activité Express', icon:'⚡', color:'#16A34A',  bg:'rgba(22,163,74,.9)',  desc:'Demi-journée ou journée. Plongez au cœur du Maroc en quelques heures.', img:SETTINGS.imgExpress||'https://images.unsplash.com/photo-1532960401447-7dd05bef20b0?w=700&q=80', cnt: ACTS.length},
+    {id:'mesure',  label:'Sur Mesure',       icon:'✂️', color:'#2563EB',  bg:'rgba(37,99,235,.9)',  desc:'100% privé, 100% vous. On construit votre voyage de A à Z.',    img:SETTINGS.imgMesure||'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=700&q=80',  cnt: EXP.filter(function(e){return e.segment==='mesure';}).length},
+    {id:'team',    label:'Team Building',    icon:'🤝', color:'#D97706',  bg:'rgba(217,119,6,.9)',  desc:'Cohésion, leadership et aventure. Approuvé par 120+ entreprises.', img:SETTINGS.imgTeam||'https://images.unsplash.com/photo-1528605248644-14dd04022da1?w=700&q=80', cnt: EXP.filter(function(e){return e.segment==='team';}).length}
   ];
 
   var TYPES = [
@@ -2529,16 +2597,14 @@ function pgHome(){
 
   /* Featured: one best-rated per segment */
   var featuredExps = SEGS.map(function(s){
-    if(s.id==='express') return null;
+    if(s.id==='express'||s.id==='team'||s.id==='mesure') return null;
     return EXP.filter(function(e){return e.segment===s.id;}).sort(function(a,b){return b.rating-a.rating;})[0]||null;
   }).filter(Boolean);
 
-  /* Best reviews */
-  var reviews = [
-    {s:'★★★★★',t:'Notre équipe de 45 est venue au Maroc sans attentes particulières. Ce que nous avons vécu a été transformateur — le bivouac désert a redéfini notre façon de travailler ensemble.',n:'Karim Bensouda',r:'DRH, OCP Group',img:'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=80&q=70',seg:'team'},
-    {s:'★★★★★',t:'En tant qu\'opérateur de voyage chinois, la logistique était ma grande inquiétude. Roamers a fourni un guide mandarin et c\'est l\'un des circuits les mieux organisés que nous ayons vécus en Afrique.',n:'Wei Zhang',r:'Tour Operator, Shanghai',img:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=70',seg:'groupe'},
-    {s:'★★★★★',t:'J\'ai voyagé dans 50+ pays. Le trek Atlas avec Roamers est dans mon top 3. Nos guides étaient des historiens, des conteurs et des experts montagne réunis en une seule personne.',n:'Sophie Martin',r:'Travel Blogger, Lyon',img:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=70',seg:'weekend'}
-  ];
+  /* Best reviews — loaded from CMS */
+  var reviews = SETTINGS.cmsTestimonials.filter(function(t){ return t.featured; }).map(function(t){
+    return {s:'★'.repeat(t.rating||5),t:t.text,n:t.name,r:t.role,img:t.img||'',seg:t.seg||''};
+  });
 
   var segColors = {groupe:'#B8172E',weekend:'#7C3AED',express:'#16A34A',mesure:'#2563EB',team:'#D97706'};
 
@@ -2548,30 +2614,32 @@ function pgHome(){
      1. HERO
   ══════════════════════════════════════ */
   +'<div class="hero">'
-    +'<div class="hero-bg"></div>'
+    +(SETTINGS.heroVideo
+      ?'<video autoplay muted loop playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0"><source src="'+SETTINGS.heroVideo+'" type="video/mp4"></video>'
+      :'<div class="hero-bg"'+(SETTINGS.heroImg?' style="background:url(\''+SETTINGS.heroImg+'\') center/cover"':'')+' ></div>')
     +'<canvas id="heroCanvas" style="position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none"></canvas>'
     +'<div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(184,23,46,.6),rgba(217,184,122,.4),transparent);z-index:3"></div>'
     +'<div class="hero-c">'
     +'<div class="hero-glass">'
-      +'<h1 class="h1" style="color:#fff;margin-bottom:12px">Explorez le Maroc<br><em class="s">autrement.</em></h1>'
-      +'<p style="font-size:clamp(13px,1.6vw,16px);color:rgba(255,255,255,.75);max-width:520px;line-height:1.6;font-weight:300;margin-bottom:20px">5 façons de vivre le Maroc. Des déserts infinis aux sommets de l\'Atlas — expériences de groupe, weekends thématiques, activités express et voyages sur mesure.</p>'
+      +'<h1 class="h1" style="color:#fff;margin-bottom:12px">'+SETTINGS.cmsHeroTitle+'</h1>'
+      +'<p style="font-size:clamp(13px,1.6vw,16px);color:rgba(255,255,255,.75);max-width:520px;line-height:1.6;font-weight:300;margin-bottom:20px">'+SETTINGS.cmsHeroSub+'</p>'
       /* Segment pill CTAs */
       +'<div class="hero-pills" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px">'
-        +SEGS.slice(0,4).map(function(s){
-          return '<button onclick="ST.expSeg=\''+s.id+'\';go(\'experiences\')" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:100px;font-size:12px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#fff;backdrop-filter:blur(8px);transition:all .2s" onmouseover="this.style.background=\''+s.color+'\';this.style.borderColor=\''+s.color+'\'" onmouseout="this.style.background=\'rgba(255,255,255,.1)\';this.style.borderColor=\'rgba(255,255,255,.22)\'">'+s.icon+' '+s.label+'</button>';
+        +SEGS.map(function(s){
+          var oc = s.id==='express'?'go(\'activities\')':s.id==='mesure'?'go(\'plan\')':s.id==='team'?'go(\'team\')':'ST.expSeg=\''+s.id+'\';go(\'experiences\')';
+          return '<button onclick="'+oc+'" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:100px;font-size:12px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#fff;backdrop-filter:blur(8px);transition:all .2s" onmouseover="this.style.background=\''+s.color+'\';this.style.borderColor=\''+s.color+'\'" onmouseout="this.style.background=\'rgba(255,255,255,.1)\';this.style.borderColor=\'rgba(255,255,255,.22)\'">'+s.icon+' '+s.label+'</button>';
         }).join('')
-        +'<button onclick="ST.expSeg=\'team\';go(\'experiences\')" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:100px;font-size:12px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#fff;backdrop-filter:blur(8px);transition:all .2s" onmouseover="this.style.background=\'#D97706\';this.style.borderColor=\'#D97706\'" onmouseout="this.style.background=\'rgba(255,255,255,.1)\';this.style.borderColor=\'rgba(255,255,255,.22)\'">🤝 Team Building</button>'
       +'</div>'
       +'<div class="hero-cta-row" style="display:flex;gap:10px;flex-wrap:wrap">'
-        +'<button class="btn btn-r btn-lg hero-main-cta" onclick="go(\'experiences\')">✦ Explorer tous les voyages</button>'
-        +'<a href="https://wa.me/212600000000" target="_blank" class="btn btn-o btn-lg hero-wa-cta">💬 WhatsApp</a>'
+        +'<button class="btn btn-r btn-lg hero-main-cta" onclick="go(\'experiences\')">'+SETTINGS.cmsHeroCta+'</button>'
+        +'<a href="'+waUrl()+'" target="_blank" class="btn btn-o btn-lg hero-wa-cta">💬 WhatsApp</a>'
       +'</div>'
     +'</div>'
     +'</div>'
     +'<div class="hero-stats">'
-      +'<div><span class="hs-n">500+</span><span class="hs-l">Voyages organisés</span></div>'
-      +'<div><span class="hs-n">16</span><span class="hs-l">Expériences</span></div>'
-      +'<div><span class="hs-n">98%</span><span class="hs-l">Satisfaction</span></div>'
+      +'<div><span class="hs-n">'+SETTINGS.cmsHeroSt1Val+'</span><span class="hs-l">'+SETTINGS.cmsHeroSt1Lbl+'</span></div>'
+      +'<div><span class="hs-n">'+SETTINGS.cmsHeroSt2Val+'</span><span class="hs-l">'+SETTINGS.cmsHeroSt2Lbl+'</span></div>'
+      +'<div><span class="hs-n">'+SETTINGS.cmsHeroSt3Val+'</span><span class="hs-l">'+SETTINGS.cmsHeroSt3Lbl+'</span></div>'
     +'</div>'
   +'</div>'
 
@@ -2582,7 +2650,7 @@ function pgHome(){
     +'<div style="flex-shrink:0;padding:0 24px 0 5%;white-space:nowrap"><span class="tbar-l">Partenaires</span></div>'
     +'<div class="marquee-track">'
       +'<div class="marquee-inner">'
-        +['OCP GROUP','ATTIJARIWAFA','MAROC TELECOM','ALLIANCE ACCESS CN','INWI','CIH BANK','BMCE BANK','MEDITEL','LABEL VIE','OCP GROUP','ATTIJARIWAFA','MAROC TELECOM','ALLIANCE ACCESS CN','INWI','CIH BANK','BMCE BANK','MEDITEL','LABEL VIE'].map(function(l){return '<span class="tbar-logo" style="color:rgba(255,255,255,.28);letter-spacing:.14em;font-size:11px;padding:0 8px;border-right:1px solid rgba(255,255,255,.07)">'+l+'</span>';}).join('')
+        +(function(){var items=SETTINGS.cmsMarquee.split(',').map(function(s){return s.trim();}).filter(Boolean);var doubled=items.concat(items);return doubled.map(function(l){return '<span class="tbar-logo" style="color:rgba(255,255,255,.28);letter-spacing:.14em;font-size:11px;padding:0 8px;border-right:1px solid rgba(255,255,255,.07)">'+l+'</span>';}).join('');})()
       +'</div>'
     +'</div>'
   +'</div>'
@@ -2602,7 +2670,8 @@ function pgHome(){
     +'<div style="position:relative;z-index:1;display:grid;grid-template-columns:repeat(5,1fr);gap:14px">'
       +SEGS.map(function(s,i){
         var glowClass = {r:'seg-card-r',p:'seg-card-p',g:'seg-card-g',b:'seg-card-b',a:'seg-card-a'}[{groupe:'r',weekend:'p',express:'g',mesure:'b',team:'a'}[s.id]||'r'];
-        return '<div class="seg-card '+glowClass+'" onclick="ST.expSeg=\''+s.id+'\';'+(s.id==='express'?'go(\'activities\')':'go(\'experiences\')')+'" style="position:relative;border-radius:20px;overflow:hidden;cursor:pointer;aspect-ratio:3/4;border:1px solid rgba(255,255,255,.06)">'
+        var segClick = s.id==='express'?'go(\'activities\')':s.id==='team'?'go(\'team\')':s.id==='mesure'?'go(\'plan\')':'ST.expSeg=\''+s.id+'\';go(\'experiences\')';
+        return '<div class="seg-card '+glowClass+'" onclick="'+segClick+'" style="position:relative;border-radius:20px;overflow:hidden;cursor:pointer;aspect-ratio:3/4;border:1px solid rgba(255,255,255,.06)">'
           +'<img src="'+s.img+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .6s ease" onmouseover="this.style.transform=\'scale(1.08)\'" onmouseout="this.style.transform=\'scale(1)\'">'
           +'<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.92) 0%,rgba(0,0,0,.3) 45%,transparent 70%)">'
             +'<div style="position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;background:'+s.color+';display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 4px 16px rgba(0,0,0,.4)">'+s.icon+'</div>'
@@ -2695,15 +2764,11 @@ function pgHome(){
     +'<div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(184,23,46,.4),rgba(217,184,122,.3),transparent)"></div>'
     +'<div style="position:relative;z-index:1;text-align:center;max-width:540px;margin:0 auto 52px">'
       +'<span class="eye eye-s">Pourquoi Roamers ?</span>'
-      +'<h2 class="h2" style="color:#fff;margin-top:6px">Pas un simple voyage.<br><em class="s">Une transformation.</em></h2>'
+      +'<h2 class="h2" style="color:#fff;margin-top:6px">'+SETTINGS.cmsWhyTitle+'<br><em class="s">'+SETTINGS.cmsWhyTitleEm+'</em></h2>'
     +'</div>'
     +'<div class="g4" style="position:relative;z-index:1">'
-      +[
-        {n:'01',icon:'🧭',t:'Guides locaux experts',d:'Des Marocains qui connaissent chaque histoire derrière chaque pierre — et les raccourcis que les touristes ne trouvent jamais.'},
-        {n:'02',icon:'✂️',t:'100% sur mesure',d:'Pas d\'itinéraires génériques. Chaque expérience est conçue autour de vos objectifs, votre rythme et vos passions.'},
-        {n:'03',icon:'🌱',t:'Impact social réel',d:'Votre aventure finance directement l\'emploi local, les coopératives et le développement de communautés rurales.'},
-        {n:'04',icon:'🛡️',t:'Sécurisé et sans souci',d:'Logistique complète, assurances, permis et support 24/7. Vous explorez librement — nous gérons tout le reste.'}
-      ].map(function(w,i){
+      +SETTINGS.cmsWhyCards.map(function(c,i){
+        var w={n:('0'+(i+1)).slice(-2),icon:c.icon,t:c.title,d:c.desc};
         return '<div class="wc wc-dk reveal" style="background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.07)">'
           +'<div style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:rgba(184,23,46,.15);border:1px solid rgba(184,23,46,.25);font-size:20px;margin-bottom:14px">'+w.icon+'</div>'
           +'<div style="font-size:11px;font-weight:700;letter-spacing:.14em;color:rgba(184,23,46,.7);text-transform:uppercase;margin-bottom:7px">'+w.n+'</div>'
@@ -2714,7 +2779,7 @@ function pgHome(){
     +'</div>'
     /* Stats row */
     +'<div style="position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:52px">'
-      +[['500+','Voyages organisés'],['16','Expériences catalogue'],['120+','Groupes entreprise'],['98%','Satisfaction client']].map(function(s){
+      +[[SETTINGS.cmsWhySt1Val,SETTINGS.cmsWhySt1Lbl],[SETTINGS.cmsWhySt2Val,SETTINGS.cmsWhySt2Lbl],[SETTINGS.cmsWhySt3Val,SETTINGS.cmsWhySt3Lbl],[SETTINGS.cmsWhySt4Val,SETTINGS.cmsWhySt4Lbl]].map(function(s){
         return '<div class="sc js-stat" data-val="'+s[0]+'"><span class="sc-n">'+s[0]+'</span><span class="sc-l">'+s[1]+'</span></div>';
       }).join('')
     +'</div>'
@@ -2748,16 +2813,16 @@ function pgHome(){
   +'<div style="background:var(--cream);padding:80px 5%">'
     +'<div class="g2">'
       +'<div>'
-        +'<span class="eye">Pour les entreprises</span>'
-        +'<h2 class="h2" style="margin-bottom:16px">Le team building<br>qui <em class="r">fonctionne vraiment.</em></h2>'
-        +'<p style="font-size:15px;color:var(--mut);line-height:1.8;max-width:460px;margin-bottom:24px">Désert, montagne, côte ou médina — 4 univers, une seule mission : créer une cohésion d\'équipe durable à travers des défis en pleine nature au Maroc.</p>'
+        +'<span class="eye">'+SETTINGS.cmsTbEyebrow+'</span>'
+        +'<h2 class="h2" style="margin-bottom:16px">'+SETTINGS.cmsTbTitle+'</h2>'
+        +'<p style="font-size:15px;color:var(--mut);line-height:1.8;max-width:460px;margin-bottom:24px">'+SETTINGS.cmsTbDesc+'</p>'
         +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:26px">'
-          +['🏜️ Bivouac Désert','⛰️ Défi Montagne','🌊 Voile & Leadership','🏛️ Médina & Cohésion'].map(function(p){
+          +[SETTINGS.cmsTbProg1,SETTINGS.cmsTbProg2,SETTINGS.cmsTbProg3,SETTINGS.cmsTbProg4].map(function(p){
             return '<div style="background:#fff;border:1px solid var(--bdr);border-radius:10px;padding:11px 13px;font-size:13px;font-weight:600;color:var(--txt)">'+p+'</div>';
           }).join('')
         +'</div>'
         +'<div style="display:flex;gap:11px;flex-wrap:wrap">'
-          +'<button class="btn btn-r btn-lg" onclick="ST.expSeg=\'team\';go(\'experiences\')">Voir les programmes</button>'
+          +'<button class="btn btn-r btn-lg" onclick="go(\'team\')">Voir les programmes</button>'
           +'<button class="btn btn-s btn-lg" onclick="go(\'contact\')">Demander un devis</button>'
         +'</div>'
       +'</div>'
@@ -2837,12 +2902,13 @@ function pgHome(){
     +'<p style="font-size:16px;color:rgba(255,255,255,.72);max-width:480px;margin:0 auto 32px;line-height:1.75">Devis personnalisé en 24h. Sans engagement. Nous parlons Français, Anglais, Arabe et Mandarin.</p>'
     +'<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:28px">'
       +'<button class="btn btn-w btn-lg" style="box-shadow:0 8px 32px rgba(0,0,0,.2)" onclick="go(\'contact\')">✦ Planifier mon voyage</button>'
-      +'<a href="https://wa.me/212600000000" target="_blank" class="btn btn-o btn-lg" style="border-color:rgba(255,255,255,.4)">💬 WhatsApp</a>'
+      +'<a href="'+waUrl()+'" target="_blank" class="btn btn-o btn-lg" style="border-color:rgba(255,255,255,.4)">💬 WhatsApp</a>'
     +'</div>'
     /* 5 segment shortcut buttons */
     +'<div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap">'
       +SEGS.map(function(s){
-        return '<button onclick="ST.expSeg=\''+s.id+'\';'+(s.id==='express'?'go(\'activities\')':'go(\'experiences\')')+'" style="display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:100px;font-size:11px;font-weight:600;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.75);cursor:pointer;transition:all .2s" onmouseover="this.style.background=\'rgba(255,255,255,.22)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(255,255,255,.12)\';this.style.color=\'rgba(255,255,255,.75)\'">'+s.icon+' '+s.label+'</button>';
+        var sClick = s.id==='express'?'go(\'activities\')':s.id==='team'?'go(\'team\')':s.id==='mesure'?'go(\'plan\')':'ST.expSeg=\''+s.id+'\';go(\'experiences\')';
+        return '<button onclick="'+sClick+'" style="display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:100px;font-size:11px;font-weight:600;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.75);cursor:pointer;transition:all .2s" onmouseover="this.style.background=\'rgba(255,255,255,.22)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(255,255,255,.12)\';this.style.color=\'rgba(255,255,255,.75)\'">'+s.icon+' '+s.label+'</button>';
       }).join('')
     +'</div>'
     +'</div>'   /* close z-index:1 wrapper */
@@ -2866,9 +2932,7 @@ function pgExp(){
     {id:'all',     label:'Toutes',           icon:'✦',  desc:'',          color:'var(--red)'},
     {id:'groupe',  label:'Voyage de Groupe', icon:'🧭', desc:'Départs fixes avec d\'autres voyageurs',   color:'var(--red)'},
     {id:'weekend', label:'Weekend à Thème',  icon:'🌙', desc:'2–3 jours de dépaysement total',           color:'#7C3AED'},
-    {id:'express', label:'Activité Express', icon:'⚡', desc:'De 1 h à une journée — plongez dès aujourd\'hui', color:'var(--sage)'},
-    {id:'mesure',  label:'Sur Mesure',       icon:'✂️', desc:'100% personnalisé pour vous',              color:var_b()},
-    {id:'team',    label:'Team Building',    icon:'🤝', desc:'Cohésion et leadership en nature',         color:'var(--amber,#D97706)'}
+    {id:'express', label:'Activité Express', icon:'⚡', desc:'De 1 h à une journée — plongez dès aujourd\'hui', color:'var(--sage)'}
   ];
   var TYPES = [
     {id:'all',      label:'Tous les types', icon:'🗺️'},
@@ -2880,9 +2944,15 @@ function pgExp(){
 
   var activeSeg = SEGS.find(function(s){return s.id===SEG;})||SEGS[0];
 
-  // Filter
+  // Redirect service segments to their dedicated pages
+  if(SEG==='team')   { go('team'); return ''; }
+  if(SEG==='mesure') { go('plan'); return ''; }
+
+  // Filter — team & mesure excluded (separate services, not catalogue categories)
   var items = EXP.filter(function(e){
     if(SEG==='express') return false; // express links to ACTS page
+    if(e.segment==='team')   return false;
+    if(e.segment==='mesure') return false;
     var sOk = SEG==='all' || e.segment===SEG;
     var tOk = TYPE==='all' || e.type===TYPE;
     var qOk = !Q
@@ -2894,11 +2964,11 @@ function pgExp(){
   });
 
   /* ── HERO ── */
-  var heroImg = SEG==='groupe'?'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=1400&q=80'
-    :SEG==='weekend'?'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?w=1400&q=80'
-    :SEG==='mesure'?'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=1400&q=80'
-    :SEG==='team'?'https://images.unsplash.com/photo-1528605248644-14dd04022da1?w=1400&q=80'
-    :'https://images.unsplash.com/photo-1548759806-821b06afb3bb?w=1400&q=80';
+  var heroImg = SEG==='groupe'?(SETTINGS.imgGroupe||'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=1400&q=80')
+    :SEG==='weekend'?(SETTINGS.imgWeekend||'https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?w=1400&q=80')
+    :SEG==='mesure'?(SETTINGS.imgMesure||'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=1400&q=80')
+    :SEG==='team'?(SETTINGS.imgTeam||'https://images.unsplash.com/photo-1528605248644-14dd04022da1?w=1400&q=80')
+    :(SETTINGS.heroImg||'https://images.unsplash.com/photo-1548759806-821b06afb3bb?w=1400&q=80');
 
   var html = ''
   /* ── HERO BANNER (hidden on phones) ── */
@@ -2939,28 +3009,6 @@ function pgExp(){
     return html;
   }
 
-  if(SEG==='mesure'){
-    html += '<div style="background:var(--warm);padding:64px 5%;text-align:center">'
-      +'<div style="font-size:56px;margin-bottom:18px">✂️</div>'
-      +'<h2 style="font-family:\'Cormorant Garamond\',serif;font-size:clamp(28px,4vw,46px);margin-bottom:12px">Votre voyage, <em style="color:var(--red)">vos règles.</em></h2>'
-      +'<p style="font-size:15px;color:var(--mut);max-width:500px;margin:0 auto 10px;line-height:1.75">Un voyage Sur Mesure se construit en conversation avec vous — pas en choisissant une carte. Dites-nous vos envies : nous concevons le programme parfait.</p>'
-      +'<p style="font-size:13px;color:var(--mut);max-width:400px;margin:0 auto 32px">Réponse sous 24h · Devis gratuit · Sans engagement</p>'
-      +'<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap">'
-        +'<button class="btn btn-r btn-lg" onclick="go(\'contact\')" style="padding:15px 32px;font-size:15px">✦ Planifier mon voyage Sur Mesure</button>'
-        +'<a href="https://wa.me/212600000000?text='+encodeURIComponent('Bonjour, je voudrais créer un voyage sur mesure avec Roamers Community.')+'" target="_blank" class="btn btn-o btn-lg">💬 Discuter sur WhatsApp</a>'
-      +'</div>'
-      +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:700px;margin:44px auto 0">'
-        +[['🏜️','Désert','Sahara, Zagora, Erg Chebbi'],['⛰️','Montagne','Toubkal, Atlas, Ourika'],['🌊','Côtier','Essaouira, Agadir, Taghazout'],['🏛️','Culture','Marrakech, Fes, Chefchaouen']].map(function(d){
-          return '<div style="background:#fff;border:1px solid var(--bdr);border-radius:14px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s" onclick="go(\'contact\')" onmouseover="this.style.borderColor=\'var(--red)\';this.style.boxShadow=\'0 4px 16px rgba(184,23,46,.1)\'" onmouseout="this.style.borderColor=\'var(--bdr)\';this.style.boxShadow=\'\'">'
-            +'<div style="font-size:28px;margin-bottom:8px">'+d[0]+'</div>'
-            +'<div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:3px">'+d[1]+'</div>'
-            +'<div style="font-size:11px;color:var(--mut)">'+d[2]+'</div>'
-          +'</div>';
-        }).join('')
-      +'</div>'
-    +'</div>'+foot();
-    return html;
-  }
 
   /* ── TYPE FILTER + SEARCH ── */
   html += '<div style="background:var(--warm);padding:20px 5% 0">'
@@ -2989,15 +3037,14 @@ function pgExp(){
       +'<button class="btn btn-r" onclick="ST.expSeg=\'all\';ST.expType=\'all\';ST.expQ=\'\';go(\'experiences\')">Voir toutes les expériences</button>'
     +'</div>';
   } else if (SEG==='all' && TYPE==='all' && !Q) {
-    /* THREE SLIDERS: Voyage Groupe · Weekend à Thème · Team Building */
+    /* TWO SLIDERS: Voyage Groupe · Weekend à Thème */
     html += '<div style="padding:8px 0 24px">'
       + renderExpSlider('groupe',  'Voyage de Groupe', '🧭', '#B8172E')
       + renderExpSlider('weekend', 'Weekend à Thème',  '🌙', '#7C3AED')
-      + renderExpSlider('team',    'Team Building',    '🤝', '#D97706')
     +'</div>';
   } else {
     html += (Q?'<div style="font-size:12px;color:var(--mut);margin-bottom:12px;padding:0 4px">'+items.length+' résultat'+(items.length>1?'s':'')+' pour « <strong style="color:var(--txt)">'+(ST.expQ||'')+'</strong> »</div>':'')
-      +'<div id="expCards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:22px;padding-bottom:56px">'+renderExpCards(items)+'</div>';
+      +'<div id="expCards" class="g3" style="padding-bottom:56px">'+renderExpCards(items)+'</div>';
   }
 
   html += '</div>';
@@ -3241,7 +3288,7 @@ function pgExpDetail(id){
     +'<div class="bk-deposit">🟢&nbsp; Réservez avec seulement <strong style="color:#16A34A;margin-left:4px">'+(Math.round(e.price*0.3)).toLocaleString()+' MAD</strong>&nbsp;d\'acompte</div>'
     +'<div class="qi"><div class="qi-r"><span>Durée</span><span>'+e.dur+'</span></div><div class="qi-r"><span>Difficulté</span><span style="color:'+difColor(e.dif||'Facile')+'">'+(e.dif||'Facile')+'</span></div><div class="qi-r"><span>Lieu</span><span>'+e.loc.split(',')[0]+'</span></div><div class="qi-r"><span>Groupe</span><span>'+e.minP+'–'+e.maxP+' pers.</span></div>'+(e.dates&&e.dates[0]?'<div class="qi-r"><span>Prochain départ</span><span style="color:var(--red);font-weight:700">'+e.dates[0].label+'</span></div>':'')+(e.pChild?'<div class="qi-r"><span>Enfant</span><span>'+e.pChild.toLocaleString()+' MAD</span></div>':'')+'</div>'
     +'<button class="btn btn-r btn-full btn-lg" style="font-size:14px;border-radius:12px;margin-top:4px" onclick="openDates(\''+e.id+'\')">📅 Voir les dates & réserver</button>'
-    +'<div style="text-align:center;margin-top:10px"><a href="https://wa.me/212600000000?text='+encodeURIComponent('Bonjour, je suis intéressé par : '+e.title)+'" target="_blank" style="font-size:13px;color:#25D366;font-weight:600">💬 Renseignements sur WhatsApp</a></div>'
+    +'<div style="text-align:center;margin-top:10px"><a href="'+waUrl('Bonjour, je suis intéressé par : '+e.title)+'" target="_blank" style="font-size:13px;color:#25D366;font-weight:600">💬 Renseignements sur WhatsApp</a></div>'
     +'<div class="bk-trust"><div class="bk-trust-i"><span class="ico">🔒</span>Paiement<br>sécurisé</div><div class="bk-trust-i"><span class="ico">✅</span>Confirmation<br>sous 24h</div><div class="bk-trust-i"><span class="ico">🔄</span>Annulation<br>gratuite</div><div class="bk-trust-i"><span class="ico">🌟</span>Guide<br>certifié</div></div>'
   +'</div></div>'
   +'</div>'
@@ -3280,7 +3327,7 @@ function pgActivities(){
         +'<p style="font-size:clamp(13px,1.6vw,15px);color:rgba(255,255,255,.8);max-width:520px;line-height:1.6;margin-bottom:16px">No multi-day commitment. Pick one experience, dive deep, leave with a story.</p>'
         +'<div class="hero-cta-row" style="display:flex;gap:10px;flex-wrap:wrap">'
           +'<button class="btn btn-r hero-main-cta" onclick="document.getElementById(\'actGrid\').scrollIntoView({behavior:\'smooth\'})">Browse Activities</button>'
-          +'<a href="https://wa.me/212600000000?text='+encodeURIComponent('Hello! I want to book a Roamers Community activity')+'" target="_blank" class="btn btn-o hero-wa-cta">💬 WhatsApp</a>'
+          +'<a href="'+waUrl('Hello! I want to book a Roamers Community activity')+'" target="_blank" class="btn btn-o hero-wa-cta">💬 WhatsApp</a>'
         +'</div>'
       +'</div>'
     +'</div>'
@@ -3329,7 +3376,7 @@ function pgActivities(){
       +'<p style="font-size:15px;color:rgba(255,255,255,.55);max-width:420px;margin:0 auto 28px;line-height:1.7">Tell us your group size, interests and available time — we\'ll design a custom half-day or full-day activity programme.</p>'
       +'<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap">'
         +'<button class="btn btn-r btn-lg" onclick="go(\'contact\')">Request Custom Day</button>'
-        +'<a href="https://wa.me/212600000000" target="_blank" class="btn btn-o btn-lg">💬 Chat Now</a>'
+        +'<a href="'+waUrl()+'" target="_blank" class="btn btn-o btn-lg">💬 Chat Now</a>'
       +'</div>'
     +'</div>'
   +'</div>'
@@ -3529,7 +3576,7 @@ function pgActDetail(id){
           }).join('')
         +'</div>'
         +'<button class="btn btn-r btn-full btn-lg" style="font-size:15px;border-radius:13px;padding:15px;margin-bottom:10px" onclick="openActBk(\''+a.id+'\')">Book This Activity</button>'
-        +'<a href="https://wa.me/212600000000?text='+encodeURIComponent('Hello! I want to book the activity: '+a.title)+'" target="_blank" class="btn btn-full btn-lg" style="background:#25D366;color:#fff;border-radius:13px;padding:15px;font-size:14px;font-weight:600;display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:14px">💬 Book via WhatsApp</a>'
+        +'<a href="'+waUrl('Hello! I want to book the activity: '+a.title)+'" target="_blank" class="btn btn-full btn-lg" style="background:#25D366;color:#fff;border-radius:13px;padding:15px;font-size:14px;font-weight:600;display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:14px">💬 Book via WhatsApp</a>'
         +'<div style="border-top:1px solid var(--bdr);padding-top:13px;font-size:12px;color:var(--mut);text-align:center;line-height:1.8">'
           +'Free cancellation up to 24h before<br>No payment required to book<br>Confirmed within a few hours'
         +'</div>'
@@ -3874,7 +3921,7 @@ function pgTeam(){
           }).join('')
         +'</div>'
         +'<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding:0 5%">'
-          +'<a href="https://wa.me/212600000000" target="_blank" class="btn btn-s" style="flex:1;max-width:200px;justify-content:center">💬 WhatsApp direct</a>'
+          +'<a href="'+waUrl()+'" target="_blank" class="btn btn-s" style="flex:1;max-width:200px;justify-content:center">💬 WhatsApp direct</a>'
           +'<button class="btn btn-s" onclick="go(\'home\')" style="flex:1;max-width:200px">← Retour à l\'accueil</button>'
         +'</div>'
       +'</div>'
@@ -4004,7 +4051,7 @@ function submitTBForm(){
   var waMsg='Demande Team Building\nRef : '+ref+'\nEntreprise : '+company+'\nContact : '+fn+' '+ln+'\nEmail : '+em+'\nTel : '+ph;
   setTimeout(function(){
     if(confirm('Envoyer aussi sur WhatsApp pour traitement prioritaire ?'))
-      window.open('https://wa.me/212600000000?text='+encodeURIComponent(waMsg),'_blank');
+      window.open(waUrl(waMsg),'_blank');
   },800);
 }
 
@@ -4153,15 +4200,15 @@ function submitTBForm(){
   }).catch(function(){}); /* fire and forget — also WhatsApp */
   setTimeout(function(){
     if(confirm('Envoyer aussi sur WhatsApp pour un traitement prioritaire ?'))
-      window.open('https://wa.me/212600000000?text='+encodeURIComponent(msg),'_blank');
+      window.open(waUrl(msg),'_blank');
   },800);
 }
 
 
 /* PAGE: ABOUT */
 function pgAbout(){
-  return '<div class="pg-hdr pg-hdr-dk" data-bg="ABOUT"><span class="eye eye-s">Our Story</span><h1 class="h1" style="color:#fff">We did not start<br><em class="s">a travel agency.</em></h1><p style="color:rgba(255,255,255,.5);font-size:15px">We built a community. Here is why that matters.</p></div>'
-  +'<div class="sec" style="background:var(--warm)"><div class="g2"><div><span class="eye">The Origin</span><h2 class="h2">Born from a <em class="r">simple belief</em></h2><p class="desc">Morocco is one of the world most extraordinary places — and most people only scratch the surface. We exist to change that.</p><p class="desc" style="margin-top:13px">Roamers Community was founded by passionate Moroccan explorers, guides, and social entrepreneurs who believed travel could create genuine human connection, support local communities, and leave both traveler and destination better than before.</p><p class="desc" style="margin-top:13px">Today we are Morocco leading experiential travel platform — working with solo travelers, families, corporations, and international partners across five continents.</p></div><div><img src="https://images.unsplash.com/photo-1529963183134-61a90db47eaf?w=700&q=80" style="width:100%;border-radius:18px;aspect-ratio:3/4;object-fit:cover"></div></div></div>'
+  return '<div class="pg-hdr pg-hdr-dk" data-bg="ABOUT"><span class="eye eye-s">Our Story</span><h1 class="h1" style="color:#fff">'+SETTINGS.cmsAboutTitle+'</h1><p style="color:rgba(255,255,255,.5);font-size:15px">We built a community. Here is why that matters.</p></div>'
+  +'<div class="sec" style="background:var(--warm)"><div class="g2"><div><span class="eye">The Origin</span><h2 class="h2">Born from a <em class="r">simple belief</em></h2><p class="desc">Morocco is one of the world most extraordinary places — and most people only scratch the surface. We exist to change that.</p><p class="desc" style="margin-top:13px">'+SETTINGS.cmsAboutBody+'</p><p class="desc" style="margin-top:13px">Today we are Morocco leading experiential travel platform — working with solo travelers, families, corporations, and international partners across five continents.</p></div><div><img src="https://images.unsplash.com/photo-1529963183134-61a90db47eaf?w=700&q=80" style="width:100%;border-radius:18px;aspect-ratio:3/4;object-fit:cover"></div></div></div>'
   +'<div class="sec" style="background:var(--blk)"><div class="g3 reveal">'+[{i:'Mission',icon:'🎯',d:'To create immersive, responsible travel experiences that connect people to Morocco culture, nature, and communities in a meaningful and lasting way.'},{i:'Vision',icon:'🔭',d:'A Morocco where tourism creates real social value — where every traveler leaves as an ambassador and every community benefits from the exchange.'},{i:'Values',icon:'💚',d:'Authenticity above convenience. Impact over volume. Adventure with purpose. Human connection above transaction.'}].map(function(v){return '<div style="text-align:center"><div style="font-size:40px;margin-bottom:13px">'+v.icon+'</div><h3 style="font-size:21px;color:#fff;margin-bottom:10px">'+v.i+'</h3><p style="font-size:14px;color:rgba(255,255,255,.5);line-height:1.75">'+v.d+'</p></div>';}).join('')+'</div></div>'
   +'<div class="sec" style="background:var(--cream)"><div style="text-align:center;max-width:540px;margin:0 auto 40px"><span class="eye">Social Impact</span><h2 class="h2">Travel that <em class="r">gives back</em></h2></div><div class="g4">'+[['200+','Local Guides Employed'],['15','Cooperatives Supported'],['3,000+','Community Members Impacted'],['40%','Revenue Returned Locally']].map(function(s){return '<div class="wc reveal" style="text-align:center"><div style="font-family:\'Bebas Neue\',cursive;font-size:50px;color:var(--red);line-height:1">'+s[0]+'</div><div style="font-size:13px;color:var(--mut);margin-top:5px">'+s[1]+'</div></div>';}).join('')+'</div></div>'
   +'<div class="cta-sec"><h2 class="h2" style="color:#fff;margin-bottom:10px">Join the Roamers Community</h2><p style="color:rgba(255,255,255,.78);margin-bottom:26px">500+ adventures organized. 98% satisfaction. Your story starts here.</p><button class="btn btn-w btn-lg" onclick="go(\'experiences\')">Explore All Experiences</button></div>'
@@ -4214,17 +4261,17 @@ function pgContact(){
     +'<div style="background:#fff;border:1px solid var(--bdr);border-radius:20px;padding:28px;margin-bottom:18px">'
       +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:20px;font-weight:600;margin-bottom:20px">Contactez-nous directement</div>'
       +[
-        {i:'💬',c:'#25D366',label:'WhatsApp',val:'+212 6 00 00 00 00',note:'Réponse la plus rapide',link:'https://wa.me/212600000000'},
-        {i:'✉️',c:'var(--red)',label:'Email',val:'hello@roamerscommunity.ma',note:'Réponse sous 24h',link:'mailto:hello@roamerscommunity.ma'},
-        {i:'📞',c:var_b(),label:'Téléphone',val:'+212 6 00 00 00 00',note:'Lun–Sam, 9h–19h',link:'tel:+212600000000'},
-        {i:'📍',c:'var(--amber,#D97706)',label:'Bureau',val:'Casablanca, Maroc',note:'Sur rendez-vous',link:'#'}
+        {i:'💬',c:'#25D366',label:'WhatsApp',val:SETTINGS.phone,note:'Réponse la plus rapide',link:waUrl()},
+        {i:'✉️',c:'var(--red)',label:'Email',val:SETTINGS.email,note:'Réponse sous 24h',link:'mailto:'+SETTINGS.email},
+        {i:'📞',c:var_b(),label:'Téléphone',val:SETTINGS.phone,note:SETTINGS.hours,link:'tel:'+SETTINGS.phone.replace(/\s/g,'')},
+        {i:'📍',c:'var(--amber,#D97706)',label:'Bureau',val:SETTINGS.address,note:'Sur rendez-vous',link:'#'}
       ].map(function(c){
         return '<a href="'+c.link+'" target="_blank" style="display:flex;align-items:center;gap:13px;padding:13px 14px;border-radius:12px;background:var(--cream);border:1px solid var(--bdr);margin-bottom:9px;transition:all .2s;text-decoration:none" onmouseover="this.style.borderColor=\''+c.c+'\';this.style.boxShadow=\'0 4px 16px rgba(0,0,0,.06)\'" onmouseout="this.style.borderColor=\'var(--bdr)\';this.style.boxShadow=\'\'">'
           +'<div style="width:40px;height:40px;border-radius:10px;background:'+c.c+'18;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0">'+c.i+'</div>'
           +'<div><div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);margin-bottom:2px">'+c.label+'</div><div style="font-size:14px;font-weight:700;color:var(--txt)">'+c.val+'</div><div style="font-size:11px;color:var(--mut);margin-top:1px">'+c.note+'</div></div>'
         +'</a>';
       }).join('')
-      +'<a href="https://wa.me/212600000000" target="_blank" class="btn btn-full" style="background:#25D366;color:#fff;border-radius:12px;padding:13px;font-size:14px;font-weight:700;justify-content:center;display:flex;align-items:center;gap:8px;margin-top:4px">💬 Ouvrir WhatsApp maintenant</a>'
+      +'<a href="'+waUrl()+'" target="_blank" class="btn btn-full" style="background:#25D366;color:#fff;border-radius:12px;padding:13px;font-size:14px;font-weight:700;justify-content:center;display:flex;align-items:center;gap:8px;margin-top:4px">💬 Ouvrir WhatsApp maintenant</a>'
     +'</div>'
     /* Specialised contacts */
     +'<div style="background:#fff;border:1px solid var(--bdr);border-radius:20px;padding:22px 24px;margin-bottom:18px">'
@@ -4284,7 +4331,7 @@ function pgContact(){
       +'</div>'
 
       +'<button class="btn btn-r btn-full btn-lg" onclick="submitContact()" style="border-radius:12px;padding:15px;font-size:15px">Envoyer le message →</button>'
-      +'<div style="display:flex;justify-content:center;margin-top:14px"><span style="font-size:12px;color:var(--mut)">Ou contactez-nous directement sur </span><a href="https://wa.me/212600000000" target="_blank" style="font-size:12px;color:#25D366;font-weight:700;margin-left:4px">WhatsApp ↗</a></div>'
+      +'<div style="display:flex;justify-content:center;margin-top:14px"><span style="font-size:12px;color:var(--mut)">Ou contactez-nous directement sur </span><a href="'+waUrl()+'" target="_blank" style="font-size:12px;color:#25D366;font-weight:700;margin-left:4px">WhatsApp ↗</a></div>'
     +'</div>'
   +'</div>'
 
@@ -4584,7 +4631,7 @@ function pgPlan(){
           +'</div>'
           +'<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:8px">'
             +'<button class="btn btn-r" onclick="go(\'experiences\')">✦ Explorer les voyages</button>'
-            +'<a href="https://wa.me/212600000000" target="_blank" class="btn btn-s">💬 WhatsApp direct</a>'
+            +'<a href="'+waUrl()+'" target="_blank" class="btn btn-s">💬 WhatsApp direct</a>'
             +'<button class="btn btn-s" onclick="go(\'home\')">← Retour à l\'accueil</button>'
           +'</div>'
         +'</div>'
@@ -4595,7 +4642,7 @@ function pgPlan(){
 
   /* ── CONTACT INFO BAR ─────────────────────────── */
   +'<div style="background:var(--blk);padding:40px 5%"><div style="max-width:860px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:20px">'
-    +[['📞','Téléphone',''+212+' 6 00 00 00 00'],['✉️','Email','hello@roamerscommunity.ma'],['📍','Bureau','Casablanca, Maroc'],['🕐','Horaires','Lun–Sam : 9h – 19h']].map(function(c){
+    +[['📞','Téléphone',SETTINGS.phone],['✉️','Email',SETTINGS.email],['📍','Bureau',SETTINGS.address],['🕐','Horaires',SETTINGS.hours]].map(function(c){
       return '<div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;background:rgba(184,23,46,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0">'+c[0]+'</div><div><div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:3px">'+c[1]+'</div><div style="font-size:13px;font-weight:600;color:#fff">'+c[2]+'</div></div></div>';
     }).join('')
   +'</div></div>'
@@ -4721,7 +4768,7 @@ function submitPlanTrip(){
     var waMsg='Demande Plan My Trip\nRef : '+ref+'\nNom : '+fn+'\nEmail : '+em+'\nTel : '+ph+'\nSegment : '+(PLAN_DATA.seg||'-')+'\nBudget : '+(PLAN_DATA.budget||'-');
     setTimeout(function(){
       if(confirm('Envoyer aussi sur WhatsApp pour confirmation immediate ?'))
-        window.open('https://wa.me/212600000000?text='+encodeURIComponent(waMsg),'_blank');
+        window.open(waUrl(waMsg),'_blank');
     },800);
   }).catch(function(err){toast('Erreur : '+(err.message||'Reessayez'),'warn');});
 }
@@ -5067,7 +5114,7 @@ function pgPlan(){
           +'</div>'
           +'<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap">'
             +'<button class="btn btn-r" onclick="go(\'experiences\')">✦ Explorer les voyages</button>'
-            +'<a href="https://wa.me/212600000000" target="_blank" class="btn btn-s">💬 WhatsApp direct</a>'
+            +'<a href="'+waUrl()+'" target="_blank" class="btn btn-s">💬 WhatsApp direct</a>'
             +'<button class="btn btn-s" onclick="go(\'home\')">← Retour accueil</button>'
           +'</div>'
         +'</div>'
@@ -5078,7 +5125,7 @@ function pgPlan(){
 
   /* ── CONTACT BAR ────────────────────────── */
   +'<div style="background:var(--blk);padding:40px 5%"><div class="plan-contact-bar" style="max-width:860px;margin:0 auto">'
-    +[['📞','Téléphone','+212 6 00 00 00 00'],['✉️','Email','hello@roamerscommunity.ma'],['📍','Bureau','Casablanca, Maroc'],['🕐','Horaires','Lun–Sam : 9h – 19h']].map(function(c){
+    +[['📞','Téléphone',SETTINGS.phone],['✉️','Email',SETTINGS.email],['📍','Bureau',SETTINGS.address],['🕐','Horaires',SETTINGS.hours]].map(function(c){
       return '<div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;background:rgba(184,23,46,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0">'+c[0]+'</div><div><div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:3px">'+c[1]+'</div><div style="font-size:13px;font-weight:600;color:#fff">'+c[2]+'</div></div></div>';
     }).join('')
   +'</div></div>'
@@ -5477,6 +5524,7 @@ function pgDash(tab){
   var navItems=[
     {id:'overview',icon:'🏠',label:'Mon Voyage'},
     {id:'trips',icon:'🗺️',label:'Mes Réservations',badge:pending.length},
+    {id:'custom',icon:'✂️',label:'Sur Mesure'},
     {id:'wishlist',icon:'❤️',label:'Ma Wishlist',badge:wlExps.length},
     {id:'passport',icon:'✈️',label:'Mon Passeport'},
     {id:'profile',icon:'👤',label:'Mon Profil'},
@@ -5639,7 +5687,7 @@ function pgDash(tab){
         +'</div>'
       +'</div>'
       +'<div style="border-top:1px solid rgba(255,255,255,.08);margin-top:18px;padding-top:14px;display:flex;gap:10px;flex-wrap:wrap">'
-        +'<a href="https://wa.me/212600000000?text='+encodeURIComponent('Bonjour, j\'ai une question sur ma réservation : '+nextTrip.id)+'" target="_blank" class="btn btn-o">💬 Poser une question</a>'
+        +'<a href="'+waUrl('Bonjour, j\'ai une question sur ma réservation : '+nextTrip.id)+'" target="_blank" class="btn btn-o">💬 Poser une question</a>'
         +'<button class="btn btn-o" onclick="go(\'dashboard\',\'trips\')">📋 Voir les détails complets</button>'
       +'</div>'
     +'</div>'
@@ -5725,6 +5773,26 @@ function pgDash(tab){
 
       main+='<div id="dashTripsList">'+renderDashTrips(myRes,nextTrip,resExp,segBadge,typeBadge,now)+'</div>';
     }
+  }
+
+  /* ══════════════════════════════════
+     TAB: SUR MESURE
+  ══════════════════════════════════ */
+  else if(ST.dTab==='custom'){
+    main='<div style="margin-bottom:22px">'
+      +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:600;margin-bottom:3px">Mes demandes Sur Mesure</div>'
+      +'<div style="font-size:13px;color:var(--mut)">Suivez l\'avancement de vos demandes de voyage personnalisé</div>'
+    +'</div>'
+    +'<div style="margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap">'
+      +'<button class="btn btn-r" onclick="go(\'plan\')">✂️ Nouvelle demande</button>'
+      +'<a href="https://wa.me/'+((window.SETTINGS&&window.SETTINGS.whatsapp)||'212600000000')+'?text='+encodeURIComponent('Bonjour, je voudrais faire le suivi de ma demande sur mesure.')+'" target="_blank" class="btn btn-o">💬 Contacter sur WhatsApp</a>'
+    +'</div>'
+    +'<div id="planReqsContainer" style="min-height:120px">'
+      +'<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:48px 20px;color:var(--mut);font-size:14px">'
+        +'<span style="animation:spin 1s linear infinite;display:inline-block;font-size:20px">⏳</span> Chargement…'
+      +'</div>'
+    +'</div>';
+    setTimeout(loadPlanReqs, 60);
   }
 
   /* ══════════════════════════════════
@@ -5917,7 +5985,7 @@ function renderDashTrips(res, nextTrip, resExp, segBadge, typeBadge, now){
         +'</div>'
         +(r.notes?'<div style="background:rgba(217,119,6,.07);border-left:3px solid #D97706;border-radius:0 8px 8px 0;padding:7px 10px;font-size:12px;color:var(--txt);margin-bottom:9px"><span style="font-weight:700;color:#D97706">📝 </span>'+r.notes+'</div>':'')
         +'<div style="display:flex;gap:7px;flex-wrap:wrap">'
-          +(r.status!=='cancelled'?'<a href="https://wa.me/212600000000?text='+encodeURIComponent('Bonjour, question sur la réservation '+r.id+' — '+r.expTitle)+'" target="_blank" class="btn btn-s btn-sm">💬 Support</a>':'')
+          +(r.status!=='cancelled'?'<a href="'+waUrl('Bonjour, question sur la réservation '+r.id+' — '+r.expTitle)+'" target="_blank" class="btn btn-s btn-sm">💬 Support</a>':'')
           +(r.status==='confirmed'&&isUpcoming?'<button class="btn btn-s btn-sm" onclick="openBk(\''+r.expId+'\')">↻ Réserver à nouveau</button>':'')
           +(r.status!=='cancelled'?'<button class="btn btn-sm" style="background:rgba(220,38,38,.08);color:#DC2626;border-radius:100px;padding:5px 12px;font-size:11px;font-weight:600" onclick="if(confirm(\'Annuler cette réservation ?\'))cancelRes('+r.id+')">Annuler</button>':'')
           +(exp.id?'<button class="btn btn-s btn-sm" onclick="go(\'exp-detail\',\''+exp.id+'\')">Voir l\'expérience</button>':'')
@@ -5944,6 +6012,70 @@ function filterDashTrips(seg, btn){
   function re(r){return EXP.find(function(e){return e.id===r.expId;})||{};}
   var el=document.getElementById('dashTripsList');
   if(el) el.innerHTML=filtered.length?renderDashTrips(filtered,nextTrip,re,sb,tb,new Date()):'<div style="text-align:center;padding:36px;color:var(--mut)">Aucune réservation dans cette catégorie.</div>';
+}
+
+/* ── Sur Mesure requests loader ─────────────── */
+function loadPlanReqs(){
+  var el = document.getElementById('planReqsContainer');
+  if(!el) return;
+  apiGet('/forms/plan/mine').then(function(d){
+    el.innerHTML = renderPlanReqs(d.requests||[]);
+  }).catch(function(err){
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--mut)">Impossible de charger vos demandes. <button class="btn btn-s btn-sm" onclick="loadPlanReqs()" style="margin-left:8px">Réessayer</button></div>';
+  });
+}
+
+function renderPlanReqs(reqs){
+  if(!reqs.length){
+    return '<div style="text-align:center;padding:68px 20px;background:#fff;border:1px solid var(--bdr);border-radius:18px">'
+      +'<div style="font-size:50px;margin-bottom:15px">✂️</div>'
+      +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:24px;margin-bottom:8px">Aucune demande pour l\'instant</div>'
+      +'<div style="font-size:14px;color:var(--mut);max-width:320px;margin:0 auto 22px;line-height:1.65">Décrivez votre voyage idéal et notre équipe vous prépare un programme 100% personnalisé.</div>'
+      +'<button class="btn btn-r" onclick="go(\'plan\')">✂️ Faire ma demande Sur Mesure</button>'
+    +'</div>';
+  }
+  var statusCfg = {
+    'new':       {label:'En attente',        color:'#D97706', bg:'#FEF3C7', icon:'⏳'},
+    'reviewed':  {label:'En cours d\'examen',color:'#2563EB', bg:'#DBEAFE', icon:'🔍'},
+    'contacted': {label:'Équipe en contact', color:'#16A34A', bg:'#DCFCE7', icon:'📞'},
+    'confirmed': {label:'Programme confirmé',color:'#16A34A', bg:'#DCFCE7', icon:'✅'},
+    'rejected':  {label:'Non retenu',        color:'#94A3B8', bg:'#F1F5F9', icon:'❌'}
+  };
+  var moodLabels = {desert:'Désert',mountain:'Montagne',coastal:'Côtier',cultural:'Culturel',adventure:'Aventure',relax:'Détente',luxury:'Luxe',budget:'Budget'};
+  var whoLabels  = {solo:'Solo',couple:'Couple',family:'Famille',friends:'Amis',corporate:'Entreprise'};
+
+  return reqs.map(function(r){
+    var s = statusCfg[r.status] || {label:r.status, color:'#64748B', bg:'#F1F5F9', icon:'📋'};
+    var moods = (r.moods||[]).map(function(m){ return moodLabels[m]||m; }).join(' · ');
+    var who   = whoLabels[r.who] || r.who || '';
+    var dateStr = r.created ? new Date(r.created).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}) : '';
+    return '<div style="background:#fff;border:1px solid var(--bdr);border-radius:18px;padding:22px 24px;margin-bottom:14px;transition:box-shadow .2s" onmouseover="this.style.boxShadow=\'var(--sh2)\'" onmouseout="this.style.boxShadow=\'\'">'
+      /* Header */
+      +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px">'
+        +'<div>'
+          +'<div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--mut);text-transform:uppercase;margin-bottom:4px">Réf. '+r.id+'</div>'
+          +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:19px;font-weight:600;color:var(--txt)">'+(r.destination||'Voyage Sur Mesure')+'</div>'
+          +'<div style="font-size:12px;color:var(--mut);margin-top:2px">📅 Demande du '+dateStr+'</div>'
+        +'</div>'
+        +'<div style="flex-shrink:0;display:inline-flex;align-items:center;gap:5px;background:'+s.bg+';color:'+s.color+';padding:5px 12px;border-radius:100px;font-size:12px;font-weight:700;white-space:nowrap">'+s.icon+' '+s.label+'</div>'
+      +'</div>'
+      /* Details grid */
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">'
+        +(r.duration?'<div style="background:var(--warm);border-radius:10px;padding:10px 12px"><div style="font-size:10px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Durée</div><div style="font-size:13px;font-weight:600;color:var(--txt)">⏱ '+r.duration+'</div></div>':'')
+        +(r.budget?'<div style="background:var(--warm);border-radius:10px;padding:10px 12px"><div style="font-size:10px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Budget</div><div style="font-size:13px;font-weight:600;color:var(--txt)">💰 '+r.budget+'</div></div>':'')
+        +(who?'<div style="background:var(--warm);border-radius:10px;padding:10px 12px"><div style="font-size:10px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Voyageurs</div><div style="font-size:13px;font-weight:600;color:var(--txt)">👥 '+who+(r.groupSize?' · '+r.groupSize:'')+'</div></div>':'')
+        +(r.dateFrom?'<div style="background:var(--warm);border-radius:10px;padding:10px 12px"><div style="font-size:10px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Dates souhaitées</div><div style="font-size:13px;font-weight:600;color:var(--txt)">🗓 '+r.dateFrom+(r.dateTo?' → '+r.dateTo:'')+'</div></div>':'')
+        +(moods?'<div style="background:var(--warm);border-radius:10px;padding:10px 12px;grid-column:1/-1"><div style="font-size:10px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Ambiances</div><div style="font-size:13px;font-weight:600;color:var(--txt)">✨ '+moods+'</div></div>':'')
+      +'</div>'
+      /* Message */
+      +(r.message?'<div style="background:#F8FAFC;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--txt);line-height:1.6;border-left:3px solid var(--bdr)"><em>« '+r.message+' »</em></div>':'')
+      /* Footer */
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+        +'<a href="https://wa.me/'+((window.SETTINGS&&window.SETTINGS.whatsapp)||'212600000000')+'?text='+encodeURIComponent('Bonjour, je voudrais faire le suivi de ma demande Sur Mesure réf. '+r.id+'.')+'" target="_blank" class="btn btn-o btn-sm">💬 WhatsApp</a>'
+        +'<button class="btn btn-s btn-sm" onclick="go(\'contact\')">✉️ Contacter l\'équipe</button>'
+      +'</div>'
+    +'</div>';
+  }).join('');
 }
 
 /* Helpers for dashboard */
@@ -6021,8 +6153,26 @@ function restoreSession() {
 
 restoreSession();
 loadExperiencesFromApi();
+loadSiteConfig();
 go('home');
 syncNav();
+
+function loadSiteConfig(){
+  fetch('/api/site-config').then(function(r){ return r.json(); }).then(function(d){
+    Object.assign(SETTINGS, d);
+    /* Apply SEO tags */
+    if(d.seoTitle)       document.title = d.seoTitle;
+    var dm = document.querySelector('meta[name="description"]');
+    if(dm && d.seoDescription) dm.setAttribute('content', d.seoDescription);
+    var km = document.querySelector('meta[name="keywords"]');
+    if(km && d.seoKeywords) km.setAttribute('content', d.seoKeywords);
+    /* Re-render current page so all CMS text + contact info updates */
+    go(ST.pg, ST.param);
+    /* Update floating WA button href */
+    var waBtn = document.getElementById('floatingWA');
+    if(waBtn) waBtn.href = waUrl('Bonjour Roamers Community!');
+  }).catch(function(){/* keep defaults */});
+}
 
 /* Replace the embedded EXP fallback with the live catalog from the API. */
 function loadExperiencesFromApi(){

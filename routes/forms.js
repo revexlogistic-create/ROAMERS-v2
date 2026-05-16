@@ -1,58 +1,145 @@
-const router = require('express').Router();
-const { v4: uuidv4 } = require('uuid');
-const db     = require('../database');
-const mailer = require('../mailer');
+'use strict';
+/**
+ * routes/forms.js — Contact, Plan My Trip, Team Building forms
+ *
+ * Security hardening applied:
+ *  [8]  Field length limits enforced on all free-text fields
+ *  [24] Email validated with regex on all form routes
+ *  [33] consentGiven field recorded for Law 09-08 compliance
+ */
 
-router.post('/contact', function(req, res) {
-  var f = req.body;
-  if (!f.fname||!f.email||!f.message) return res.status(400).json({ error:'Name, email and message required' });
-  var doc = db.contacts.insert({ id:uuidv4(), fname:f.fname, lname:f.lname||'', email:f.email, phone:f.phone||'', subject:f.subject||'', message:f.message, status:'unread', created:new Date().toISOString() });
+var router   = require('express').Router();
+var uuidv4   = require('uuid').v4;
+var db       = require('../database');
+var mailer   = require('../mailer');
+var authMw   = require('../middleware/auth');
+var validate = require('../middleware/validate');
+var audit    = require('../middleware/audit');
+
+var auth = authMw.auth;
+
+/* ── CONTACT FORM ────────────────────────────────────────────── */
+router.post('/contact', audit.audit('form:contact'), function(req, res) {
+  var f = req.body || {};
+
+  if (!f.fname || !String(f.fname).trim()) return res.status(400).json({ error: 'Name is required' });
+  if (!validate.isEmail(f.email))          return res.status(400).json({ error: 'Valid email address required' });
+  if (!f.message || !String(f.message).trim()) return res.status(400).json({ error: 'Message is required' });
+
+  var doc = db.contacts.insert({
+    id:             uuidv4(),
+    fname:          String(f.fname).trim().slice(0, 100),
+    lname:          f.lname ? String(f.lname).trim().slice(0, 100) : '',
+    email:          f.email.toLowerCase().trim(),
+    phone:          f.phone   ? String(f.phone).trim().slice(0, 30)    : '',
+    subject:        f.subject ? String(f.subject).trim().slice(0, 200) : '',
+    message:        String(f.message).trim().slice(0, 4000),
+    consentGiven:   !!f.consentGiven,
+    consentTs:      new Date().toISOString(),
+    status:         'unread',
+    created:        new Date().toISOString()
+  });
+
   mailer.sendContactNotification(doc).catch(function(){});
-  res.status(201).json({ message:'Message sent', id:doc.id });
+  res.status(201).json({ message: 'Message sent', id: doc.id });
 });
 
-router.post('/plan', function(req, res) {
-  var f = req.body;
-  if (!f.fname||!f.email||!f.phone) return res.status(400).json({ error:'Name, email and phone required' });
-  var id = 'RC-PLAN-'+Math.random().toString(36).substr(2,4).toUpperCase();
+/* ── PLAN MY TRIP ────────────────────────────────────────────── */
+var PLAN_SEGMENTS = ['groupe','weekend','express','mesure',''];
+var PLAN_BUDGETS  = ['<3000','3000-5000','5000-10000','>10000',''];
+
+router.post('/plan', audit.audit('form:plan'), function(req, res) {
+  var f = req.body || {};
+
+  if (!f.fname || !String(f.fname).trim()) return res.status(400).json({ error: 'First name is required' });
+  if (!validate.isEmail(f.email))          return res.status(400).json({ error: 'Valid email address required' });
+  if (!f.phone || !String(f.phone).trim()) return res.status(400).json({ error: 'Phone number is required' });
+
+  var id = 'RC-PLAN-' + uuidv4().replace(/-/g,'').toUpperCase().slice(0,6);
+
   var doc = db.plans.insert({
-    id:id,
-    segment:f.segment||'',
-    moods:f.moods||[],
-    who:f.who||'',
-    destination:f.destination||'',
-    groupSize:f.groupSize||'',
-    duration:f.duration||'',
-    budget:f.budget||'',
-    lang:f.lang||'',
-    dateFrom:f.dateFrom||'',
-    dateTo:f.dateTo||'',
-    departCity:f.departCity||'',
-    fname:f.fname, lname:f.lname||'', email:f.email, phone:f.phone,
-    source:f.source||'', message:f.message||'',
-    status:'new', created:new Date().toISOString()
+    id:          id,
+    segment:     PLAN_SEGMENTS.includes(f.segment) ? f.segment : '',
+    moods:       Array.isArray(f.moods) ? f.moods.slice(0, 10) : [],
+    who:         f.who         ? String(f.who).trim().slice(0, 100)         : '',
+    destination: f.destination ? String(f.destination).trim().slice(0, 200) : '',
+    groupSize:   f.groupSize   ? String(f.groupSize).trim().slice(0, 50)    : '',
+    duration:    f.duration    ? String(f.duration).trim().slice(0, 50)     : '',
+    budget:      f.budget      ? String(f.budget).trim().slice(0, 50)       : '',
+    lang:        f.lang        ? String(f.lang).trim().slice(0, 20)         : '',
+    dateFrom:    f.dateFrom    ? String(f.dateFrom).trim().slice(0, 20)     : '',
+    dateTo:      f.dateTo      ? String(f.dateTo).trim().slice(0, 20)       : '',
+    departCity:  f.departCity  ? String(f.departCity).trim().slice(0, 100)  : '',
+    fname:       String(f.fname).trim().slice(0, 100),
+    lname:       f.lname ? String(f.lname).trim().slice(0, 100) : '',
+    email:       f.email.toLowerCase().trim(),
+    phone:       String(f.phone).trim().slice(0, 30),
+    source:      f.source  ? String(f.source).trim().slice(0, 100)  : '',
+    message:     f.message ? String(f.message).trim().slice(0, 4000) : '',
+    consentGiven: !!f.consentGiven,
+    consentTs:    new Date().toISOString(),
+    status:      'new',
+    created:     new Date().toISOString()
   });
+
   mailer.sendPlanRequest(doc).catch(function(){});
-  res.status(201).json({ message:'Plan request submitted', ref:id });
+  res.status(201).json({ message: 'Plan request submitted', ref: id });
 });
 
-router.post('/team', function(req, res) {
-  var f = req.body;
-  if (!f.company||!f.email||!f.phone||!f.contactFn) return res.status(400).json({ error:'Company, contact, email and phone required' });
-  var id = 'RC-TB-'+Math.random().toString(36).substr(2,4).toUpperCase();
+/* ── TEAM BUILDING REQUEST ───────────────────────────────────── */
+router.post('/team', audit.audit('form:team-building'), function(req, res) {
+  var f = req.body || {};
+
+  if (!f.company  || !String(f.company).trim()) return res.status(400).json({ error: 'Company name is required' });
+  if (!f.contactFn || !String(f.contactFn).trim()) return res.status(400).json({ error: 'Contact first name is required' });
+  if (!validate.isEmail(f.email))               return res.status(400).json({ error: 'Valid email address required' });
+  if (!f.phone    || !String(f.phone).trim())   return res.status(400).json({ error: 'Phone number is required' });
+
+  var id = 'RC-TB-' + uuidv4().replace(/-/g,'').toUpperCase().slice(0,6);
+
   var doc = db.teams.insert({
-    id:id, company:f.company, industry:f.industry||'', corpSize:f.corpSize||'', city:f.city||'',
-    contactFn:f.contactFn, contactLn:f.contactLn||'', contactRole:f.contactRole||'',
-    email:f.email, phone:f.phone,
-    groupSize:f.groupSize||'', groupExact:parseInt(f.groupExact)||0,
-    duration:f.duration||'', location:f.location||'',
-    programs:f.programs||[], objectives:f.objectives||[], budget:f.budget||'',
-    dateFrom:f.dateFrom||'', dateTo:f.dateTo||'', flexDate:!!f.flexDate,
-    needs:f.needs||[], notes:f.notes||'',
-    status:'new', created:new Date().toISOString()
+    id:          id,
+    company:     String(f.company).trim().slice(0, 200),
+    industry:    f.industry    ? String(f.industry).trim().slice(0, 100)    : '',
+    corpSize:    f.corpSize    ? String(f.corpSize).trim().slice(0, 50)     : '',
+    city:        f.city        ? String(f.city).trim().slice(0, 100)        : '',
+    contactFn:   String(f.contactFn).trim().slice(0, 100),
+    contactLn:   f.contactLn   ? String(f.contactLn).trim().slice(0, 100)  : '',
+    contactRole: f.contactRole ? String(f.contactRole).trim().slice(0, 100) : '',
+    email:       f.email.toLowerCase().trim(),
+    phone:       String(f.phone).trim().slice(0, 30),
+    groupSize:   f.groupSize   ? String(f.groupSize).trim().slice(0, 50)   : '',
+    groupExact:  Math.max(0, parseInt(f.groupExact) || 0),
+    duration:    f.duration    ? String(f.duration).trim().slice(0, 50)    : '',
+    location:    f.location    ? String(f.location).trim().slice(0, 200)   : '',
+    programs:    Array.isArray(f.programs)   ? f.programs.slice(0, 20)   : [],
+    objectives:  Array.isArray(f.objectives) ? f.objectives.slice(0, 20) : [],
+    budget:      f.budget  ? String(f.budget).trim().slice(0, 50)   : '',
+    dateFrom:    f.dateFrom ? String(f.dateFrom).trim().slice(0, 20) : '',
+    dateTo:      f.dateTo   ? String(f.dateTo).trim().slice(0, 20)   : '',
+    flexDate:    !!f.flexDate,
+    needs:       Array.isArray(f.needs) ? f.needs.slice(0, 20) : [],
+    notes:       f.notes ? String(f.notes).trim().slice(0, 4000) : '',
+    consentGiven: !!f.consentGiven,
+    consentTs:    new Date().toISOString(),
+    status:      'new',
+    created:     new Date().toISOString()
   });
+
   mailer.sendTeamRequest(doc).catch(function(){});
-  res.status(201).json({ message:'Team request submitted', ref:id });
+  res.status(201).json({ message: 'Team request submitted', ref: id });
+});
+
+/* ── GET MY PLAN REQUESTS (authenticated) ────────────────────── */
+router.get('/plan/mine', auth, function(req, res) {
+  /* Match on userId if present, fall back to email for pre-auth requests */
+  var reqs = db.plans.all()
+    .filter(function(p){
+      return (p.userId && p.userId === req.user.id) ||
+             (!p.userId && p.email === req.user.email);
+    })
+    .sort(function(a, b){ return new Date(b.created) - new Date(a.created); });
+  res.json({ requests: reqs });
 });
 
 module.exports = router;
