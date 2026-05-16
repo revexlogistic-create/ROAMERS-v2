@@ -121,8 +121,9 @@ router.post('/', adminOnly, function(req, res) {
     hi:     asArray(b.hi),
     inc:    asArray(b.inc),
     exc:    asArray(b.exc),
-    it:     Array.isArray(b.it) ? b.it : [],
-    dif:    ALLOWED_DIFF.includes(b.dif) ? b.dif : 'Facile',
+    it:      Array.isArray(b.it) ? b.it : [],
+    circuit: Array.isArray(b.circuit) ? b.circuit : (b.circuit ? String(b.circuit).split(',').map(function(s){return s.trim();}).filter(Boolean) : []),
+    dif:     ALLOWED_DIFF.includes(b.dif) ? b.dif : 'Facile',
     dates:  Array.isArray(b.dates) ? b.dates : [],
     status: ALLOWED_STATUS.includes(b.status) ? b.status : 'open',
     booked: parseInt(b.booked) || 0,
@@ -164,6 +165,7 @@ router.put('/:id', adminOnly, function(req, res) {
   if (b.inc     !== undefined) changes.inc     = asArray(b.inc);
   if (b.exc     !== undefined) changes.exc     = asArray(b.exc);
   if (b.it      !== undefined) changes.it      = Array.isArray(b.it) ? b.it : [];
+  if (b.circuit !== undefined) changes.circuit = Array.isArray(b.circuit) ? b.circuit : (b.circuit ? String(b.circuit).split(',').map(function(s){return s.trim();}).filter(Boolean) : []);
   if (b.dif     !== undefined) changes.dif     = ALLOWED_DIFF.includes(b.dif) ? b.dif : 'Facile';
   if (b.dates   !== undefined) changes.dates   = Array.isArray(b.dates) ? b.dates : [];
   if (b.status  !== undefined) changes.status  = ALLOWED_STATUS.includes(b.status) ? b.status : 'open';

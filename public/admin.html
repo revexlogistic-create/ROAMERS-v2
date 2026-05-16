@@ -2021,8 +2021,12 @@ function openTripModal(id) {
         +'<div style="display:flex;gap:8px;margin-top:6px">'+difPills+'</div>'
         +'<input type="hidden" id="mTripDif" value="'+curDif+'">'
       +'</div>'
-      +'<div class="fg" style="margin-bottom:0"><label class="fl">Description</label>'
+      +'<div class="fg"><label class="fl">Description</label>'
         +'<textarea class="fi fi-area" id="mTripDesc" style="min-height:80px" placeholder="Décrivez l\'expérience en 2–3 phrases...">'+v('desc')+'</textarea>'
+      +'</div>'
+      +'<div class="fg" style="margin-bottom:0"><label class="fl">🗺️ Circuit cartographique</label>'
+        +'<textarea class="fi fi-area" id="mTripCircuit" style="min-height:46px" placeholder="Marrakech, Ouarzazate, Merzouga">'+(t&&t.circuit?t.circuit.join(', '):'')+'</textarea>'
+        +'<div style="font-size:11px;color:var(--text3);margin-top:3px">Étapes du circuit séparées par des virgules — tracé automatique sur la carte de l\'app</div>'
       +'</div>'
     +'</div>'
 
@@ -2197,6 +2201,7 @@ function saveTrip(id) {
     img:         imgs[0],
     imgs:        imgs,
     it:          _aIt.map(function(d){return {d:d.d,t:d.t,desc:d.desc,img:d.imgData||d.img};}).filter(function(d){return d.t;}),
+    circuit:     ((document.getElementById('mTripCircuit')||{value:''}).value).split(',').map(function(s){return s.trim();}).filter(Boolean),
     created:     existing ? existing.created : new Date().toISOString().split('T')[0]
   };
 
@@ -2209,7 +2214,8 @@ function saveTrip(id) {
     maxP:trip.capacity, minP:trip.minP,
     status:trip.status, dates:trip.dates,
     inc:trip.services, hi:trip.hi, exc:trip.exc,
-    img:trip.img, imgs:trip.imgs, it:trip.it
+    img:trip.img, imgs:trip.imgs, it:trip.it,
+    circuit:trip.circuit
   };
 
   if (id) {
