@@ -2305,17 +2305,27 @@ function viewBooking(id) {
 
 function openActivityModal(actId) {
   var a = actId ? DB.activities.find(function(x){return x.id===actId;}) : null;
+  var hlVal  = a && a.highlights ? (Array.isArray(a.highlights) ? a.highlights.join('\n') : a.highlights) : '';
+  var incVal = a && a.inc        ? (Array.isArray(a.inc)        ? a.inc.join('\n')        : a.inc)        : '';
+  var excVal = a && a.exc        ? (Array.isArray(a.exc)        ? a.exc.join('\n')        : a.exc)        : '';
   openModal('<div class="modal-header"><h3>'+(a?'Modifier':'Nouvelle')+' Activité</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
     + '<div class="modal-body">'
     + '<div class="fg"><label class="fl">Titre *</label><input class="fi" id="maTitle" placeholder="ex : Camel Trekking au coucher du soleil" value="'+(a?a.title:'')+'"></div>'
-    + '<div class="fg-row"><div class="fg"><label class="fl">Catégorie</label><select class="fi fi-select" id="maCat"><option value="adventure">Adventure</option><option value="culture">Culture</option><option value="corporate">Corporate</option><option value="wellness">Wellness</option></select></div><div class="fg"><label class="fl">Durée</label><input class="fi" id="maDur" placeholder="ex : 2h" value="'+(a?a.duration:'')+'"></div></div>'
-    + '<div class="fg-row"><div class="fg"><label class="fl">Prix (MAD)</label><input class="fi" id="maPrice" type="number" placeholder="350" value="'+(a?a.price:'')+'"></div><div class="fg"><label class="fl">Statut</label><select class="fi fi-select" id="maStatus"><option value="active">Actif</option><option value="inactive">Inactif</option></select></div></div>'
-    + '<div class="fg"><label class="fl">Description</label><textarea class="fi fi-area" id="maDesc" style="min-height:80px">'+(a?a.desc:'')+'</textarea></div>'
+    + '<div class="fg"><label class="fl">Sous-titre / accroche</label><input class="fi" id="maSub" placeholder="ex : Traversez les dunes dorées au coucher du soleil" value="'+(a&&a.sub?a.sub:'')+'"></div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Catégorie</label><select class="fi fi-select" id="maCat"><option value="adventure">Adventure</option><option value="culture">Culture</option><option value="corporate">Corporate</option><option value="wellness">Wellness</option><option value="other">Other</option></select></div><div class="fg"><label class="fl">Icône (emoji)</label><input class="fi" id="maIcon" placeholder="🐪" value="'+(a&&a.icon?a.icon:'')+'"></div></div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Durée</label><input class="fi" id="maDur" placeholder="ex : 2h" value="'+(a?a.duration:'')+'"></div><div class="fg"><label class="fl">Localisation</label><input class="fi" id="maLoc" placeholder="ex : Merzouga, Erg Chebbi" value="'+(a&&a.location?a.location:'')+'"></div></div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Prix adulte (MAD)</label><input class="fi" id="maPrice" type="number" placeholder="350" value="'+(a?a.price:'')+'"></div><div class="fg"><label class="fl">Prix enfant (MAD)</label><input class="fi" id="maPChild" type="number" placeholder="200" value="'+(a&&a.pChild!=null?a.pChild:'')+'"></div></div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Participants min</label><input class="fi" id="maMinP" type="number" placeholder="1" value="'+(a&&a.minP?a.minP:1)+'"></div><div class="fg"><label class="fl">Participants max</label><input class="fi" id="maMaxP" type="number" placeholder="12" value="'+(a&&a.maxP?a.maxP:20)+'"></div></div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Badge (optionnel)</label><input class="fi" id="maBadge" placeholder="ex : Bestseller" value="'+(a&&a.badge?a.badge:'')+'"></div><div class="fg"><label class="fl">Statut</label><select class="fi fi-select" id="maStatus"><option value="active">Actif</option><option value="inactive">Inactif</option></select></div></div>'
+    + '<div class="fg"><label class="fl">Image URL</label><input class="fi" id="maImg" placeholder="https://images.unsplash.com/..." value="'+(a&&a.img?a.img:'')+'"></div>'
+    + '<div class="fg"><label class="fl">Description courte</label><textarea class="fi fi-area" id="maDesc" style="min-height:60px">'+(a&&a.desc?a.desc:'')+'</textarea></div>'
+    + '<div class="fg"><label class="fl">Points forts (1 par ligne)</label><textarea class="fi fi-area" id="maHl" style="min-height:80px" placeholder="Guide certifié&#10;Vue panoramique&#10;Thé à la menthe inclus">'+hlVal+'</textarea></div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Inclus (1 par ligne)</label><textarea class="fi fi-area" id="maInc" style="min-height:70px" placeholder="Guide expert&#10;Équipement">'+incVal+'</textarea></div><div class="fg"><label class="fl">Non inclus (1 par ligne)</label><textarea class="fi fi-area" id="maExc" style="min-height:70px" placeholder="Transport&#10;Repas">'+excVal+'</textarea></div></div>'
     + '</div>'
-    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="saveActivity('+(actId?'\''+actId+'\'':'null')+')">'+(a?'Enregistrer':'Créer')+'</button></div>',
-    'modal-md');
+    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="saveActivity('+(actId?'\''+ actId +'\''  :'null')+')">'+(a?'Enregistrer':'Créer')+'</button></div>',
+    'modal-lg');
   setTimeout(function(){
-    if(a){ document.getElementById('maCat').value=a.category; document.getElementById('maStatus').value=a.status; }
+    if(a){ document.getElementById('maCat').value=a.category||'adventure'; document.getElementById('maStatus').value=a.status||'active'; }
   },0);
 }
 
@@ -2325,11 +2335,23 @@ function saveActivity(actId) {
   var title = document.getElementById('maTitle').value;
   if (!title) { showToast('Titre requis','error'); return; }
   var body = {
-    title:title, category:document.getElementById('maCat').value,
-    duration:document.getElementById('maDur').value,
-    price:parseInt(document.getElementById('maPrice').value)||0,
-    status:document.getElementById('maStatus').value,
-    desc:document.getElementById('maDesc').value
+    title:      title,
+    sub:        document.getElementById('maSub').value,
+    category:   document.getElementById('maCat').value,
+    icon:       document.getElementById('maIcon').value,
+    duration:   document.getElementById('maDur').value,
+    location:   document.getElementById('maLoc').value,
+    price:      parseInt(document.getElementById('maPrice').value)||0,
+    pChild:     document.getElementById('maPChild').value !== '' ? parseInt(document.getElementById('maPChild').value)||0 : null,
+    minP:       parseInt(document.getElementById('maMinP').value)||1,
+    maxP:       parseInt(document.getElementById('maMaxP').value)||20,
+    badge:      document.getElementById('maBadge').value,
+    status:     document.getElementById('maStatus').value,
+    img:        document.getElementById('maImg').value,
+    desc:       document.getElementById('maDesc').value,
+    highlights: document.getElementById('maHl').value,
+    inc:        document.getElementById('maInc').value,
+    exc:        document.getElementById('maExc').value
   };
   if (actId && actId !== 'null') {
     api('PUT','/admin/activities/'+actId,body).then(function(d){

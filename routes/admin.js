@@ -238,6 +238,12 @@ router.get('/activities', function(req, res) {
   res.json({ activities: db.activities.all().sort(function(a, b){ return new Date(a.created) - new Date(b.created); }) });
 });
 
+function parseLines(v) {
+  if (Array.isArray(v)) return v.map(function(s){ return String(s).trim(); }).filter(Boolean);
+  if (typeof v === 'string') return v.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+  return [];
+}
+
 router.post('/activities', auditMod.audit('admin:activity:create'), function(req, res) {
   var f = req.body || {};
   if (!f.title || !String(f.title).trim()) return res.status(400).json({ error: 'Title required' });
@@ -245,14 +251,25 @@ router.post('/activities', auditMod.audit('admin:activity:create'), function(req
   if (f.status   && !ACTIVITY_STATUS.includes(f.status)) return res.status(400).json({ error: 'Invalid status' });
   var now = new Date().toISOString();
   var doc = db.activities.insert({
-    id:       uuidv4(),
-    title:    String(f.title).trim(),
-    category: ACTIVITY_CATS.includes(f.category) ? f.category : 'adventure',
-    duration: f.duration ? String(f.duration).trim() : '',
-    price:    Math.max(0, parseInt(f.price) || 0),
-    status:   ACTIVITY_STATUS.includes(f.status) ? f.status : 'active',
-    desc:     f.desc ? String(f.desc).trim() : '',
-    created:  now, updated: now
+    id:         uuidv4(),
+    title:      String(f.title).trim(),
+    category:   ACTIVITY_CATS.includes(f.category) ? f.category : 'adventure',
+    duration:   f.duration   ? String(f.duration).trim()   : '',
+    price:      Math.max(0, parseInt(f.price) || 0),
+    pChild:     f.pChild !== undefined ? Math.max(0, parseInt(f.pChild) || 0) : null,
+    minP:       Math.max(1, parseInt(f.minP) || 1),
+    maxP:       Math.max(1, parseInt(f.maxP) || 20),
+    status:     ACTIVITY_STATUS.includes(f.status) ? f.status : 'active',
+    desc:       f.desc       ? String(f.desc).trim()       : '',
+    sub:        f.sub        ? String(f.sub).trim()        : '',
+    badge:      f.badge      ? String(f.badge).trim()      : '',
+    location:   f.location   ? String(f.location).trim()   : '',
+    icon:       f.icon       ? String(f.icon).trim()       : '',
+    img:        f.img        ? String(f.img).trim()        : '',
+    highlights: parseLines(f.highlights),
+    inc:        parseLines(f.inc),
+    exc:        parseLines(f.exc),
+    created:    now, updated: now
   });
   res.status(201).json({ activity: doc });
 });
@@ -262,10 +279,21 @@ router.put('/activities/:id', auditMod.audit('admin:activity:update'), function(
   if (!existing) return res.status(404).json({ error: 'Activity not found' });
   var f = req.body || {};
   var changes = { updated: new Date().toISOString() };
-  if (f.title    !== undefined) changes.title    = String(f.title || '').trim();
-  if (f.desc     !== undefined) changes.desc     = String(f.desc  || '').trim();
-  if (f.duration !== undefined) changes.duration = String(f.duration || '').trim();
-  if (f.price    !== undefined) changes.price    = Math.max(0, parseInt(f.price) || 0);
+  if (f.title      !== undefined) changes.title      = String(f.title || '').trim();
+  if (f.desc       !== undefined) changes.desc       = String(f.desc  || '').trim();
+  if (f.sub        !== undefined) changes.sub        = String(f.sub   || '').trim();
+  if (f.badge      !== undefined) changes.badge      = String(f.badge || '').trim();
+  if (f.location   !== undefined) changes.location   = String(f.location || '').trim();
+  if (f.icon       !== undefined) changes.icon       = String(f.icon  || '').trim();
+  if (f.img        !== undefined) changes.img        = String(f.img   || '').trim();
+  if (f.duration   !== undefined) changes.duration   = String(f.duration || '').trim();
+  if (f.price      !== undefined) changes.price      = Math.max(0, parseInt(f.price) || 0);
+  if (f.pChild     !== undefined) changes.pChild     = f.pChild === '' ? null : Math.max(0, parseInt(f.pChild) || 0);
+  if (f.minP       !== undefined) changes.minP       = Math.max(1, parseInt(f.minP) || 1);
+  if (f.maxP       !== undefined) changes.maxP       = Math.max(1, parseInt(f.maxP) || 20);
+  if (f.highlights !== undefined) changes.highlights = parseLines(f.highlights);
+  if (f.inc        !== undefined) changes.inc        = parseLines(f.inc);
+  if (f.exc        !== undefined) changes.exc        = parseLines(f.exc);
   if (f.category !== undefined) {
     if (!ACTIVITY_CATS.includes(f.category)) return res.status(400).json({ error: 'Invalid category' });
     changes.category = f.category;

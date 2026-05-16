@@ -287,6 +287,14 @@ app.get('/api/site-config', function(req, res) {
   });
 });
 
+/* ── PUBLIC ACTIVITIES ───────────────────────────────────────── */
+app.get('/api/activities', function(req, res) {
+  var acts = db.activities.all()
+    .filter(function(a){ return a.status === 'active'; })
+    .sort(function(a, b){ return new Date(a.created) - new Date(b.created); });
+  res.json({ activities: acts });
+});
+
 /* ── STATIC FILES ────────────────────────────────────────────── */
 app.use(express.static(PUBLIC, {
   maxAge: isProd ? '1d' : 0,
