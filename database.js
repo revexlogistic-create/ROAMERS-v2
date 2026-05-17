@@ -81,7 +81,9 @@ if (process.env.MONGODB_URI) {
       sum:    function(key,fn){ const c=_caches[name]; return (fn?c.filter(fn):c).reduce(function(s,r){return s+(Number(r[key])||0);},0); },
       insert: function(doc)   { _caches[name].push(doc); scheduleFlush(name); return doc; },
       update: function(fn,ch) { _caches[name].forEach(function(r,i){ if(fn(r)) _caches[name][i]=Object.assign({},r,ch); }); scheduleFlush(name); },
-      remove: function(fn)    { _caches[name]=_caches[name].filter(function(r){return !fn(r);}); scheduleFlush(name); }
+      remove: function(fn)    { _caches[name]=_caches[name].filter(function(r){return !fn(r);}); scheduleFlush(name); },
+      /* Await the pending MongoDB flush — call this before res.json() in write routes */
+      flush:  function()      { return _flushChain[name] || Promise.resolve(); }
     };
   }
 
@@ -137,7 +139,8 @@ if (process.env.MONGODB_URI) {
       sum:    function(key,fn){ const c=read(); return (fn?c.filter(fn):c).reduce(function(s,r){return s+(Number(r[key])||0);},0); },
       insert: function(doc)   { const rows=read(); rows.push(doc); write(rows); return doc; },
       update: function(fn,ch) { write(read().map(function(r){return fn(r)?Object.assign({},r,ch):r;})); },
-      remove: function(fn)    { write(read().filter(function(r){return !fn(r);})); }
+      remove: function(fn)    { write(read().filter(function(r){return !fn(r);})); },
+      flush:  function()      { return Promise.resolve(); }
     };
   }
 

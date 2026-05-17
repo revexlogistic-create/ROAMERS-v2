@@ -89,7 +89,7 @@ router.get('/:id', function(req, res) {
 
 /* ── ADMIN ──────────────────────────────────── */
 
-router.post('/', adminOnly, function(req, res) {
+router.post('/', adminOnly, async function(req, res) {
   const b = req.body || {};
   const errors = validateBody(b, false);
   if (errors.length) return res.status(400).json({ error: errors.join('; ') });
@@ -131,10 +131,11 @@ router.post('/', adminOnly, function(req, res) {
     created: now, updated: now
   };
   db.experiences.insert(doc);
+  await db.experiences.flush();
   res.status(201).json({ experience: doc });
 });
 
-router.put('/:id', adminOnly, function(req, res) {
+router.put('/:id', adminOnly, async function(req, res) {
   const b = req.body || {};
   const existing = db.experiences.find(function(e){ return e.id === req.params.id; });
   if (!existing) return res.status(404).json({ error: 'Experience not found' });
@@ -175,14 +176,16 @@ router.put('/:id', adminOnly, function(req, res) {
 
   changes.updated = new Date().toISOString();
   db.experiences.update(function(e){ return e.id === req.params.id; }, changes);
+  await db.experiences.flush();
   const updated = db.experiences.find(function(e){ return e.id === req.params.id; });
   res.json({ experience: updated });
 });
 
-router.delete('/:id', adminOnly, function(req, res) {
+router.delete('/:id', adminOnly, async function(req, res) {
   const r = db.experiences.find(function(e){ return e.id === req.params.id; });
   if (!r) return res.status(404).json({ error: 'Experience not found' });
   db.experiences.remove(function(e){ return e.id === req.params.id; });
+  await db.experiences.flush();
   res.json({ message: 'Experience deleted', id: req.params.id });
 });
 
