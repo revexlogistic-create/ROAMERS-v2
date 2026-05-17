@@ -19,7 +19,7 @@ var audit    = require('../middleware/audit');
 var auth = authMw.auth;
 
 /* ── CONTACT FORM ────────────────────────────────────────────── */
-router.post('/contact', audit.audit('form:contact'), function(req, res) {
+router.post('/contact', audit.audit('form:contact'), async function(req, res) {
   var f = req.body || {};
 
   if (!f.fname || !String(f.fname).trim()) return res.status(400).json({ error: 'Name is required' });
@@ -41,6 +41,7 @@ router.post('/contact', audit.audit('form:contact'), function(req, res) {
   });
 
   mailer.sendContactNotification(doc).catch(function(){});
+  await db.contacts.flush();
   res.status(201).json({ message: 'Message sent', id: doc.id });
 });
 
@@ -48,7 +49,7 @@ router.post('/contact', audit.audit('form:contact'), function(req, res) {
 var PLAN_SEGMENTS = ['groupe','weekend','express','mesure',''];
 var PLAN_BUDGETS  = ['<3000','3000-5000','5000-10000','>10000',''];
 
-router.post('/plan', audit.audit('form:plan'), function(req, res) {
+router.post('/plan', audit.audit('form:plan'), async function(req, res) {
   var f = req.body || {};
 
   if (!f.fname || !String(f.fname).trim()) return res.status(400).json({ error: 'First name is required' });
@@ -83,11 +84,12 @@ router.post('/plan', audit.audit('form:plan'), function(req, res) {
   });
 
   mailer.sendPlanRequest(doc).catch(function(){});
+  await db.plans.flush();
   res.status(201).json({ message: 'Plan request submitted', ref: id });
 });
 
 /* ── TEAM BUILDING REQUEST ───────────────────────────────────── */
-router.post('/team', audit.audit('form:team-building'), function(req, res) {
+router.post('/team', audit.audit('form:team-building'), async function(req, res) {
   var f = req.body || {};
 
   if (!f.company  || !String(f.company).trim()) return res.status(400).json({ error: 'Company name is required' });
@@ -127,6 +129,7 @@ router.post('/team', audit.audit('form:team-building'), function(req, res) {
   });
 
   mailer.sendTeamRequest(doc).catch(function(){});
+  await db.teams.flush();
   res.status(201).json({ message: 'Team request submitted', ref: id });
 });
 
@@ -143,7 +146,7 @@ router.get('/plan/mine', auth, function(req, res) {
 });
 
 /* ── CUSTOM ITINERARY (mobile app) ──────────────────────────── */
-router.post('/itinerary', audit.audit('form:itinerary'), function(req, res) {
+router.post('/itinerary', audit.audit('form:itinerary'), async function(req, res) {
   var f = req.body || {};
 
   var stops = Array.isArray(f.stops) ? f.stops : [];
@@ -171,6 +174,7 @@ router.post('/itinerary', audit.audit('form:itinerary'), function(req, res) {
     created:     new Date().toISOString()
   });
 
+  await db.itineraries.flush();
   res.status(201).json({ message: 'Itinéraire sauvegardé', ref: id });
 });
 

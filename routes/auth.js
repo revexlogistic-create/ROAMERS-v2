@@ -72,7 +72,7 @@ function clearFailedLogins(userId) {
 var _DUMMY_HASH = bcrypt.hashSync('timing-safe-dummy-' + Math.random(), 10);
 
 /* ── REGISTER ────────────────────────────────────────────────── */
-router.post('/register', function(req, res) {
+router.post('/register', async function(req, res) {
   var f  = req.body || {};
   var ip = auditMod.getIp(req);
 
@@ -112,6 +112,7 @@ router.post('/register', function(req, res) {
   });
 
   auditMod.log('user:register', user.id, ip);
+  await db.users.flush();
   res.status(201).json({ token: makeToken(user), user: sanitizeUser(user) });
 });
 
@@ -154,7 +155,7 @@ router.get('/me', auth, function(req, res) {
 });
 
 /* ── UPDATE PROFILE ──────────────────────────────────────────── */
-router.put('/profile', auth, auditMod.audit('user:profile:update'), function(req, res) {
+router.put('/profile', auth, auditMod.audit('user:profile:update'), async function(req, res) {
   var f = req.body || {};
   if (!f.fname || !String(f.fname).trim()) return res.status(400).json({ error: 'First name required' });
   if (!f.lname || !String(f.lname).trim()) return res.status(400).json({ error: 'Last name required' });
@@ -167,12 +168,13 @@ router.put('/profile', auth, auditMod.audit('user:profile:update'), function(req
     bio:     f.bio     ? String(f.bio).trim()     : ''
   });
 
+  await db.users.flush();
   var updated = db.users.find(function(u){ return u.id === req.user.id; });
   res.json({ user: sanitizeUser(updated) });
 });
 
 /* ── CHANGE PASSWORD ─────────────────────────────────────────── */
-router.put('/password', auth, auditMod.audit('user:password:change'), function(req, res) {
+router.put('/password', auth, auditMod.audit('user:password:change'), async function(req, res) {
   var f  = req.body || {};
   var ip = auditMod.getIp(req);
 
@@ -197,6 +199,7 @@ router.put('/password', auth, auditMod.audit('user:password:change'), function(r
   });
 
   auditMod.log('user:password:changed', user.id, ip);
+  await db.users.flush();
 
   /* Issue a new token with the updated tokenVersion */
   var updatedUser = db.users.find(function(u){ return u.id === req.user.id; });
@@ -204,21 +207,23 @@ router.put('/password', auth, auditMod.audit('user:password:change'), function(r
 });
 
 /* ── WISHLIST TOGGLE ─────────────────────────────────────────── */
-router.post('/wishlist/:expId', auth, function(req, res) {
+router.post('/wishlist/:expId', auth, async function(req, res) {
   var user = db.users.find(function(u){ return u.id === req.user.id; });
   var wl   = Array.isArray(user.wishlist) ? user.wishlist.slice() : [];
   var idx  = wl.indexOf(req.params.expId);
   if (idx === -1) wl.push(req.params.expId); else wl.splice(idx, 1);
   db.users.update(function(u){ return u.id === req.user.id; }, { wishlist: wl });
+  await db.users.flush();
   res.json({ wishlist: wl });
 });
 
 /* ── DELETE ACCOUNT ──────────────────────────────────────────── */
-router.delete('/account', auth, auditMod.audit('user:account:delete'), function(req, res) {
+router.delete('/account', auth, auditMod.audit('user:account:delete'), async function(req, res) {
   if (req.user.role === 'admin') {
     return res.status(403).json({ error: 'Admin accounts cannot be self-deleted' });
   }
   db.users.remove(function(u){ return u.id === req.user.id; });
+  await db.users.flush();
   res.json({ message: 'Account deleted' });
 });
 

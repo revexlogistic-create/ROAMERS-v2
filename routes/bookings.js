@@ -21,7 +21,7 @@ var auth         = authMw.auth;
 var optionalAuth = authMw.optionalAuth;
 
 /* ── CREATE BOOKING (guest or authenticated) ─────────────────── */
-router.post('/', optionalAuth, audit.audit('booking:create'), function(req, res) {
+router.post('/', optionalAuth, audit.audit('booking:create'), async function(req, res) {
   var f  = req.body || {};
   var ip = audit.getIp(req);
 
@@ -81,6 +81,7 @@ router.post('/', optionalAuth, audit.audit('booking:create'), function(req, res)
   var mailer = require('../mailer');
   mailer.sendBookingConfirmation(booking).catch(function(){});
 
+  await db.bookings.flush();
   res.status(201).json({ booking: booking, ref: id });
 });
 
@@ -111,7 +112,7 @@ router.get('/:id', optionalAuth, function(req, res) {
 });
 
 /* ── CANCEL BOOKING ──────────────────────────────────────────── */
-router.patch('/:id/cancel', auth, audit.audit('booking:cancel'), function(req, res) {
+router.patch('/:id/cancel', auth, audit.audit('booking:cancel'), async function(req, res) {
   var b = db.bookings.find(function(x){ return x.id === req.params.id; });
   if (!b) return res.status(404).json({ error: 'Booking not found' });
   if (b.userId !== req.user.id && req.user.role !== 'admin') {
@@ -119,6 +120,7 @@ router.patch('/:id/cancel', auth, audit.audit('booking:cancel'), function(req, r
   }
   if (b.status === 'cancelled') return res.status(400).json({ error: 'Booking is already cancelled' });
   db.bookings.update(function(x){ return x.id === req.params.id; }, { status: 'cancelled' });
+  await db.bookings.flush();
   res.json({ message: 'Booking cancelled' });
 });
 

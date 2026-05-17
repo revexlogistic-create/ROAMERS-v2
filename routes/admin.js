@@ -48,7 +48,7 @@ router.get('/bookings', function(req, res) {
 var BOOKING_ALLOWED_STATUS  = ['pending','confirmed','completed','cancelled'];
 var BOOKING_ALLOWED_PAYMENT = ['unpaid','paid','refunded'];
 
-router.patch('/bookings/:id', auditMod.audit('admin:booking:update'), function(req, res) {
+router.patch('/bookings/:id', auditMod.audit('admin:booking:update'), async function(req, res) {
   var f  = req.body || {};
   var bk = db.bookings.find(function(b){ return b.id === req.params.id; });
   if (!bk) return res.status(404).json({ error: 'Booking not found' });
@@ -67,13 +67,15 @@ router.patch('/bookings/:id', auditMod.audit('admin:booking:update'), function(r
   if (!Object.keys(changes).length) return res.status(400).json({ error: 'Nothing to update' });
 
   db.bookings.update(function(b){ return b.id === req.params.id; }, changes);
+  await db.bookings.flush();
   res.json({ message: 'Updated' });
 });
 
-router.delete('/bookings/:id', auditMod.audit('admin:booking:delete'), function(req, res) {
+router.delete('/bookings/:id', auditMod.audit('admin:booking:delete'), async function(req, res) {
   var bk = db.bookings.find(function(b){ return b.id === req.params.id; });
   if (!bk) return res.status(404).json({ error: 'Booking not found' });
   db.bookings.remove(function(b){ return b.id === req.params.id; });
+  await db.bookings.flush();
   res.json({ message: 'Booking deleted', id: req.params.id });
 });
 
@@ -91,7 +93,7 @@ router.get('/users', function(req, res) {
 });
 
 /* Create team member */
-router.post('/team', auditMod.audit('admin:user:create'), function(req, res) {
+router.post('/team', auditMod.audit('admin:user:create'), async function(req, res) {
   var f = req.body || {};
   if (!f.fname || !String(f.fname).trim()) return res.status(400).json({ error: 'First name required' });
   if (!validate.isEmail(f.email))          return res.status(400).json({ error: 'Valid email required' });
@@ -129,11 +131,12 @@ router.post('/team', auditMod.audit('admin:user:create'), function(req, res) {
   var out = Object.assign({}, user);
   delete out.password;
   delete out.tokenVersion;
+  await db.users.flush();
   res.status(201).json({ message: 'User created', user: out });
 });
 
 /* Update team member — validated field whitelist (issue #4) */
-router.patch('/team/:id', auditMod.audit('admin:user:update'), function(req, res) {
+router.patch('/team/:id', auditMod.audit('admin:user:update'), async function(req, res) {
   var f    = req.body || {};
   var user = db.users.find(function(u){ return u.id === req.params.id; });
   if (!user) return res.status(404).json({ error: 'User not found' });
@@ -164,18 +167,20 @@ router.patch('/team/:id', auditMod.audit('admin:user:update'), function(req, res
   if (!Object.keys(changes).length) return res.status(400).json({ error: 'Nothing to update' });
 
   db.users.update(function(u){ return u.id === req.params.id; }, changes);
+  await db.users.flush();
   res.json({ message: 'User updated' });
 });
 
 /* Unlock a locked user account */
-router.post('/team/:id/unlock', auditMod.audit('admin:user:unlock'), function(req, res) {
+router.post('/team/:id/unlock', auditMod.audit('admin:user:unlock'), async function(req, res) {
   var user = db.users.find(function(u){ return u.id === req.params.id; });
   if (!user) return res.status(404).json({ error: 'User not found' });
   db.users.update(function(u){ return u.id === req.params.id; }, { loginFailCount: 0, loginLockUntil: null });
+  await db.users.flush();
   res.json({ message: 'User account unlocked' });
 });
 
-router.delete('/team/:id', auditMod.audit('admin:user:delete'), function(req, res) {
+router.delete('/team/:id', auditMod.audit('admin:user:delete'), async function(req, res) {
   var user = db.users.find(function(u){ return u.id === req.params.id; });
   if (!user) return res.status(404).json({ error: 'User not found' });
   if (user.role === 'admin') {
@@ -183,6 +188,7 @@ router.delete('/team/:id', auditMod.audit('admin:user:delete'), function(req, re
     if (adminCount <= 1) return res.status(400).json({ error: 'Cannot delete the last admin' });
   }
   db.users.remove(function(u){ return u.id === req.params.id; });
+  await db.users.flush();
   res.json({ message: 'User deleted', id: req.params.id });
 });
 
@@ -190,12 +196,13 @@ router.delete('/team/:id', auditMod.audit('admin:user:delete'), function(req, re
 router.get('/plan-requests', function(req, res) {
   res.json({ requests: db.plans.all().sort(function(a, b){ return new Date(b.created) - new Date(a.created); }) });
 });
-router.patch('/plan-requests/:id', auditMod.audit('admin:plan:update'), function(req, res) {
+router.patch('/plan-requests/:id', auditMod.audit('admin:plan:update'), async function(req, res) {
   var allowed = ['new','reviewing','quoted','closed'];
   if (req.body.status && !allowed.includes(req.body.status)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
   db.plans.update(function(p){ return p.id === req.params.id; }, { status: req.body.status });
+  await db.plans.flush();
   res.json({ message: 'Updated' });
 });
 
@@ -203,12 +210,13 @@ router.patch('/plan-requests/:id', auditMod.audit('admin:plan:update'), function
 router.get('/team-requests', function(req, res) {
   res.json({ requests: db.teams.all().sort(function(a, b){ return new Date(b.created) - new Date(a.created); }) });
 });
-router.patch('/team-requests/:id', auditMod.audit('admin:team-req:update'), function(req, res) {
+router.patch('/team-requests/:id', auditMod.audit('admin:team-req:update'), async function(req, res) {
   var allowed = ['new','reviewing','quoted','closed'];
   if (req.body.status && !allowed.includes(req.body.status)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
   db.teams.update(function(t){ return t.id === req.params.id; }, { status: req.body.status });
+  await db.teams.flush();
   res.json({ message: 'Updated' });
 });
 
@@ -216,18 +224,20 @@ router.patch('/team-requests/:id', auditMod.audit('admin:team-req:update'), func
 router.get('/messages', function(req, res) {
   res.json({ messages: db.contacts.all().sort(function(a, b){ return new Date(b.created) - new Date(a.created); }) });
 });
-router.patch('/messages/:id', auditMod.audit('admin:message:update'), function(req, res) {
+router.patch('/messages/:id', auditMod.audit('admin:message:update'), async function(req, res) {
   var allowed = ['unread','read','archived'];
   if (req.body.status && !allowed.includes(req.body.status)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
   db.contacts.update(function(c){ return c.id === req.params.id; }, { status: req.body.status });
+  await db.contacts.flush();
   res.json({ message: 'Updated' });
 });
-router.delete('/messages/:id', auditMod.audit('admin:message:delete'), function(req, res) {
+router.delete('/messages/:id', auditMod.audit('admin:message:delete'), async function(req, res) {
   var msg = db.contacts.find(function(c){ return c.id === req.params.id; });
   if (!msg) return res.status(404).json({ error: 'Message not found' });
   db.contacts.remove(function(c){ return c.id === req.params.id; });
+  await db.contacts.flush();
   res.json({ message: 'Message deleted', id: req.params.id });
 });
 
@@ -245,7 +255,7 @@ function parseLines(v) {
   return [];
 }
 
-router.post('/activities', auditMod.audit('admin:activity:create'), function(req, res) {
+router.post('/activities', auditMod.audit('admin:activity:create'), async function(req, res) {
   var f = req.body || {};
   if (!f.title || !String(f.title).trim()) return res.status(400).json({ error: 'Title required' });
   if (f.category && !ACTIVITY_CATS.includes(f.category)) return res.status(400).json({ error: 'Invalid category' });
@@ -272,10 +282,11 @@ router.post('/activities', auditMod.audit('admin:activity:create'), function(req
     exc:        parseLines(f.exc),
     created:    now, updated: now
   });
+  await db.activities.flush();
   res.status(201).json({ activity: doc });
 });
 
-router.put('/activities/:id', auditMod.audit('admin:activity:update'), function(req, res) {
+router.put('/activities/:id', auditMod.audit('admin:activity:update'), async function(req, res) {
   var existing = db.activities.find(function(a){ return a.id === req.params.id; });
   if (!existing) return res.status(404).json({ error: 'Activity not found' });
   var f = req.body || {};
@@ -304,14 +315,16 @@ router.put('/activities/:id', auditMod.audit('admin:activity:update'), function(
     changes.status = f.status;
   }
   db.activities.update(function(a){ return a.id === req.params.id; }, changes);
+  await db.activities.flush();
   var updated = db.activities.find(function(a){ return a.id === req.params.id; });
   res.json({ activity: updated });
 });
 
-router.delete('/activities/:id', auditMod.audit('admin:activity:delete'), function(req, res) {
+router.delete('/activities/:id', auditMod.audit('admin:activity:delete'), async function(req, res) {
   var a = db.activities.find(function(x){ return x.id === req.params.id; });
   if (!a) return res.status(404).json({ error: 'Activity not found' });
   db.activities.remove(function(x){ return x.id === req.params.id; });
+  await db.activities.flush();
   res.json({ message: 'Activity deleted', id: req.params.id });
 });
 
@@ -323,7 +336,7 @@ router.get('/partners', function(req, res) {
   res.json({ partners: db.partners.all().sort(function(a, b){ return new Date(a.created) - new Date(b.created); }) });
 });
 
-router.post('/partners', auditMod.audit('admin:partner:create'), function(req, res) {
+router.post('/partners', auditMod.audit('admin:partner:create'), async function(req, res) {
   var f = req.body || {};
   if (!f.name || !String(f.name).trim()) return res.status(400).json({ error: 'Partner name required' });
   if (f.email && !validate.isEmail(f.email)) return res.status(400).json({ error: 'Valid email required' });
@@ -342,10 +355,11 @@ router.post('/partners', auditMod.audit('admin:partner:create'), function(req, r
     revenue:  Math.max(0, parseInt(f.revenue)  || 0),
     created:  now, updated: now
   });
+  await db.partners.flush();
   res.status(201).json({ partner: doc });
 });
 
-router.put('/partners/:id', auditMod.audit('admin:partner:update'), function(req, res) {
+router.put('/partners/:id', auditMod.audit('admin:partner:update'), async function(req, res) {
   var existing = db.partners.find(function(p){ return p.id === req.params.id; });
   if (!existing) return res.status(404).json({ error: 'Partner not found' });
   var f = req.body || {};
@@ -370,14 +384,16 @@ router.put('/partners/:id', auditMod.audit('admin:partner:update'), function(req
   if (f.programs !== undefined) changes.programs = Math.max(0, parseInt(f.programs) || 0);
   if (f.revenue  !== undefined) changes.revenue  = Math.max(0, parseInt(f.revenue)  || 0);
   db.partners.update(function(p){ return p.id === req.params.id; }, changes);
+  await db.partners.flush();
   var updated = db.partners.find(function(p){ return p.id === req.params.id; });
   res.json({ partner: updated });
 });
 
-router.delete('/partners/:id', auditMod.audit('admin:partner:delete'), function(req, res) {
+router.delete('/partners/:id', auditMod.audit('admin:partner:delete'), async function(req, res) {
   var p = db.partners.find(function(x){ return x.id === req.params.id; });
   if (!p) return res.status(404).json({ error: 'Partner not found' });
   db.partners.remove(function(x){ return x.id === req.params.id; });
+  await db.partners.flush();
   res.json({ message: 'Partner deleted', id: req.params.id });
 });
 
@@ -397,7 +413,7 @@ router.get('/settings', function(req, res) {
   res.json({ settings: s || {} });
 });
 
-router.put('/settings', auditMod.audit('admin:settings:update'), function(req, res) {
+router.put('/settings', auditMod.audit('admin:settings:update'), async function(req, res) {
   var body = req.body || {};
 
   /* Strip disallowed keys (issue #3) */
@@ -418,6 +434,7 @@ router.put('/settings', auditMod.audit('admin:settings:update'), function(req, r
   } else {
     db.settings.insert(Object.assign({ id: 'main' }, filtered, { created: now, updated: now }));
   }
+  await db.settings.flush();
   var updated = db.settings.find(function(){ return true; });
   res.json({ settings: updated, message: 'Settings saved' });
 });
@@ -438,13 +455,14 @@ router.get('/itineraries', function(req, res) {
   res.json({ itineraries: list, total: list.length });
 });
 
-router.patch('/itineraries/:id', auditMod.audit('admin:itinerary:update'), function(req, res) {
+router.patch('/itineraries/:id', auditMod.audit('admin:itinerary:update'), async function(req, res) {
   var it = db.itineraries.find(function(r) { return r.id === req.params.id; });
   if (!it) return res.status(404).json({ error: 'Itinerary not found' });
   var allowed = ['new', 'reviewed', 'contacted', 'closed'];
   var status = req.body && req.body.status;
   if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
   db.itineraries.update(function(r) { return r.id === req.params.id; }, { status: status });
+  await db.itineraries.flush();
   res.json({ message: 'Updated' });
 });
 
