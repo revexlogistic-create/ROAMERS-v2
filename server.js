@@ -51,7 +51,7 @@ app.use(helmet({
     directives: {
       defaultSrc:  ["'self'"],
       /* SPA uses inline scripts/styles — required for the SPA to function */
-      scriptSrc:   ["'self'", "'unsafe-inline'"],
+      scriptSrc:   ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
       styleSrc:    ["'self'", "'unsafe-inline'",
                     'https://fonts.googleapis.com'],
       fontSrc:     ["'self'", 'https://fonts.gstatic.com', 'data:'],
@@ -129,6 +129,9 @@ app.use('/api/bookings', sizeGuard(200 * 1024), smallJson, smallUrle);
 
 /* Admin settings endpoint: 25 MB (for base64 image uploads) */
 app.use('/api/admin/settings', largeJson, largeUrle);
+
+/* Experiences endpoint: 10 MB (voyage photos stored as base64 in body) */
+app.use('/api/experiences', sizeGuard(10 * 1024 * 1024), express.json({ limit: '10mb' }), express.urlencoded({ extended: true, limit: '10mb' }));
 
 /* Everything else: 2 MB */
 app.use(stdJson);
