@@ -1893,10 +1893,8 @@ function _aRenderIt(){
         +'<div class="it-day-photo-row">'
           +'<input class="fi" placeholder="URL photo (ou uploader →)" value="'+d.img.replace(/"/g,'&quot;')+'" oninput="_aIt['+i+'].img=this.value;_aUpdateDayThumb('+i+')">'
           +(d.imgData||d.img?'<img class="it-day-thumb" id="aThumb-'+i+'" src="'+(d.imgData||d.img)+'" style="display:block">':'<img class="it-day-thumb" id="aThumb-'+i+'">')
-          +'<label style="display:inline-flex;align-items:center;gap:5px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;background:var(--surface3);transition:all .15s" onmouseover="this.style.borderColor=\'var(--red)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
-            +'📷'
-            +'<input type="file" accept="image/*" style="display:none" onchange="_aHandleDayPhoto(this,'+i+')">'
-          +'</label>'
+          +'<input type="file" id="aDayPhoto-'+i+'" accept="image/*" style="display:none" onchange="_aHandleDayPhoto(this,'+i+')">'
+          +'<button type="button" onclick="document.getElementById(\'aDayPhoto-'+i+'\').click()" style="display:inline-flex;align-items:center;gap:5px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;background:var(--surface3);transition:all .15s;flex-shrink:0" onmouseover="this.style.borderColor=\'var(--red)\'" onmouseout="this.style.borderColor=\'var(--border)\'">📷</button>'
         +'</div>'
       +'</div>'
       +'<button class="it-row-rm" onclick="_aRemoveItDay('+i+')">✕</button>'
