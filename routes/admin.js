@@ -33,7 +33,8 @@ router.get('/stats', function(req, res) {
     totalUsers:    db.users.count(function(u){ return u.role === 'user'; }),
     newPlanReqs:   db.plans.count(function(p){ return p.status === 'new'; }),
     newTeamReqs:   db.teams.count(function(t){ return t.status === 'new'; }),
-    newMessages:   db.contacts.count(function(c){ return c.status === 'unread'; })
+    newMessages:   db.contacts.count(function(c){ return c.status === 'unread'; }),
+    newItineraries: db.itineraries.count(function(i){ return i.status === 'new'; })
   });
 });
 
@@ -428,6 +429,24 @@ function sanitizeCmsField(s) {
   if (typeof s !== 'string') return s;
   return validate2.stripDangerousHtml(s);
 }
+
+/* ── ITINERARIES ─────────────────────────────────────────────── */
+router.get('/itineraries', function(req, res) {
+  var list = db.itineraries.all().sort(function(a, b) {
+    return new Date(b.created) - new Date(a.created);
+  });
+  res.json({ itineraries: list, total: list.length });
+});
+
+router.patch('/itineraries/:id', auditMod.audit('admin:itinerary:update'), function(req, res) {
+  var it = db.itineraries.find(function(r) { return r.id === req.params.id; });
+  if (!it) return res.status(404).json({ error: 'Itinerary not found' });
+  var allowed = ['new', 'reviewed', 'contacted', 'closed'];
+  var status = req.body && req.body.status;
+  if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  db.itineraries.update(function(r) { return r.id === req.params.id; }, { status: status });
+  res.json({ message: 'Updated' });
+});
 
 function sanitizeCmsObject(obj) {
   if (typeof obj !== 'object' || obj === null) return obj;

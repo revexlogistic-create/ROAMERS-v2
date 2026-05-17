@@ -142,4 +142,36 @@ router.get('/plan/mine', auth, function(req, res) {
   res.json({ requests: reqs });
 });
 
+/* ── CUSTOM ITINERARY (mobile app) ──────────────────────────── */
+router.post('/itinerary', audit.audit('form:itinerary'), function(req, res) {
+  var f = req.body || {};
+
+  var stops = Array.isArray(f.stops) ? f.stops : [];
+  stops = stops.filter(function(s){ return s && typeof s === 'string'; })
+               .map(function(s){ return String(s).trim().slice(0, 100); })
+               .filter(Boolean);
+  if (stops.length < 2) return res.status(400).json({ error: 'Au moins 2 étapes requises' });
+  if (stops.length > 20) return res.status(400).json({ error: 'Maximum 20 étapes' });
+
+  var distKm = f.distanceKm != null ? Math.round(Number(f.distanceKm)) || null : null;
+  var durH   = f.durationH  != null ? Math.round(Number(f.durationH))  || null : null;
+
+  var id = 'RC-ITIN-' + uuidv4().replace(/-/g,'').toUpperCase().slice(0, 6);
+
+  var doc = db.itineraries.insert({
+    id:          id,
+    stops:       stops,
+    stopCount:   stops.length,
+    distanceKm:  distKm,
+    durationH:   durH,
+    fname:       f.fname ? String(f.fname).trim().slice(0, 100) : 'Anonyme',
+    email:       validate.isEmail(f.email || '') ? String(f.email).toLowerCase().trim() : '',
+    note:        f.note  ? String(f.note).trim().slice(0, 500) : '',
+    status:      'new',
+    created:     new Date().toISOString()
+  });
+
+  res.status(201).json({ message: 'Itinéraire sauvegardé', ref: id });
+});
+
 module.exports = router;

@@ -393,6 +393,7 @@ label.fl{display:block;font-size:11px;font-weight:600;letter-spacing:.05em;text-
   <div class="sb-item" onclick="goPage('plans')" id="nav-plans"><div class="si">🗓️</div><span>Plan Requests</span><span class="badge" id="plansBadge" style="display:none">0</span></div>
   <div class="sb-item" onclick="goPage('teams')" id="nav-teams"><div class="si">🏢</div><span>Team Building</span><span class="badge" id="teamsBadge" style="display:none">0</span></div>
   <div class="sb-item" onclick="goPage('messages')" id="nav-messages"><div class="si">💬</div><span>Messages</span><span class="badge" id="msgsBadge" style="display:none">0</span></div>
+  <div class="sb-item" onclick="goPage('itineraries')" id="nav-itineraries"><div class="si">🛤️</div><span>Itinéraires App</span><span class="badge green" id="itinBadge" style="display:none">0</span></div>
   <div class="sb-item" onclick="goPage('partners')" id="nav-partners"><div class="si">🤝</div><span>Partnerships</span></div>
   <div class="sb-item" onclick="goPage('analytics')" id="nav-analytics"><div class="si">📈</div><span>Analytics</span></div>
 
@@ -523,7 +524,7 @@ function mapBk(b) {
   });
 }
 function loadAll(cb) {
-  var left = 9;
+  var left = 10;
   function done(){ if(--left===0) cb(); }
   api('GET','/experiences?includeDrafts=1').then(function(d){
     if(d.experiences) DB.trips = d.experiences.map(mapExp);
@@ -595,6 +596,14 @@ function loadAll(cb) {
       if(d.settings.cms) DB.cms = JSON.parse(JSON.stringify(Object.assign({}, DB.cms, d.settings.cms)));
     }
   }).catch(function(){}).then(done);
+  api('GET','/admin/itineraries').then(function(d){
+    if(d.itineraries) {
+      DB.itineraries = d.itineraries;
+      var newItins = d.itineraries.filter(function(r){ return r.status==='new'; });
+      var ib = document.getElementById('itinBadge');
+      if(ib){ ib.textContent = newItins.length; ib.style.display = newItins.length ? 'inline-block' : 'none'; }
+    }
+  }).catch(function(){}).then(done);
 }
 
 /* ═══════════════════════════════════════════════
@@ -609,6 +618,7 @@ var DB = {
   activities: [],
   partners: [],
   messages: [],
+  itineraries: [],
   adminUsers: [],
   settings: {},
   notifications: [],
@@ -688,11 +698,11 @@ function goPage(page) {
   document.querySelectorAll('.sb-item').forEach(function(el){ el.classList.remove('active'); });
   var navEl = document.getElementById('nav-'+page);
   if (navEl) navEl.classList.add('active');
-  var titles = {overview:'Overview',bookings:'Bookings',trips:'Trips (Voyages)',activities:'Activities & Experiences',customers:'Customers',media:'Media Library',cms:'Website Content (CMS)',partners:'Partnerships & Programs',analytics:'Analytics',users:'Users & Roles',settings:'Settings',plans:'Plan Requests',teams:'Team Building Requests',messages:'Messages'};
+  var titles = {overview:'Overview',bookings:'Bookings',trips:'Trips (Voyages)',activities:'Activities & Experiences',customers:'Customers',media:'Media Library',cms:'Website Content (CMS)',partners:'Partnerships & Programs',analytics:'Analytics',users:'Users & Roles',settings:'Settings',plans:'Plan Requests',teams:'Team Building Requests',messages:'Messages',itineraries:'Itinéraires App'};
   document.getElementById('pageTitle').textContent = titles[page] || page;
   Object.values(APP.chartInstances).forEach(function(c){ if(c) c.destroy(); });
   APP.chartInstances = {};
-  var renders = {overview:renderOverview,bookings:renderBookings,trips:renderTrips,activities:renderActivities,customers:renderCustomers,media:renderMedia,cms:renderCMS,partners:renderPartners,analytics:renderAnalytics,users:renderUsers,settings:renderSettings,plans:renderPlanRequests,teams:renderTeamRequests,messages:renderMessages};
+  var renders = {overview:renderOverview,bookings:renderBookings,trips:renderTrips,activities:renderActivities,customers:renderCustomers,media:renderMedia,cms:renderCMS,partners:renderPartners,analytics:renderAnalytics,users:renderUsers,settings:renderSettings,plans:renderPlanRequests,teams:renderTeamRequests,messages:renderMessages,itineraries:renderItineraries};
   document.getElementById('content').innerHTML = (renders[page] || renderOverview)();
   if (page === 'overview') initOverviewCharts();
   if (page === 'analytics') initAnalyticsCharts();
@@ -3196,6 +3206,89 @@ function reloadMessages() {
       goPage('messages'); showToast('Messages actualisés');
     }
   }).catch(function(){showToast('Erreur de chargement','error');});
+}
+
+/* ══════════════════════════════════════════════════
+   PAGE: ITINERARIES APP
+══════════════════════════════════════════════════ */
+function renderItineraries() {
+  var list  = DB.itineraries;
+  var total = list.length;
+  var newC  = list.filter(function(r){ return r.status==='new'; }).length;
+  var revC  = list.filter(function(r){ return r.status==='reviewed'; }).length;
+  var conC  = list.filter(function(r){ return r.status==='contacted'; }).length;
+
+  var statusBadge = function(s){
+    var map = {new:'badge yellow',reviewed:'badge blue',contacted:'badge green',closed:'badge'};
+    return '<span class="'+(map[s]||'badge')+'">'+s+'</span>';
+  };
+
+  var rows = list.map(function(r){
+    var stops = Array.isArray(r.stops) ? r.stops.join(' → ') : '';
+    var dist  = r.distanceKm ? r.distanceKm+' km' : '—';
+    var dur   = r.durationH  ? r.durationH+'h' : '—';
+    var date  = (r.created||'').split('T')[0];
+    var user  = r.fname || 'Anonyme';
+    if(r.email) user += ' <small style="color:var(--muted)">'+r.email+'</small>';
+    return '<tr>'
+      +'<td><code style="font-size:11px">'+r.id+'</code></td>'
+      +'<td>'+user+'</td>'
+      +'<td style="max-width:260px;white-space:normal;font-size:12px">'+stops+'</td>'
+      +'<td style="text-align:center">'+r.stopCount+'</td>'
+      +'<td style="text-align:center">'+dist+'</td>'
+      +'<td style="text-align:center">'+dur+'</td>'
+      +'<td>'+date+'</td>'
+      +'<td>'+statusBadge(r.status)+'</td>'
+      +'<td>'
+        +'<select style="font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--card);color:var(--text)" onchange="updateItinStatus(\''+r.id+'\',this.value)">'
+          +['new','reviewed','contacted','closed'].map(function(s){
+            return '<option value="'+s+'"'+(r.status===s?' selected':'')+'>'+s+'</option>';
+          }).join('')
+        +'</select>'
+      +'</td>'
+      +'</tr>';
+  }).join('');
+
+  return '<div class="kpi-row">'
+    +'<div class="kpi-card"><div class="kpi-val">'+total+'</div><div class="kpi-lbl">Total itinéraires</div></div>'
+    +'<div class="kpi-card"><div class="kpi-val" style="color:#f59e0b">'+newC+'</div><div class="kpi-lbl">Nouveaux</div></div>'
+    +'<div class="kpi-card"><div class="kpi-val" style="color:#3b82f6">'+revC+'</div><div class="kpi-lbl">Revus</div></div>'
+    +'<div class="kpi-card"><div class="kpi-val" style="color:#10b981">'+conC+'</div><div class="kpi-lbl">Contactés</div></div>'
+    +'</div>'
+    +'<div class="section-header" style="margin-top:24px">'
+      +'<h3>Itinéraires personnalisés</h3>'
+      +'<button class="btn-sm" onclick="reloadItineraries()">↻ Actualiser</button>'
+    +'</div>'
+    +'<div class="table-wrap"><table class="data-table"><thead><tr>'
+      +'<th>Référence</th><th>Utilisateur</th><th>Étapes</th>'
+      +'<th style="text-align:center">Nb</th><th style="text-align:center">Distance</th>'
+      +'<th style="text-align:center">Durée</th><th>Date</th><th>Statut</th><th>Action</th>'
+    +'</tr></thead><tbody>'
+    +(rows || '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">Aucun itinéraire enregistré</td></tr>')
+    +'</tbody></table></div>';
+}
+
+function updateItinStatus(id, status) {
+  api('PATCH','/admin/itineraries/'+id, {status:status}).then(function(){
+    var r = DB.itineraries.find(function(x){ return x.id===id; });
+    if(r) r.status = status;
+    var newItins = DB.itineraries.filter(function(x){ return x.status==='new'; });
+    var ib = document.getElementById('itinBadge');
+    if(ib){ ib.textContent=newItins.length; ib.style.display=newItins.length?'inline-block':'none'; }
+    showToast('Statut mis à jour');
+  }).catch(function(){ showToast('Erreur de mise à jour','error'); });
+}
+
+function reloadItineraries() {
+  api('GET','/admin/itineraries').then(function(d){
+    if(d.itineraries){
+      DB.itineraries = d.itineraries;
+      var newItins = d.itineraries.filter(function(r){ return r.status==='new'; });
+      var ib = document.getElementById('itinBadge');
+      if(ib){ ib.textContent=newItins.length; ib.style.display=newItins.length?'inline-block':'none'; }
+      goPage('itineraries'); showToast('Itinéraires actualisés');
+    }
+  }).catch(function(){ showToast('Erreur de chargement','error'); });
 }
 
 function renderNotifList() {
