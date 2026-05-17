@@ -1844,7 +1844,19 @@ var _aEditId = null;
 
 function _aPhotoRead(file, cb){
   var r = new FileReader();
-  r.onload = function(e){ cb(e.target.result); };
+  r.onload = function(e){
+    var img = new Image();
+    img.onload = function(){
+      var MAX = 1200;
+      var w = img.width, h = img.height;
+      if (w > MAX){ h = Math.round(h * MAX / w); w = MAX; }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      cb(canvas.toDataURL('image/jpeg', 0.72));
+    };
+    img.src = e.target.result;
+  };
   r.readAsDataURL(file);
 }
 function _aRenderPhotos(){
