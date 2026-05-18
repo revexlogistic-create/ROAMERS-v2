@@ -206,6 +206,7 @@ app.use('/api/forms',       frmLim,   require('./routes/forms'));
 app.use('/api/experiences',           require('./routes/experiences'));
 app.use('/api/admin',       adminLim, require('./routes/admin'));
 app.use('/api/payments',              require('./routes/payments'));
+app.use('/api/reviews',               require('./routes/reviews'));
 
 /* ── HEALTH ──────────────────────────────────────────────────── */
 /* Removed env name — no information disclosure (issue #28) */

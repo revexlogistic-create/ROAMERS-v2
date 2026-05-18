@@ -1771,7 +1771,7 @@ function go(pg,param){
   window.scrollTo({top:0,behavior:'smooth'});
   syncNav();
   syncAppShell(pg);
-  setTimeout(function(){initReveal();initDetailSlider();if(pg==='home')initHeroCanvas();},80);
+  setTimeout(function(){initReveal();initDetailSlider();if(pg==='home')initHeroCanvas();if(pg==='exp-detail'&&ST.param)loadExpReviews(ST.param);},80);
   /* Close mobile drawer if open */
   var mob2=document.getElementById('mob');
   if(mob2 && mob2.classList.contains('open')){mob2.classList.remove('open');document.body.style.overflow='';}
@@ -3333,6 +3333,7 @@ function pgExpDetail(id){
     +'<div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Comment se déroule le transport ?<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 6.5l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="faq-a">Nos guides-chauffeurs vous prennent en charge depuis votre hôtel ou un point de ralliement central. Les détails précis vous sont communiqués 48h avant le départ.</div></div>'
   +'</div></div>'
   +'<div style="background:rgba(217,119,6,.07);border-left:3px solid #D97706;border-radius:0 10px 10px 0;padding:14px 16px;margin-bottom:32px;font-size:13px;color:var(--txt)"><span style="font-weight:700;color:#D97706">📋 Annulation : </span>Gratuite jusqu\'à 7 jours avant. 50% entre 3 et 7 jours. Aucun remboursement sous 48h.</div>'
+  +'<div style="margin-bottom:32px"><h3 class="h3" style="font-size:20px;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--bdr)">⭐ Avis voyageurs</h3><div id="exp-rev-'+e.id+'"><div style="padding:20px;text-align:center;color:var(--mut);font-size:14px">Chargement des avis…</div></div></div>'
   +'</div>'
   +'<div><div class="bk-sb">'
     +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="color:#F5A623;font-size:14px">★ '+e.rating+'</span><span style="font-size:13px;color:var(--mut)">('+e.rev+' avis)</span></div>'
@@ -6186,6 +6187,108 @@ function apiPatch(path, body) {
   if (token) headers['Authorization'] = 'Bearer ' + token;
   return fetch(API_BASE + path, { method: 'PATCH', headers: headers, body: JSON.stringify(body) })
     .then(function(r){ return r.json().then(function(d){ if(!r.ok) throw new Error(d.error||'Error'); return d; }); });
+}
+
+/* ── REVIEWS ─────────────────────────────────── */
+function setRevStar(expId, val) {
+  document.getElementById('rev-rating-' + expId).value = val;
+  var stars = document.querySelectorAll('#star-pick-' + expId + ' span');
+  stars.forEach(function(s, i) { s.style.color = i < val ? '#F5A623' : '#CBD5E1'; });
+}
+
+async function loadExpReviews(expId) {
+  var el = document.getElementById('exp-rev-' + expId);
+  if (!el) return;
+  try {
+    var r = await fetch('/api/reviews/' + expId);
+    var data = await r.json();
+    var reviews = data.reviews || [];
+    var summary = data.summary || { avg: 0, total: 0, dist: [0,0,0,0,0] };
+    var user = ST.user;
+    var html = '';
+
+    /* ── Rating summary block ── */
+    if (summary.total > 0) {
+      var starsH = '';
+      for (var si = 1; si <= 5; si++) starsH += '<span style="color:' + (si <= Math.round(summary.avg) ? '#F5A623' : '#CBD5E1') + '">★</span>';
+      html += '<div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;padding:16px 18px;background:var(--warm);border-radius:14px;flex-wrap:wrap">';
+      html += '<div style="text-align:center;min-width:72px"><div style="font-size:44px;font-weight:800;color:var(--txt);line-height:1;font-family:\'Bebas Neue\',cursive">' + summary.avg + '</div>';
+      html += '<div style="font-size:17px;margin:3px 0">' + starsH + '</div>';
+      html += '<div style="font-size:12px;color:var(--mut)">' + summary.total + ' avis</div></div>';
+      html += '<div style="flex:1;min-width:160px">';
+      for (var bi = 5; bi >= 1; bi--) {
+        var cnt = summary.dist[bi - 1] || 0;
+        var pct = summary.total ? Math.round((cnt / summary.total) * 100) : 0;
+        html += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px"><span style="font-size:11px;color:var(--mut);width:24px;text-align:right">' + bi + '★</span>';
+        html += '<div style="flex:1;background:#E2E8F0;border-radius:4px;height:7px;overflow:hidden"><div style="background:#F5A623;height:100%;width:' + pct + '%;border-radius:4px"></div></div>';
+        html += '<span style="font-size:11px;color:var(--mut);width:22px">' + cnt + '</span></div>';
+      }
+      html += '</div></div>';
+    }
+
+    /* ── Individual review cards ── */
+    if (reviews.length) {
+      html += '<div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">';
+      reviews.forEach(function(rv) {
+        var dateStr = new Date(rv.created).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        var sH = '';
+        for (var si2 = 1; si2 <= 5; si2++) sH += '<span style="color:' + (si2 <= rv.rating ? '#F5A623' : '#CBD5E1') + ';font-size:13px">★</span>';
+        html += '<div style="padding:14px 16px;border:1px solid var(--bdr);border-radius:12px;background:#fff">';
+        html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">';
+        html += '<div style="width:38px;height:38px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0">' + (rv.initial || '?') + '</div>';
+        html += '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--txt)">' + rv.displayName.replace(/[<>]/g, '') + '</div><div>' + sH + '</div></div>';
+        html += '<div style="font-size:11px;color:var(--mut);white-space:nowrap">' + dateStr + '</div></div>';
+        html += '<p style="font-size:14px;color:var(--txt);line-height:1.75;margin:0">' + rv.text.replace(/[<>]/g, '').replace(/\n/g, '<br>') + '</p></div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<p style="color:var(--mut);font-size:14px;padding:8px 0">Aucun avis pour le moment. Soyez le premier !</p>';
+    }
+
+    /* ── Write-review form (logged-in users only) ── */
+    if (user) {
+      html += '<div style="padding:18px;background:var(--warm);border-radius:12px;border:1.5px dashed var(--bdr)">';
+      html += '<div style="font-size:15px;font-weight:700;margin-bottom:12px;color:var(--txt)">✏️ Votre avis</div>';
+      html += '<div style="display:flex;gap:4px;margin-bottom:12px" id="star-pick-' + expId + '">';
+      for (var fi = 1; fi <= 5; fi++) {
+        html += '<span style="font-size:32px;cursor:pointer;color:#CBD5E1;line-height:1;transition:color .15s" onclick="setRevStar(\'' + expId + '\',' + fi + ')">★</span>';
+      }
+      html += '</div>';
+      html += '<input type="hidden" id="rev-rating-' + expId + '" value="0">';
+      html += '<textarea id="rev-text-' + expId + '" placeholder="Partagez votre expérience (min. 10 caractères)…" style="width:100%;padding:10px 12px;border:1.5px solid var(--bdr);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:90px;box-sizing:border-box;outline:none"></textarea>';
+      html += '<div id="rev-err-' + expId + '" style="color:#DC2626;font-size:12px;margin-top:5px;display:none"></div>';
+      html += '<button onclick="submitExpReview(\'' + expId + '\')" style="margin-top:10px;background:var(--red);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit" onmouseover="this.style.opacity=\'.85\'" onmouseout="this.style.opacity=\'1\'">Publier mon avis</button>';
+      html += '</div>';
+    } else {
+      html += '<div style="text-align:center;padding:14px;background:var(--warm);border-radius:10px;font-size:13px;color:var(--mut)"><a href="#" onclick="go(\'login\')" style="color:var(--red);font-weight:600">Connectez-vous</a> pour laisser un avis · Réservation requise</div>';
+    }
+
+    el.innerHTML = html;
+  } catch(e) {
+    var el2 = document.getElementById('exp-rev-' + expId);
+    if (el2) el2.innerHTML = '<p style="color:var(--mut);font-size:13px;padding:10px 0">Impossible de charger les avis.</p>';
+  }
+}
+
+async function submitExpReview(expId) {
+  var rating = parseInt(document.getElementById('rev-rating-' + expId).value || '0');
+  var text   = (document.getElementById('rev-text-'   + expId).value || '').trim();
+  var errEl  = document.getElementById('rev-err-' + expId);
+  if (!rating) { errEl.textContent = 'Veuillez choisir une note (1–5 étoiles).'; errEl.style.display = 'block'; return; }
+  if (text.length < 10) { errEl.textContent = 'Votre avis doit faire au moins 10 caractères.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  try {
+    var res = await apiPost('/reviews', { expId: expId, rating: rating, text: text });
+    /* Update local EXP cache so star count refreshes without reload */
+    var expObj = EXP.find(function(x){ return x.id === expId; });
+    if (expObj && res.newRating) { expObj.rating = res.newRating; expObj.rev = res.newRev; }
+    var el = document.getElementById('exp-rev-' + expId);
+    if (el) el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mut);font-size:14px">Mise à jour…</div>';
+    loadExpReviews(expId);
+  } catch(err) {
+    var errEl2 = document.getElementById('rev-err-' + expId);
+    if (errEl2) { errEl2.textContent = err.message; errEl2.style.display = 'block'; }
+  }
 }
 
 /* Restore session from token on page load */

@@ -49,7 +49,7 @@ if (process.env.MONGODB_URI) {
     return _mdb;
   }
 
-  const TABLES = ['users','bookings','plans','teams','contacts','experiences','activities','partners','settings','itineraries'];
+  const TABLES = ['users','bookings','plans','teams','contacts','experiences','activities','partners','settings','itineraries','reviews'];
   const _caches = {};
   TABLES.forEach(function(t){ _caches[t] = []; });
 
@@ -97,7 +97,8 @@ if (process.env.MONGODB_URI) {
     activities:  makeTable('activities'),
     partners:    makeTable('partners'),
     settings:    makeTable('settings'),
-    itineraries: makeTable('itineraries')
+    itineraries: makeTable('itineraries'),
+    reviews:     makeTable('reviews')
   };
 
   /* Called once by server.js before accepting requests */
@@ -163,7 +164,8 @@ if (process.env.MONGODB_URI) {
     activities:  createTable('activities'),
     partners:    createTable('partners'),
     settings:    createTable('settings'),
-    itineraries: createTable('itineraries')
+    itineraries: createTable('itineraries'),
+    reviews:     createTable('reviews')
   };
 
   db._init = async function(){ /* no-op for file mode */ };
