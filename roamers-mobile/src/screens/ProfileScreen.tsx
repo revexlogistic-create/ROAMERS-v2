@@ -1024,4 +1024,12 @@ const s = StyleSheet.create({
   /* ── Misc ── */
   loadingBox: { paddingTop: 60, alignItems: 'center' },
   empty: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 24 },
+
+  /* ── Hero CTA buttons (OverviewTab) ── */
+  heroPrimary:  { flex: 1, backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 13, alignItems: 'center' as const, shadowColor: COLORS.primary, shadowOpacity: 0.45, shadowOffset: { width: 0, height: 6 }, shadowRadius: 14, elevation: 10 },
+  heroSecondary:{ flex: 1, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)', borderRadius: 12, paddingVertical: 13, alignItems: 'center' as const },
 });
+
+/* Alias so main ProfileScreen component (which uses `styles.xxx`) works alongside
+   sub-components that use `s.xxx` */
+const styles = s;
