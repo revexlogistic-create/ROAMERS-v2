@@ -87,7 +87,7 @@ export default function BookingScreen({ route, navigation }: any) {
   /* ── Navigation guards ── */
   function nextStep() {
     if (step === 1) {
-      if (!date.trim()) { Alert.alert('Date requise', 'Veuillez indiquer une date de départ.'); return; }
+      if (!date) { Alert.alert('Date requise', 'Veuillez choisir une date de départ dans les dates disponibles.'); return; }
     }
     if (step === 2) {
       if (!name.trim())  { Alert.alert('Nom requis', 'Veuillez entrer votre nom complet.'); return; }
@@ -212,13 +212,35 @@ export default function BookingScreen({ route, navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            {/* Date */}
-            <Field
-              label="Date souhaitée"
-              value={date}
-              onChange={setDate}
-              placeholder="ex: 20 juin 2026"
-            />
+            {/* Available dates */}
+            <Text style={styles.fieldLabel}>Date de départ</Text>
+            {(() => {
+              const today = new Date(); today.setHours(0,0,0,0);
+              const futureDates = (exp?.dates || []).filter((d: any) => new Date(d.raw) >= today);
+              if (futureDates.length === 0) return (
+                <View style={{ backgroundColor: '#1a1a1a', borderRadius: RADIUS.md, padding: 14, borderWidth: 1, borderColor: COLORS.border, marginBottom: 18 }}>
+                  <Text style={{ color: COLORS.muted, fontSize: 13 }}>Aucune date disponible actuellement — contactez-nous pour plus d'informations.</Text>
+                </View>
+              );
+              return (
+                <View style={styles.datesGrid}>
+                  {futureDates.map((d: any) => {
+                    const selected = date === d.raw;
+                    return (
+                      <TouchableOpacity
+                        key={d.raw}
+                        style={[styles.dateChip, selected && styles.dateChipActive]}
+                        onPress={() => setDate(d.raw)}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[styles.dateChipTxt, selected && styles.dateChipTxtActive]}>{d.label}</Text>
+                        {selected && <Text style={{ color: COLORS.primary, fontSize: 14, marginTop: 2 }}>✓</Text>}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              );
+            })()}
 
             {/* Price summary */}
             <View style={styles.priceSummary}>
@@ -299,7 +321,7 @@ export default function BookingScreen({ route, navigation }: any) {
             <View style={styles.recapSection}>
               <Text style={styles.recapHeader}>👥 Participants</Text>
               <Text style={styles.recapVal}>{adults} adulte{adults > 1 ? 's' : ''}{children > 0 ? ` + ${children} enfant${children > 1 ? 's' : ''}` : ''}</Text>
-              <Text style={styles.recapSub}>📅 {date}</Text>
+              <Text style={styles.recapSub}>📅 {(exp?.dates || []).find((d: any) => d.raw === date)?.label || date}</Text>
             </View>
 
             {/* Contact */}
@@ -434,4 +456,11 @@ const styles = StyleSheet.create({
   disclaimer: { color: COLORS.muted, fontSize: 11, textAlign: 'center', lineHeight: 16, marginHorizontal: 16, marginBottom: 12 },
 
   body: { paddingBottom: 24 },
+
+  /* date picker */
+  datesGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 18 },
+  dateChip:         { paddingHorizontal: 16, paddingVertical: 12, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: '#1a1a1a', alignItems: 'center', minWidth: (width - 32 - 32 - 10) / 2 },
+  dateChipActive:   { borderColor: COLORS.primary, backgroundColor: '#1a0208' },
+  dateChipTxt:      { color: COLORS.sub, fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  dateChipTxtActive:{ color: '#fff', fontWeight: '800' },
 });
