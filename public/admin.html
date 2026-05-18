@@ -2651,25 +2651,132 @@ function openActivityModal(actId) {
   var hlVal  = a && a.highlights ? (Array.isArray(a.highlights) ? a.highlights.join('\n') : a.highlights) : '';
   var incVal = a && a.inc        ? (Array.isArray(a.inc)        ? a.inc.join('\n')        : a.inc)        : '';
   var excVal = a && a.exc        ? (Array.isArray(a.exc)        ? a.exc.join('\n')        : a.exc)        : '';
+  var imgs   = (a && Array.isArray(a.imgs)) ? a.imgs : [];
+  var latVal = (a && a.lat) ? String(a.lat) : '';
+  var lngVal = (a && a.lng) ? String(a.lng) : '';
   openModal('<div class="modal-header"><h3>'+(a?'Modifier':'Nouvelle')+' Activité</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
     + '<div class="modal-body">'
-    + '<div class="fg"><label class="fl">Titre *</label><input class="fi" id="maTitle" placeholder="ex : Camel Trekking au coucher du soleil" value="'+(a?a.title:'')+'"></div>'
-    + '<div class="fg"><label class="fl">Sous-titre / accroche</label><input class="fi" id="maSub" placeholder="ex : Traversez les dunes dorées au coucher du soleil" value="'+(a&&a.sub?a.sub:'')+'"></div>'
-    + '<div class="fg-row"><div class="fg"><label class="fl">Catégorie</label><select class="fi fi-select" id="maCat"><option value="adventure">Adventure</option><option value="culture">Culture</option><option value="corporate">Corporate</option><option value="wellness">Wellness</option><option value="other">Other</option></select></div><div class="fg"><label class="fl">Icône (emoji)</label><input class="fi" id="maIcon" placeholder="🐪" value="'+(a&&a.icon?a.icon:'')+'"></div></div>'
-    + '<div class="fg-row"><div class="fg"><label class="fl">Durée</label><input class="fi" id="maDur" placeholder="ex : 2h" value="'+(a?a.duration:'')+'"></div><div class="fg"><label class="fl">Localisation</label><input class="fi" id="maLoc" placeholder="ex : Merzouga, Erg Chebbi" value="'+(a&&a.location?a.location:'')+'"></div></div>'
-    + '<div class="fg-row"><div class="fg"><label class="fl">Prix adulte (MAD)</label><input class="fi" id="maPrice" type="number" placeholder="350" value="'+(a?a.price:'')+'"></div><div class="fg"><label class="fl">Prix enfant (MAD)</label><input class="fi" id="maPChild" type="number" placeholder="200" value="'+(a&&a.pChild!=null?a.pChild:'')+'"></div></div>'
-    + '<div class="fg-row"><div class="fg"><label class="fl">Participants min</label><input class="fi" id="maMinP" type="number" placeholder="1" value="'+(a&&a.minP?a.minP:1)+'"></div><div class="fg"><label class="fl">Participants max</label><input class="fi" id="maMaxP" type="number" placeholder="12" value="'+(a&&a.maxP?a.maxP:20)+'"></div></div>'
-    + '<div class="fg-row"><div class="fg"><label class="fl">Badge (optionnel)</label><input class="fi" id="maBadge" placeholder="ex : Bestseller" value="'+(a&&a.badge?a.badge:'')+'"></div><div class="fg"><label class="fl">Statut</label><select class="fi fi-select" id="maStatus"><option value="active">Actif</option><option value="inactive">Inactif</option></select></div></div>'
-    + '<div class="fg"><label class="fl">Image URL</label><input class="fi" id="maImg" placeholder="https://images.unsplash.com/..." value="'+(a&&a.img?a.img:'')+'"></div>'
-    + '<div class="fg"><label class="fl">Description courte</label><textarea class="fi fi-area" id="maDesc" style="min-height:60px">'+(a&&a.desc?a.desc:'')+'</textarea></div>'
-    + '<div class="fg"><label class="fl">Points forts (1 par ligne)</label><textarea class="fi fi-area" id="maHl" style="min-height:80px" placeholder="Guide certifié&#10;Vue panoramique&#10;Thé à la menthe inclus">'+hlVal+'</textarea></div>'
-    + '<div class="fg-row"><div class="fg"><label class="fl">Inclus (1 par ligne)</label><textarea class="fi fi-area" id="maInc" style="min-height:70px" placeholder="Guide expert&#10;Équipement">'+incVal+'</textarea></div><div class="fg"><label class="fl">Non inclus (1 par ligne)</label><textarea class="fi fi-area" id="maExc" style="min-height:70px" placeholder="Transport&#10;Repas">'+excVal+'</textarea></div></div>'
+    /* ── COVER PHOTO ── */
+    + '<div class="fg"><label class="fl">Photo de couverture</label>'
+    + _upZone('actCover', a&&a.img?a.img:'', 1200, '16/5', 'Photo de couverture', 'Cliquer ou glisser une image')
     + '</div>'
-    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="saveActivity('+(actId?'\''+ actId +'\''  :'null')+')">'+(a?'Enregistrer':'Créer')+'</button></div>',
+    /* ── GALLERY ── */
+    + '<div class="fg"><label class="fl">Galerie (3 photos supplémentaires)</label>'
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">'
+    + _upZone('actImg1', imgs[0]||'', 800, '4/3', 'Photo 2', 'Photo 2')
+    + _upZone('actImg2', imgs[1]||'', 800, '4/3', 'Photo 3', 'Photo 3')
+    + _upZone('actImg3', imgs[2]||'', 800, '4/3', 'Photo 4', 'Photo 4')
+    + '</div></div>'
+    /* ── TITLE / SUBTITLE ── */
+    + '<div class="fg"><label class="fl">Titre *</label><input class="fi" id="maTitle" placeholder="ex : Camel Trekking au coucher du soleil" value="'+(a?_esc(a.title):'')+'"></div>'
+    + '<div class="fg"><label class="fl">Sous-titre / accroche</label><input class="fi" id="maSub" placeholder="ex : Traversez les dunes dorées au coucher du soleil" value="'+(a&&a.sub?_esc(a.sub):'')+'"></div>'
+    /* ── CATEGORY / BADGE / STATUS ── */
+    + '<div class="fg-row"><div class="fg"><label class="fl">Catégorie</label><select class="fi fi-select" id="maCat"><option value="adventure">Adventure</option><option value="culture">Culture</option><option value="corporate">Corporate</option><option value="wellness">Wellness</option><option value="other">Other</option></select></div>'
+    + '<div class="fg"><label class="fl">Badge</label><input class="fi" id="maBadge" placeholder="ex : Bestseller" value="'+(a&&a.badge?_esc(a.badge):'')+'"></div>'
+    + '<div class="fg"><label class="fl">Statut</label><select class="fi fi-select" id="maStatus"><option value="active">Actif</option><option value="inactive">Inactif</option></select></div></div>'
+    /* ── DURATION / DIFFICULTY / MIN AGE / ICON ── */
+    + '<div class="fg-row"><div class="fg"><label class="fl">Durée</label><input class="fi" id="maDur" placeholder="ex : 2h30" value="'+(a&&a.duration?_esc(a.duration):'')+'"></div>'
+    + '<div class="fg"><label class="fl">Difficulté</label><select class="fi fi-select" id="maDiff"><option value="">— Choisir —</option><option value="easy">Facile</option><option value="moderate">Modéré</option><option value="hard">Difficile</option></select></div>'
+    + '<div class="fg"><label class="fl">Âge min.</label><input class="fi" id="maMinAge" type="number" placeholder="5" value="'+(a&&a.minAge!=null?a.minAge:'')+'"></div>'
+    + '<div class="fg"><label class="fl">Icône (emoji)</label><input class="fi" id="maIcon" placeholder="🐪" value="'+(a&&a.icon?_esc(a.icon):'')+'"></div></div>'
+    /* ── PRICING / PAX ── */
+    + '<div class="fg-row"><div class="fg"><label class="fl">Prix adulte (MAD)</label><input class="fi" id="maPrice" type="number" placeholder="350" value="'+(a&&a.price!=null?a.price:'')+'"></div>'
+    + '<div class="fg"><label class="fl">Prix enfant (MAD)</label><input class="fi" id="maPChild" type="number" placeholder="200" value="'+(a&&a.pChild!=null?a.pChild:'')+'"></div>'
+    + '<div class="fg"><label class="fl">Participants min</label><input class="fi" id="maMinP" type="number" placeholder="1" value="'+(a&&a.minP?a.minP:1)+'"></div>'
+    + '<div class="fg"><label class="fl">Participants max</label><input class="fi" id="maMaxP" type="number" placeholder="12" value="'+(a&&a.maxP?a.maxP:20)+'"></div></div>'
+    /* ── LOCATION / MEETING POINT ── */
+    + '<div class="fg-row"><div class="fg"><label class="fl">Localisation</label><input class="fi" id="maLoc" placeholder="ex : Merzouga, Erg Chebbi" value="'+(a&&a.location?_esc(a.location):'')+'"></div>'
+    + '<div class="fg"><label class="fl">Point de rendez-vous</label><input class="fi" id="maMeetPt" placeholder="ex : Parking hôtel Auberge" value="'+(a&&a.meetingPoint?_esc(a.meetingPoint):'')+'"></div></div>'
+    /* ── MAP PICKER ── */
+    + '<div class="fg"><label class="fl">Position GPS</label>'
+    + '<div style="display:flex;gap:10px;align-items:center">'
+    + '<input class="fi" id="maLat" placeholder="Latitude" value="'+latVal+'" style="flex:1;font-size:12px">'
+    + '<input class="fi" id="maLng" placeholder="Longitude" value="'+lngVal+'" style="flex:1;font-size:12px">'
+    + '<button type="button" class="btn btn-secondary" onclick="openMapPicker()" style="white-space:nowrap;flex-shrink:0">📍 Choisir sur la carte</button>'
+    + '</div>'
+    + (latVal ? '<div style="font-size:11px;color:var(--green);margin-top:5px">✓ Position enregistrée : '+latVal+', '+lngVal+'</div>' : '<div style="font-size:11px;color:var(--text3);margin-top:5px">Aucune position — cliquez le bouton pour en choisir une</div>')
+    + '</div>'
+    /* ── DESCRIPTION ── */
+    + '<div class="fg"><label class="fl">Description</label><textarea class="fi fi-area" id="maDesc" style="min-height:80px">'+escH(a&&a.desc?a.desc:'')+'</textarea></div>'
+    /* ── HIGHLIGHTS / INC / EXC ── */
+    + '<div class="fg"><label class="fl">Points forts (1 par ligne)</label><textarea class="fi fi-area" id="maHl" style="min-height:80px" placeholder="Guide certifié&#10;Vue panoramique&#10;Thé à la menthe inclus">'+escH(hlVal)+'</textarea></div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Inclus (1 par ligne)</label><textarea class="fi fi-area" id="maInc" style="min-height:70px" placeholder="Guide expert&#10;Équipement">'+escH(incVal)+'</textarea></div>'
+    + '<div class="fg"><label class="fl">Non inclus (1 par ligne)</label><textarea class="fi fi-area" id="maExc" style="min-height:70px" placeholder="Transport&#10;Repas">'+escH(excVal)+'</textarea></div></div>'
+    + '</div>'
+    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="saveActivity('+(actId?'\''+actId+'\'':'null')+')">'+(a?'Enregistrer':'Créer')+'</button></div>',
     'modal-lg');
   setTimeout(function(){
-    if(a){ document.getElementById('maCat').value=a.category||'adventure'; document.getElementById('maStatus').value=a.status||'active'; }
-  },0);
+    if (a) {
+      document.getElementById('maCat').value    = a.category   || 'adventure';
+      document.getElementById('maStatus').value = a.status     || 'active';
+      if (a.difficulty) document.getElementById('maDiff').value = a.difficulty;
+    }
+  }, 50);
+}
+
+/* ── Standalone map picker overlay (avoids Leaflet-in-scrollable-modal issues) ── */
+function openMapPicker() {
+  var curLat = parseFloat(document.getElementById('maLat').value) || null;
+  var curLng = parseFloat(document.getElementById('maLng').value) || null;
+  window._mpLat = curLat; window._mpLng = curLng; window._mpMarker = null; window._mpMap = null;
+  var ov = document.createElement('div');
+  ov.id = 'mpOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:600;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)';
+  ov.innerHTML =
+    '<div style="background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);width:90vw;max-width:900px;height:82vh;display:flex;flex-direction:column;overflow:hidden">'
+    + '<div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">'
+      + '<div><div style="font-weight:700;font-size:15px">📍 Choisir la position</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-top:2px">Cliquer sur la carte pour placer le marqueur — utilisez le scroll pour zoomer</div></div>'
+      + '<button onclick="closeMapPicker()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3);line-height:1;padding:4px">✕</button>'
+    + '</div>'
+    + '<div style="flex:1;position:relative;min-height:0"><div id="mpMapDiv" style="width:100%;height:100%"></div>'
+    + '<div id="mpLabel" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;pointer-events:none;white-space:nowrap">'+(curLat?'📍 '+curLat.toFixed(5)+', '+curLng.toFixed(5):'Cliquez pour placer le marqueur')+'</div>'
+    + '</div>'
+    + '<div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">'
+      + '<span id="mpCoordsTxt" style="font-size:12px;color:var(--text2)">'+(curLat?'Lat: '+curLat.toFixed(6)+' — Lng: '+curLng.toFixed(6):'Aucune position sélectionnée')+'</span>'
+      + '<div style="display:flex;gap:8px"><button class="btn btn-secondary" onclick="closeMapPicker()">Annuler</button>'
+      + '<button class="btn btn-primary" id="mpConfirmBtn" onclick="confirmMapPicker()" '+(curLat?'':'disabled')+'>Confirmer la position</button></div>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(ov);
+  function _doInit() {
+    var L = window.L;
+    if (!document.getElementById('mpMapDiv')) return;
+    var lat = window._mpLat || 31.7917, lng = window._mpLng || -7.0926, zoom = window._mpLat ? 12 : 5;
+    var map = L.map('mpMapDiv').setView([lat, lng], zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap', maxZoom:19 }).addTo(map);
+    if (window._mpLat) { window._mpMarker = L.marker([window._mpLat, window._mpLng]).addTo(map); }
+    map.on('click', function(e) {
+      var ll = e.latlng;
+      window._mpLat = ll.lat; window._mpLng = ll.lng;
+      if (window._mpMarker) map.removeLayer(window._mpMarker);
+      window._mpMarker = L.marker([ll.lat, ll.lng]).addTo(map);
+      var lbl = document.getElementById('mpLabel'), ct = document.getElementById('mpCoordsTxt'), btn = document.getElementById('mpConfirmBtn');
+      if (lbl) lbl.textContent = '📍 '+ll.lat.toFixed(5)+', '+ll.lng.toFixed(5);
+      if (ct)  ct.textContent  = 'Lat: '+ll.lat.toFixed(6)+' — Lng: '+ll.lng.toFixed(6);
+      if (btn) btn.disabled = false;
+    });
+    window._mpMap = map;
+    setTimeout(function(){ map.invalidateSize(true); }, 100);
+  }
+  setTimeout(function(){
+    if (window.L) { _doInit(); }
+    else {
+      var lcs = document.createElement('link'); lcs.rel='stylesheet'; lcs.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(lcs);
+      var lsc = document.createElement('script'); lsc.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; lsc.onload=_doInit; document.head.appendChild(lsc);
+    }
+  }, 80);
+}
+function closeMapPicker() {
+  if (window._mpMap) { window._mpMap.remove(); window._mpMap = null; }
+  var ov = document.getElementById('mpOverlay'); if (ov) ov.remove();
+}
+function confirmMapPicker() {
+  if (window._mpLat == null) return;
+  var latEl = document.getElementById('maLat'), lngEl = document.getElementById('maLng');
+  if (latEl) latEl.value = window._mpLat.toFixed(6);
+  if (lngEl) lngEl.value = window._mpLng.toFixed(6);
+  closeMapPicker();
 }
 
 function editActivity(id) { openActivityModal(id); }
@@ -2677,24 +2784,32 @@ function editActivity(id) { openActivityModal(id); }
 function saveActivity(actId) {
   var title = document.getElementById('maTitle').value;
   if (!title) { showToast('Titre requis','error'); return; }
+  var imgs = [];
+  ['actImg1','actImg2','actImg3'].forEach(function(id){ var el = document.getElementById(id); if (el && el.value) imgs.push(el.value); });
   var body = {
-    title:      title,
-    sub:        document.getElementById('maSub').value,
-    category:   document.getElementById('maCat').value,
-    icon:       document.getElementById('maIcon').value,
-    duration:   document.getElementById('maDur').value,
-    location:   document.getElementById('maLoc').value,
-    price:      parseInt(document.getElementById('maPrice').value)||0,
-    pChild:     document.getElementById('maPChild').value !== '' ? parseInt(document.getElementById('maPChild').value)||0 : null,
-    minP:       parseInt(document.getElementById('maMinP').value)||1,
-    maxP:       parseInt(document.getElementById('maMaxP').value)||20,
-    badge:      document.getElementById('maBadge').value,
-    status:     document.getElementById('maStatus').value,
-    img:        document.getElementById('maImg').value,
-    desc:       document.getElementById('maDesc').value,
-    highlights: document.getElementById('maHl').value,
-    inc:        document.getElementById('maInc').value,
-    exc:        document.getElementById('maExc').value
+    title:        title,
+    sub:          document.getElementById('maSub').value,
+    category:     document.getElementById('maCat').value,
+    icon:         document.getElementById('maIcon').value,
+    duration:     document.getElementById('maDur').value,
+    location:     document.getElementById('maLoc').value,
+    meetingPoint: document.getElementById('maMeetPt').value,
+    difficulty:   document.getElementById('maDiff').value,
+    minAge:       document.getElementById('maMinAge').value !== '' ? parseInt(document.getElementById('maMinAge').value)||0 : null,
+    price:        parseInt(document.getElementById('maPrice').value)||0,
+    pChild:       document.getElementById('maPChild').value !== '' ? parseInt(document.getElementById('maPChild').value)||0 : null,
+    minP:         parseInt(document.getElementById('maMinP').value)||1,
+    maxP:         parseInt(document.getElementById('maMaxP').value)||20,
+    badge:        document.getElementById('maBadge').value,
+    status:       document.getElementById('maStatus').value,
+    img:          document.getElementById('actCover').value,
+    imgs:         imgs,
+    lat:          document.getElementById('maLat').value || null,
+    lng:          document.getElementById('maLng').value || null,
+    desc:         document.getElementById('maDesc').value,
+    highlights:   document.getElementById('maHl').value,
+    inc:          document.getElementById('maInc').value,
+    exc:          document.getElementById('maExc').value
   };
   if (actId && actId !== 'null') {
     api('PUT','/admin/activities/'+actId,body).then(function(d){

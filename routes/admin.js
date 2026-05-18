@@ -19,6 +19,7 @@ var authMw   = require('../middleware/auth');
 var auditMod = require('../middleware/audit');
 var validate = require('../middleware/validate');
 var notify   = require('../utils/notify');
+var fcm      = require('../utils/fcm');
 
 var adminOnly  = authMw.adminOnly;
 var VALID_ROLES = authMw.VALID_ROLES;
@@ -328,10 +329,16 @@ router.post('/activities', auditMod.audit('admin:activity:create'), async functi
     badge:      f.badge      ? String(f.badge).trim()      : '',
     location:   f.location   ? String(f.location).trim()   : '',
     icon:       f.icon       ? String(f.icon).trim()       : '',
-    img:        f.img        ? String(f.img).trim()        : '',
-    highlights: parseLines(f.highlights),
-    inc:        parseLines(f.inc),
-    exc:        parseLines(f.exc),
+    img:          f.img          ? String(f.img).trim()          : '',
+    imgs:         Array.isArray(f.imgs) ? f.imgs.filter(s => typeof s === 'string' && s.trim()) : [],
+    lat:          f.lat          ? parseFloat(f.lat)            : null,
+    lng:          f.lng          ? parseFloat(f.lng)            : null,
+    meetingPoint: f.meetingPoint ? String(f.meetingPoint).trim() : '',
+    difficulty:   f.difficulty   ? String(f.difficulty).trim()  : '',
+    minAge:       f.minAge       ? Math.max(0, parseInt(f.minAge) || 0) : null,
+    highlights:   parseLines(f.highlights),
+    inc:          parseLines(f.inc),
+    exc:          parseLines(f.exc),
     created:    now, updated: now
   });
   await db.activities.flush();
@@ -349,8 +356,14 @@ router.put('/activities/:id', auditMod.audit('admin:activity:update'), async fun
   if (f.badge      !== undefined) changes.badge      = String(f.badge || '').trim();
   if (f.location   !== undefined) changes.location   = String(f.location || '').trim();
   if (f.icon       !== undefined) changes.icon       = String(f.icon  || '').trim();
-  if (f.img        !== undefined) changes.img        = String(f.img   || '').trim();
-  if (f.duration   !== undefined) changes.duration   = String(f.duration || '').trim();
+  if (f.img          !== undefined) changes.img          = String(f.img   || '').trim();
+  if (f.imgs         !== undefined) changes.imgs         = Array.isArray(f.imgs) ? f.imgs.filter(s => typeof s === 'string' && s.trim()) : [];
+  if (f.lat          !== undefined) changes.lat          = f.lat ? parseFloat(f.lat) : null;
+  if (f.lng          !== undefined) changes.lng          = f.lng ? parseFloat(f.lng) : null;
+  if (f.meetingPoint !== undefined) changes.meetingPoint = String(f.meetingPoint || '').trim();
+  if (f.difficulty   !== undefined) changes.difficulty   = String(f.difficulty || '').trim();
+  if (f.minAge       !== undefined) changes.minAge       = f.minAge ? Math.max(0, parseInt(f.minAge) || 0) : null;
+  if (f.duration     !== undefined) changes.duration     = String(f.duration || '').trim();
   if (f.price      !== undefined) changes.price      = Math.max(0, parseInt(f.price) || 0);
   if (f.pChild     !== undefined) changes.pChild     = f.pChild === '' ? null : Math.max(0, parseInt(f.pChild) || 0);
   if (f.minP       !== undefined) changes.minP       = Math.max(1, parseInt(f.minP) || 1);
@@ -583,64 +596,18 @@ router.post('/notifications/send', auditMod.audit('admin:notification:send'), as
     return res.status(400).json({ error: 'Aucun appareil enregistré' });
   }
 
-  /* Build Expo push messages (batch, max 100 per chunk) */
-  var messages = tokens.map(function(t) {
-    return {
-      to:    t.token,
-      sound: 'default',
-      title: title,
-      body:  body,
-      data:  f.data || {}
-    };
-  });
-
-  var chunks = [];
-  for (var i = 0; i < messages.length; i += 100) {
-    chunks.push(messages.slice(i, i + 100));
-  }
+  /* Send via Firebase Admin SDK (direct FCM delivery) */
+  var tokenStrings = tokens.map(function(t){ return t.token; });
 
   var successCount = 0;
   var failCount    = 0;
-  var receipts     = [];
 
   try {
-    var https = require('https');
-    for (var ci = 0; ci < chunks.length; ci++) {
-      var chunk     = chunks[ci];
-      var postBody  = JSON.stringify(chunk);
-      var response  = await new Promise(function(resolve, reject) {
-        var opts = {
-          hostname: 'exp.host',
-          path:     '/--/api/v2/push/send',
-          method:   'POST',
-          headers:  {
-            'Content-Type':   'application/json',
-            'Accept':         'application/json',
-            'Accept-Encoding': 'gzip, deflate'
-          }
-        };
-        var req2 = https.request(opts, function(resp) {
-          var data = '';
-          resp.on('data', function(d){ data += d; });
-          resp.on('end', function(){
-            try { resolve(JSON.parse(data)); }
-            catch(e) { resolve({}); }
-          });
-        });
-        req2.on('error', reject);
-        req2.write(postBody);
-        req2.end();
-      });
-
-      var data = response.data || [];
-      data.forEach(function(r) {
-        if (r.status === 'ok')    successCount++;
-        else                      failCount++;
-        receipts.push(r);
-      });
-    }
+    var result = await fcm.sendMulti(tokenStrings, title, body, f.data || {});
+    successCount = result.success;
+    failCount    = result.fail;
   } catch(err) {
-    return res.status(502).json({ error: 'Expo Push API error: ' + err.message });
+    return res.status(502).json({ error: 'FCM error: ' + err.message });
   }
 
   /* Store notification in history */

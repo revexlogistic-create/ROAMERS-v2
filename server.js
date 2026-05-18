@@ -130,6 +130,9 @@ app.use('/api/bookings', sizeGuard(200 * 1024), smallJson, smallUrle);
 /* Admin settings endpoint: 25 MB (for base64 image uploads) */
 app.use('/api/admin/settings', largeJson, largeUrle);
 
+/* Admin activities endpoint: 10 MB (for base64 cover photo uploads) */
+app.use('/api/admin/activities', sizeGuard(10 * 1024 * 1024), express.json({ limit: '10mb' }), express.urlencoded({ extended: true, limit: '10mb' }));
+
 /* Experiences endpoint: 10 MB (voyage photos stored as base64 in body) */
 app.use('/api/experiences', sizeGuard(10 * 1024 * 1024), express.json({ limit: '10mb' }), express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -307,8 +310,9 @@ app.post('/api/push-token', express.json({ limit: '10kb' }), async function(req,
   var deviceId = String(req.body.deviceId || '').trim();
   var email    = req.body.email ? String(req.body.email).toLowerCase().trim() : '';
 
-  if (!token || !token.startsWith('ExponentPushToken[')) {
-    return res.status(400).json({ error: 'Invalid Expo push token' });
+  /* Accept any non-empty token: raw FCM token or Expo push token */
+  if (!token || token.length < 10) {
+    return res.status(400).json({ error: 'Token invalide' });
   }
 
   var now = new Date().toISOString();
