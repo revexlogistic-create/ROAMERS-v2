@@ -2136,7 +2136,7 @@ function openTripModal(id) {
     +'</div>'
     +'<div class="modal-footer">'
       +'<button class="btn btn-secondary" onclick="closeModal()">Annuler</button>'
-      +'<button class="btn btn-primary" onclick="saveTrip('+(t?t.id:'null')+')" style="min-width:180px;padding:10px 20px">'
+      +'<button class="btn btn-primary" onclick="saveTrip('+(t?"\'"+t.id+"\'":"null")+')" style="min-width:180px;padding:10px 20px">'
         +(t ? '💾 Enregistrer les modifications' : '🚀 Publier le voyage')
       +'</button>'
     +'</div>',
@@ -2218,7 +2218,12 @@ function saveTrip(id) {
     minP:        parseInt((document.getElementById('mTripMin')||{value:1}).value)||1,
     booked:      existing ? existing.booked : 0,
     status:      statusEl ? statusEl.value : 'open',
-    dates:       ((document.getElementById('mTripDates')||{value:''}).value).split(',').map(function(d){return d.trim();}).filter(Boolean),
+    dates:       ((document.getElementById('mTripDates')||{value:''}).value).split(',').map(function(d){
+                   var raw=d.trim(); if(!raw) return null;
+                   var dt=new Date(raw+'T00:00:00');
+                   var label=isNaN(dt)?raw:dt.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+                   return {raw:raw,label:label};
+                 }).filter(Boolean),
     services:    ((document.getElementById('mTripSvc') ||{value:''}).value).split(',').map(function(s){return s.trim();}).filter(Boolean),
     hi:          ((document.getElementById('mTripHi')  ||{value:''}).value).split('\n').map(function(s){return s.trim();}).filter(Boolean),
     exc:         ((document.getElementById('mTripExc') ||{value:''}).value).split(',').map(function(s){return s.trim();}).filter(Boolean),
