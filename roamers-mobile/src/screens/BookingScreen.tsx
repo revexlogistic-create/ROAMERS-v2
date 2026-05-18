@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, ActivityIndicator, Alert, Image,
+  TextInput, ActivityIndicator, Alert, Image, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,8 @@ import { COLORS, RADIUS, SHADOW } from '../constants/theme';
 
 const { width } = require('react-native').Dimensions.get('window');
 const COUNTRIES = ['Maroc', 'France', 'Algérie', 'Tunisie', 'USA', 'UK', 'EAU', 'Espagne', 'Italie', 'Allemagne', 'Autre'];
+
+const STEP_LABELS = ['Participants', 'Contact', 'Récap', 'Paiement'];
 
 /* ── Step indicator ─────────────────────────────────────────────────────── */
 function StepDot({ n, active, done }: { n: number; active: boolean; done: boolean }) {
@@ -33,7 +35,7 @@ const dot = StyleSheet.create({
 });
 
 /* ── Reusable field ─────────────────────────────────────────────────────── */
-function Field({ label, value, onChange, placeholder, keyboardType = 'default', secureTextEntry = false, multiline = false }: any) {
+function Field({ label, value, onChange, placeholder, keyboardType = 'default', multiline = false }: any) {
   return (
     <View style={{ marginBottom: 14 }}>
       <Text style={f.label}>{label}</Text>
@@ -44,7 +46,6 @@ function Field({ label, value, onChange, placeholder, keyboardType = 'default', 
         placeholder={placeholder}
         placeholderTextColor={COLORS.muted}
         keyboardType={keyboardType}
-        secureTextEntry={secureTextEntry}
         multiline={multiline}
       />
     </View>
@@ -59,8 +60,8 @@ const f = StyleSheet.create({
    Main
    ══════════════════════════════════════════════════════════════════════════ */
 export default function BookingScreen({ route, navigation }: any) {
-  const { exp } = route.params;
-  const insets  = useSafeAreaInsets();
+  const { exp }  = route.params;
+  const insets   = useSafeAreaInsets();
   const { user } = useAuth();
 
   const [step, setStep] = useState(1);
@@ -77,17 +78,19 @@ export default function BookingScreen({ route, navigation }: any) {
   const [country, setCountry] = useState(user?.country || 'Maroc');
   const [notes,   setNotes]   = useState('');
 
-  /* Step 3 – Confirm */
-  const [loading, setLoading] = useState(false);
+  /* Step 4 – Payment */
+  const [payMethod, setPayMethod] = useState<'virement' | 'carte'>('virement');
+  const [loading,   setLoading]   = useState(false);
 
   const adultPrice = Number(exp?.price) || 0;
   const childPrice = exp?.pChild != null ? Number(exp.pChild) : adultPrice;
   const total      = adults * adultPrice + children * childPrice;
+  const acompte    = Math.round(total * 0.3); // 30% deposit
 
   /* ── Navigation guards ── */
   function nextStep() {
     if (step === 1) {
-      if (!date) { Alert.alert('Date requise', 'Veuillez choisir une date de départ dans les dates disponibles.'); return; }
+      if (!date) { Alert.alert('Date requise', 'Veuillez choisir une date de départ.'); return; }
     }
     if (step === 2) {
       if (!name.trim())  { Alert.alert('Nom requis', 'Veuillez entrer votre nom complet.'); return; }
@@ -109,7 +112,7 @@ export default function BookingScreen({ route, navigation }: any) {
         email:    email.trim(),
         phone:    phone.trim(),
         country,
-        notes:    notes.trim(),
+        notes:    `[${payMethod === 'virement' ? 'Virement bancaire' : 'Carte bancaire'}] ${notes.trim()}`.trim(),
       });
       navigation.replace('BookingSuccess', { ref: res.booking?.id || res.ref, exp });
     } catch (e: any) {
@@ -136,7 +139,7 @@ export default function BookingScreen({ route, navigation }: any) {
 
       {/* ── Step indicators ── */}
       <View style={styles.stepRow}>
-        {['Participants', 'Contact', 'Confirmation'].map((label, i) => {
+        {STEP_LABELS.map((label, i) => {
           const n = i + 1;
           return (
             <React.Fragment key={n}>
@@ -144,7 +147,7 @@ export default function BookingScreen({ route, navigation }: any) {
                 <StepDot n={n} active={step === n} done={step > n} />
                 <Text style={[styles.stepLabel, step === n && { color: COLORS.primary }]}>{label}</Text>
               </View>
-              {i < 2 && (
+              {i < STEP_LABELS.length - 1 && (
                 <View style={[styles.stepLine, step > n && { backgroundColor: '#22c55e' }]} />
               )}
             </React.Fragment>
@@ -166,8 +169,8 @@ export default function BookingScreen({ route, navigation }: any) {
           <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={styles.expGrad}>
             <Text style={styles.expTitle} numberOfLines={2}>{exp?.title}</Text>
             <View style={{ flexDirection: 'row', gap: 14, marginTop: 4 }}>
-              {exp?.dur  && <Text style={styles.expMeta}>⏱ {exp.dur}</Text>}
-              {exp?.loc  && <Text style={styles.expMeta}>📍 {exp.loc}</Text>}
+              {exp?.dur    && <Text style={styles.expMeta}>⏱ {exp.dur}</Text>}
+              {exp?.loc    && <Text style={styles.expMeta}>📍 {exp.loc}</Text>}
               {exp?.rating && <Text style={styles.expMeta}>⭐ {exp.rating}</Text>}
             </View>
           </LinearGradient>
@@ -216,24 +219,29 @@ export default function BookingScreen({ route, navigation }: any) {
             <Text style={styles.fieldLabel}>Date de départ</Text>
             {(() => {
               const today = new Date(); today.setHours(0,0,0,0);
-              const futureDates = (exp?.dates || []).filter((d: any) => new Date(d.raw) >= today);
+              const futureDates = (exp?.dates || []).filter((d: any) => {
+                const raw = typeof d === 'object' ? d.raw : d;
+                return raw && new Date(raw) >= today;
+              });
               if (futureDates.length === 0) return (
                 <View style={{ backgroundColor: '#1a1a1a', borderRadius: RADIUS.md, padding: 14, borderWidth: 1, borderColor: COLORS.border, marginBottom: 18 }}>
-                  <Text style={{ color: COLORS.muted, fontSize: 13 }}>Aucune date disponible actuellement — contactez-nous pour plus d'informations.</Text>
+                  <Text style={{ color: COLORS.muted, fontSize: 13 }}>Aucune date disponible — contactez-nous pour plus d'informations.</Text>
                 </View>
               );
               return (
                 <View style={styles.datesGrid}>
                   {futureDates.map((d: any) => {
-                    const selected = date === d.raw;
+                    const raw = typeof d === 'object' ? d.raw : d;
+                    const label = typeof d === 'object' ? d.label : raw;
+                    const selected = date === raw;
                     return (
                       <TouchableOpacity
-                        key={d.raw}
+                        key={raw}
                         style={[styles.dateChip, selected && styles.dateChipActive]}
-                        onPress={() => setDate(d.raw)}
+                        onPress={() => setDate(raw)}
                         activeOpacity={0.75}
                       >
-                        <Text style={[styles.dateChipTxt, selected && styles.dateChipTxtActive]}>{d.label}</Text>
+                        <Text style={[styles.dateChipTxt, selected && styles.dateChipTxtActive]}>{label}</Text>
                         {selected && <Text style={{ color: COLORS.primary, fontSize: 14, marginTop: 2 }}>✓</Text>}
                       </TouchableOpacity>
                     );
@@ -297,39 +305,39 @@ export default function BookingScreen({ route, navigation }: any) {
               label="Message (optionnel)"
               value={notes}
               onChange={setNotes}
-              placeholder="Précisez vos demandes spéciales, allergies, régimes…"
+              placeholder="Demandes spéciales, allergies, régimes…"
               multiline
             />
           </View>
         )}
 
         {/* ═══════════════════════════════
-            STEP 3 — Confirmation
+            STEP 3 — Récapitulatif
             ═══════════════════════════════ */}
         {step === 3 && (
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>Récapitulatif</Text>
 
-            {/* Experience */}
             <View style={styles.recapSection}>
               <Text style={styles.recapHeader}>🏕️ Expérience</Text>
               <Text style={styles.recapVal}>{exp?.title}</Text>
               {exp?.loc && <Text style={styles.recapSub}>📍 {exp.loc}</Text>}
             </View>
 
-            {/* Participants */}
             <View style={styles.recapSection}>
               <Text style={styles.recapHeader}>👥 Participants</Text>
               <Text style={styles.recapVal}>{adults} adulte{adults > 1 ? 's' : ''}{children > 0 ? ` + ${children} enfant${children > 1 ? 's' : ''}` : ''}</Text>
-              <Text style={styles.recapSub}>📅 {(exp?.dates || []).find((d: any) => d.raw === date)?.label || date}</Text>
+              <Text style={styles.recapSub}>📅 {(() => {
+                const found = (exp?.dates || []).find((d: any) => (typeof d === 'object' ? d.raw : d) === date);
+                return found ? (typeof found === 'object' ? found.label : found) : date;
+              })()}</Text>
             </View>
 
-            {/* Contact */}
             <View style={styles.recapSection}>
               <Text style={styles.recapHeader}>📋 Contact</Text>
               <Text style={styles.recapVal}>{name}</Text>
               <Text style={styles.recapSub}>{email}</Text>
-              <Text style={styles.recapSub}>{phone}</Text>
+              <Text style={styles.recapSub}>{phone} · {country}</Text>
             </View>
 
             {notes ? (
@@ -339,7 +347,6 @@ export default function BookingScreen({ route, navigation }: any) {
               </View>
             ) : null}
 
-            {/* Total */}
             <LinearGradient colors={['#1a000a', '#111']} style={styles.totalCard}>
               <View style={styles.priceRow}>
                 <Text style={{ color: COLORS.sub, fontSize: 13 }}>{adults} adulte{adults > 1 ? 's' : ''} × {adultPrice.toLocaleString('fr-MA')} MAD</Text>
@@ -356,16 +363,113 @@ export default function BookingScreen({ route, navigation }: any) {
                 <Text style={{ color: COLORS.primary, fontSize: 24, fontWeight: '900' }}>{total.toLocaleString('fr-MA')} MAD</Text>
               </View>
             </LinearGradient>
+          </View>
+        )}
+
+        {/* ═══════════════════════════════
+            STEP 4 — Paiement
+            ═══════════════════════════════ */}
+        {step === 4 && (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>Mode de paiement</Text>
+
+            {/* Total reminder */}
+            <LinearGradient colors={['#1a000a', '#111']} style={[styles.totalCard, { marginBottom: 22 }]}>
+              <View style={styles.priceRow}>
+                <Text style={{ color: COLORS.sub, fontSize: 13 }}>Montant total</Text>
+                <Text style={{ color: COLORS.primary, fontSize: 22, fontWeight: '900' }}>{total.toLocaleString('fr-MA')} MAD</Text>
+              </View>
+              <View style={styles.priceRow}>
+                <Text style={{ color: COLORS.muted, fontSize: 12 }}>Acompte requis (30%)</Text>
+                <Text style={{ color: '#22c55e', fontSize: 14, fontWeight: '700' }}>{acompte.toLocaleString('fr-MA')} MAD</Text>
+              </View>
+            </LinearGradient>
+
+            <Text style={styles.fieldLabel}>Choisissez votre méthode</Text>
+
+            {/* Virement bancaire */}
+            <TouchableOpacity
+              style={[styles.payOption, payMethod === 'virement' && styles.payOptionActive]}
+              onPress={() => setPayMethod('virement')}
+              activeOpacity={0.85}
+            >
+              <View style={styles.payOptionLeft}>
+                <View style={[styles.payIconBox, { backgroundColor: '#1a2d1a' }]}>
+                  <Text style={{ fontSize: 24 }}>🏦</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.payTitle}>Virement bancaire</Text>
+                  <Text style={styles.paySub}>Transférez l'acompte sur notre RIB — confirmation sous 24h</Text>
+                </View>
+              </View>
+              <View style={[styles.payRadio, payMethod === 'virement' && styles.payRadioActive]}>
+                {payMethod === 'virement' && <View style={styles.payRadioDot} />}
+              </View>
+            </TouchableOpacity>
+
+            {/* Virement details */}
+            {payMethod === 'virement' && (
+              <View style={styles.bankDetails}>
+                <Text style={styles.bankTitle}>Coordonnées bancaires Roamers</Text>
+                {[
+                  ['Banque', 'Attijariwafa Bank'],
+                  ['Titulaire', 'ROAMERS SARL'],
+                  ['RIB', '007 780 0021456300001 23'],
+                  ['Montant', `${acompte.toLocaleString('fr-MA')} MAD (acompte 30%)`],
+                  ['Référence', `REF-${name.replace(/\s/g,'').toUpperCase().slice(0,6)}`],
+                ].map(([k, v]) => (
+                  <View key={k} style={styles.bankRow}>
+                    <Text style={styles.bankKey}>{k}</Text>
+                    <Text style={styles.bankVal}>{v}</Text>
+                  </View>
+                ))}
+                <Text style={styles.bankNote}>
+                  ⚠️ Indiquez votre nom complet en référence et envoyez le justificatif par WhatsApp au +212 6 XX XX XX XX
+                </Text>
+              </View>
+            )}
+
+            {/* Carte bancaire */}
+            <TouchableOpacity
+              style={[styles.payOption, payMethod === 'carte' && styles.payOptionActive, { marginTop: 12 }]}
+              onPress={() => setPayMethod('carte')}
+              activeOpacity={0.85}
+            >
+              <View style={styles.payOptionLeft}>
+                <View style={[styles.payIconBox, { backgroundColor: '#1a1a2e' }]}>
+                  <Text style={{ fontSize: 24 }}>💳</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.payTitle}>Carte bancaire</Text>
+                  <Text style={styles.paySub}>Paiement sécurisé en ligne · Visa / Mastercard / CMI</Text>
+                </View>
+              </View>
+              <View style={[styles.payRadio, payMethod === 'carte' && styles.payRadioActive]}>
+                {payMethod === 'carte' && <View style={styles.payRadioDot} />}
+              </View>
+            </TouchableOpacity>
+
+            {/* Stripe note */}
+            {payMethod === 'carte' && (
+              <View style={styles.stripeNote}>
+                <Text style={{ fontSize: 20, marginBottom: 6 }}>🔒</Text>
+                <Text style={styles.stripeNoteTitle}>Paiement sécurisé</Text>
+                <Text style={styles.stripeNoteSub}>
+                  Après confirmation, vous recevrez un lien de paiement sécurisé par email pour régler l'acompte de{' '}
+                  <Text style={{ color: COLORS.primary, fontWeight: '800' }}>{acompte.toLocaleString('fr-MA')} MAD</Text>
+                </Text>
+              </View>
+            )}
 
             <Text style={styles.disclaimer}>
-              En confirmant, vous acceptez nos conditions générales. Notre équipe vous contactera dans les 24h pour finaliser votre réservation.
+              En confirmant, vous acceptez nos conditions générales. Notre équipe vous contactera dans les 24h pour valider votre réservation.
             </Text>
           </View>
         )}
 
         {/* ── CTA ── */}
         <View style={{ paddingHorizontal: 0, marginTop: 4 }}>
-          {step < 3 ? (
+          {step < 4 ? (
             <TouchableOpacity onPress={nextStep} activeOpacity={0.87}>
               <LinearGradient colors={['#d4173a', '#8f1122']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaBtn}>
                 <Text style={styles.ctaBtnTxt}>Continuer →</Text>
@@ -376,7 +480,9 @@ export default function BookingScreen({ route, navigation }: any) {
               <LinearGradient colors={['#d4173a', '#8f1122']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaBtn}>
                 {loading
                   ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.ctaBtnTxt}>◆  Confirmer la réservation</Text>
+                  : <Text style={styles.ctaBtnTxt}>
+                      {payMethod === 'virement' ? '◆  Confirmer & payer par virement' : '◆  Confirmer & recevoir le lien de paiement'}
+                    </Text>
                 }
               </LinearGradient>
             </TouchableOpacity>
@@ -401,16 +507,16 @@ const styles = StyleSheet.create({
   headerTitle: { color: COLORS.text, fontSize: 17, fontWeight: '800' },
 
   /* step indicator */
-  stepRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 20, gap: 0 },
-  stepLine:  { flex: 1, height: 2, backgroundColor: COLORS.border, marginTop: -14, marginHorizontal: 4 },
-  stepLabel: { color: COLORS.muted, fontSize: 10, fontWeight: '600', textAlign: 'center', marginTop: 2 },
+  stepRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, paddingHorizontal: 12, gap: 0 },
+  stepLine:  { flex: 1, height: 2, backgroundColor: COLORS.border, marginTop: -14, marginHorizontal: 2 },
+  stepLabel: { color: COLORS.muted, fontSize: 9, fontWeight: '600', textAlign: 'center', marginTop: 2 },
 
   /* experience card */
-  expCard: { marginHorizontal: 16, marginTop: 16, borderRadius: RADIUS.lg, overflow: 'hidden', height: 160, borderWidth: 1, borderColor: COLORS.border },
+  expCard: { marginHorizontal: 16, marginTop: 16, borderRadius: RADIUS.lg, overflow: 'hidden', height: 140, borderWidth: 1, borderColor: COLORS.border },
   expImg:  { width: '100%', height: '100%', position: 'absolute' },
   expGrad: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 14, paddingTop: 40 },
-  expTitle:{ color: '#fff', fontSize: 16, fontWeight: '900', lineHeight: 20 },
-  expMeta: { color: 'rgba(255,255,255,0.6)', fontSize: 12 },
+  expTitle:{ color: '#fff', fontSize: 15, fontWeight: '900', lineHeight: 19 },
+  expMeta: { color: 'rgba(255,255,255,0.6)', fontSize: 11 },
 
   /* step content */
   stepContent: { paddingHorizontal: 16, paddingTop: 22, gap: 0 },
@@ -449,18 +555,47 @@ const styles = StyleSheet.create({
   recapSub:     { color: COLORS.sub, fontSize: 13, lineHeight: 18 },
   totalCard:    { borderRadius: RADIUS.lg, padding: 16, borderWidth: 1, borderColor: COLORS.primary + '33', marginBottom: 16 },
 
+  /* payment options */
+  payOption: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#1a1a1a', borderRadius: RADIUS.lg,
+    borderWidth: 1.5, borderColor: COLORS.border,
+    padding: 16, gap: 14,
+  },
+  payOptionActive: { borderColor: COLORS.primary, backgroundColor: '#1a0208' },
+  payOptionLeft:   { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  payIconBox:      { width: 48, height: 48, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center' },
+  payTitle:        { color: COLORS.text, fontSize: 15, fontWeight: '800', marginBottom: 3 },
+  paySub:          { color: COLORS.sub, fontSize: 12, lineHeight: 16 },
+  payRadio:        { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
+  payRadioActive:  { borderColor: COLORS.primary },
+  payRadioDot:     { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.primary },
+
+  /* bank details */
+  bankDetails: { backgroundColor: '#0d1a0d', borderRadius: RADIUS.lg, padding: 16, borderWidth: 1, borderColor: '#22c55e33', marginTop: 12 },
+  bankTitle:   { color: '#22c55e', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 },
+  bankRow:     { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  bankKey:     { color: COLORS.muted, fontSize: 12 },
+  bankVal:     { color: COLORS.text, fontSize: 13, fontWeight: '700', textAlign: 'right', flex: 1, marginLeft: 12 },
+  bankNote:    { color: COLORS.sub, fontSize: 11, lineHeight: 16, marginTop: 12, borderTopWidth: 1, borderTopColor: '#22c55e22', paddingTop: 10 },
+
+  /* stripe note */
+  stripeNote:     { backgroundColor: '#0a0a1e', borderRadius: RADIUS.lg, padding: 16, borderWidth: 1, borderColor: '#3b82f633', marginTop: 12, alignItems: 'center' },
+  stripeNoteTitle:{ color: '#60a5fa', fontSize: 14, fontWeight: '800', marginBottom: 6 },
+  stripeNoteSub:  { color: COLORS.sub, fontSize: 13, lineHeight: 19, textAlign: 'center' },
+
   /* CTA */
   ctaBtn:    { borderRadius: RADIUS.pill, paddingVertical: 17, alignItems: 'center', marginHorizontal: 16, marginBottom: 24, ...SHADOW.md },
-  ctaBtnTxt: { color: '#fff', fontWeight: '900', fontSize: 16, letterSpacing: 0.5 },
+  ctaBtnTxt: { color: '#fff', fontWeight: '900', fontSize: 15, letterSpacing: 0.3 },
 
   disclaimer: { color: COLORS.muted, fontSize: 11, textAlign: 'center', lineHeight: 16, marginHorizontal: 16, marginBottom: 12 },
 
   body: { paddingBottom: 24 },
 
   /* date picker */
-  datesGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 18 },
-  dateChip:         { paddingHorizontal: 16, paddingVertical: 12, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: '#1a1a1a', alignItems: 'center', minWidth: (width - 32 - 32 - 10) / 2 },
-  dateChipActive:   { borderColor: COLORS.primary, backgroundColor: '#1a0208' },
-  dateChipTxt:      { color: COLORS.sub, fontSize: 14, fontWeight: '600', textAlign: 'center' },
-  dateChipTxtActive:{ color: '#fff', fontWeight: '800' },
+  datesGrid:         { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 18 },
+  dateChip:          { paddingHorizontal: 16, paddingVertical: 12, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: '#1a1a1a', alignItems: 'center', minWidth: (width - 32 - 32 - 10) / 2 },
+  dateChipActive:    { borderColor: COLORS.primary, backgroundColor: '#1a0208' },
+  dateChipTxt:       { color: COLORS.sub, fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  dateChipTxtActive: { color: '#fff', fontWeight: '800' },
 });
