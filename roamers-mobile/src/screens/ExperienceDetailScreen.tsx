@@ -262,42 +262,6 @@ export default function ExperienceDetailScreen({ route, navigation }: any) {
           )}
         </View>
 
-        {/* ── THUMBNAIL STRIP (Instagram grid style) ── */}
-        {imgs.length > 1 && (
-          <View style={s.thumbStrip}>
-            <ScrollView
-              horizontal showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 3, paddingHorizontal: 3 }}
-            >
-              {imgs.map((uri, i) => (
-                <TouchableOpacity
-                  key={i}
-                  onPress={() => goToImage(i)}
-                  activeOpacity={0.85}
-                  style={[
-                    s.thumb,
-                    i === imgIdx && { borderWidth: 2.5, borderColor: segColor },
-                  ]}
-                >
-                  <Image source={{ uri }} style={s.thumbImg} resizeMode="cover" />
-                  {/* Dim overlay for non-active */}
-                  {i !== imgIdx && (
-                    <View
-                      pointerEvents="none"
-                      style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.38)', borderRadius: RADIUS.sm - 1 }}
-                    />
-                  )}
-                  {/* "+" badge on last thumb if more images */}
-                  {i === 3 && imgs.length > 4 && (
-                    <View style={[s.thumbMore, { backgroundColor: 'rgba(0,0,0,0.72)' }]}>
-                      <Text style={s.thumbMoreTxt}>+{imgs.length - 4}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
 
         {/* ── TITLE ── */}
         <View style={s.titleBlock}>
@@ -625,12 +589,6 @@ const s = StyleSheet.create({
   ratingOvStar:  { color: '#FFD700', fontSize: 13, fontWeight: '800' },
   ratingOvRev:   { color: 'rgba(255,255,255,0.65)', fontSize: 12 },
 
-  /* ── Thumbnail strip ── */
-  thumbStrip: { backgroundColor: '#0e0e0e', paddingVertical: 4 },
-  thumb:      { width: 72, height: 72, borderRadius: RADIUS.sm, overflow: 'hidden' },
-  thumbImg:   { width: '100%', height: '100%' },
-  thumbMore:  { ...StyleSheet.absoluteFillObject as any, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.sm - 1 },
-  thumbMoreTxt: { color: '#fff', fontSize: 16, fontWeight: '900' },
 
   /* Title */
   titleBlock: { paddingHorizontal: 18, paddingTop: 22, paddingBottom: 8 },
