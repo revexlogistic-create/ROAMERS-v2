@@ -396,6 +396,7 @@ label.fl{display:block;font-size:11px;font-weight:600;letter-spacing:.05em;text-
   <div class="sb-item" onclick="goPage('teams')" id="nav-teams"><div class="si">🏢</div><span>Team Building</span><span class="badge" id="teamsBadge" style="display:none">0</span></div>
   <div class="sb-item" onclick="goPage('messages')" id="nav-messages"><div class="si">💬</div><span>Messages</span><span class="badge" id="msgsBadge" style="display:none">0</span></div>
   <div class="sb-item" onclick="goPage('itineraries')" id="nav-itineraries"><div class="si">🛤️</div><span>Itinéraires App</span><span class="badge green" id="itinBadge" style="display:none">0</span></div>
+  <div class="sb-item" onclick="goPage('notifications')" id="nav-notifications"><div class="si">🔔</div><span>Notifications</span><span class="badge green" id="notifTokenBadge" style="display:none">0</span></div>
   <div class="sb-item" onclick="goPage('partners')" id="nav-partners"><div class="si">🤝</div><span>Partnerships</span></div>
   <div class="sb-item" onclick="goPage('analytics')" id="nav-analytics"><div class="si">📈</div><span>Analytics</span></div>
 
@@ -536,7 +537,7 @@ function mapBk(b) {
   });
 }
 function loadAll(cb) {
-  var left = 10;
+  var left = 12;
   function done(){ if(--left===0) cb(); }
   api('GET','/experiences?includeDrafts=1').then(function(d){
     if(d.experiences) DB.trips = d.experiences.map(mapExp);
@@ -616,6 +617,16 @@ function loadAll(cb) {
       if(ib){ ib.textContent = newItins.length; ib.style.display = newItins.length ? 'inline-block' : 'none'; }
     }
   }).catch(function(){}).then(done);
+  api('GET','/admin/push-tokens').then(function(d){
+    if(d.tokens) {
+      DB.pushTokens = d.tokens;
+      var nb = document.getElementById('notifTokenBadge');
+      if(nb && d.tokens.length){ nb.textContent = d.tokens.length; nb.style.display = 'inline-block'; }
+    }
+  }).catch(function(){}).then(done);
+  api('GET','/admin/notifications').then(function(d){
+    if(d.notifications) DB.pushNotifHistory = d.notifications;
+  }).catch(function(){}).then(done);
 }
 
 /* ═══════════════════════════════════════════════
@@ -634,6 +645,8 @@ var DB = {
   adminUsers: [],
   settings: {},
   notifications: [],
+  pushTokens: [],
+  pushNotifHistory: [],
   cms: {
     hero:{
       title:'Explorez le Maroc<br><em class="s">autrement.</em>',
@@ -699,11 +712,11 @@ function goPage(page) {
   document.querySelectorAll('.sb-item').forEach(function(el){ el.classList.remove('active'); });
   var navEl = document.getElementById('nav-'+page);
   if (navEl) navEl.classList.add('active');
-  var titles = {overview:'Overview',bookings:'Bookings',trips:'Trips (Voyages)',activities:'Activities & Experiences',customers:'Customers',media:'Media Library',cms:'Website Content (CMS)',partners:'Partnerships & Programs',analytics:'Analytics',users:'Users & Roles',settings:'Settings',plans:'Plan Requests',teams:'Team Building Requests',messages:'Messages',itineraries:'Itinéraires App'};
+  var titles = {overview:'Overview',bookings:'Bookings',trips:'Trips (Voyages)',activities:'Activities & Experiences',customers:'Customers',media:'Media Library',cms:'Website Content (CMS)',partners:'Partnerships & Programs',analytics:'Analytics',users:'Users & Roles',settings:'Settings',plans:'Plan Requests',teams:'Team Building Requests',messages:'Messages',itineraries:'Itinéraires App',notifications:'Notifications Push'};
   document.getElementById('pageTitle').textContent = titles[page] || page;
   Object.values(APP.chartInstances).forEach(function(c){ if(c) c.destroy(); });
   APP.chartInstances = {};
-  var renders = {overview:renderOverview,bookings:renderBookings,trips:renderTrips,activities:renderActivities,customers:renderCustomers,media:renderMedia,cms:renderCMS,partners:renderPartners,analytics:renderAnalytics,users:renderUsers,settings:renderSettings,plans:renderPlanRequests,teams:renderTeamRequests,messages:renderMessages,itineraries:renderItineraries};
+  var renders = {overview:renderOverview,bookings:renderBookings,trips:renderTrips,activities:renderActivities,customers:renderCustomers,media:renderMedia,cms:renderCMS,partners:renderPartners,analytics:renderAnalytics,users:renderUsers,settings:renderSettings,plans:renderPlanRequests,teams:renderTeamRequests,messages:renderMessages,itineraries:renderItineraries,notifications:renderNotifications};
   document.getElementById('content').innerHTML = (renders[page] || renderOverview)();
   if (page === 'overview') initOverviewCharts();
   if (page === 'analytics') initAnalyticsCharts();
@@ -1509,6 +1522,8 @@ function renderSettings() {
 
 /* ── helper: escape attribute value ── */
 function _esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+/* ── helper: escape HTML content ── */
+function escH(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 /* ── build one upload dropzone widget ── */
 function _upZone(fieldId, val, maxW, ratio, label, phText){
@@ -3662,6 +3677,169 @@ function hashColor(s) {
   var colors = ['#B8172E','#2563EB','#16A34A','#D97706','#7C3AED','#0891B2','#BE185D','#059669'];
   var h = 0; for(var i=0;i<s.length;i++) h = s.charCodeAt(i)+((h<<5)-h);
   return colors[Math.abs(h)%colors.length];
+}
+
+/* ═══════════════════════════════════════════════
+   PAGE: NOTIFICATIONS
+═══════════════════════════════════════════════ */
+var NOTIF_TEMPLATES = [
+  { label:'📣 Nouveau voyage',   title:'Nouveau voyage disponible !', body:'Un nouveau voyage vient d\'être ajouté — découvrez-le maintenant sur l\'app Roamers.' },
+  { label:'⏰ Rappel réservation', title:'Rappel : votre voyage approche !', body:'Votre aventure commence bientôt. Vérifiez les détails de votre réservation dans l\'app.' },
+  { label:'💰 Promo flash',       title:'Offre exclusive — 48h seulement', body:'Une promotion spéciale est disponible sur une sélection de voyages. Ne la manquez pas !' },
+  { label:'🎉 Confirmation',      title:'Réservation confirmée ✅', body:'Votre réservation a été confirmée par notre équipe. À très bientôt sur les pistes !' }
+];
+
+function renderNotifications() {
+  var tokens  = DB.pushTokens || [];
+  var history = DB.pushNotifHistory || [];
+  var android = tokens.filter(function(t){ return t.platform==='android'; }).length;
+  var ios     = tokens.filter(function(t){ return t.platform==='ios'; }).length;
+
+  var tmplOpts = NOTIF_TEMPLATES.map(function(t,i){
+    return '<option value="'+i+'">'+t.label+'</option>';
+  }).join('');
+
+  var histRows = history.length ? history.map(function(n){
+    var ok  = n.successCount || 0;
+    var err = n.failCount    || 0;
+    return '<tr>'
+      +'<td style="padding:10px 14px"><strong>'+escH(n.title)+'</strong><div style="color:var(--text3);font-size:12px;margin-top:2px">'+escH(n.body).slice(0,80)+(n.body&&n.body.length>80?'…':'')+'</div></td>'
+      +'<td style="padding:10px 14px;color:var(--text2);font-size:12px">'+fmtDate(n.sentAt)+'</td>'
+      +'<td style="padding:10px 14px;text-align:center"><span style="background:var(--green-l);color:var(--green);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">✓ '+ok+'</span></td>'
+      +'<td style="padding:10px 14px;text-align:center">'+(err ? '<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">✗ '+err+'</span>' : '<span style="color:var(--text3)">—</span>')+'</td>'
+      +'<td style="padding:10px 14px;color:var(--text2);font-size:12px">'+escH(n.sentBy||'admin')+'</td>'
+      +'</tr>';
+  }).join('') : '<tr><td colspan="5" style="padding:40px;text-align:center;color:var(--text3)">Aucune notification envoyée</td></tr>';
+
+  return '<div style="max-width:900px">'
+
+    /* KPI row */
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">'
+      +'<div class="card" style="padding:20px;text-align:center">'
+        +'<div style="font-size:32px;font-weight:800;color:var(--blue)">'+tokens.length+'</div>'
+        +'<div style="color:var(--text2);font-size:13px;margin-top:4px">Appareils enregistrés</div>'
+        +'<div style="color:var(--text3);font-size:11px;margin-top:6px">🤖 Android: '+android+' &nbsp; 🍎 iOS: '+ios+'</div>'
+      +'</div>'
+      +'<div class="card" style="padding:20px;text-align:center">'
+        +'<div style="font-size:32px;font-weight:800;color:var(--purple)">'+history.length+'</div>'
+        +'<div style="color:var(--text2);font-size:13px;margin-top:4px">Notifications envoyées</div>'
+        +'<div style="color:var(--text3);font-size:11px;margin-top:6px">Total historique</div>'
+      +'</div>'
+      +'<div class="card" style="padding:20px;text-align:center">'
+        +'<div style="font-size:32px;font-weight:800;color:var(--green)">'
+          +(history.reduce(function(s,n){ return s+(n.successCount||0); }, 0))
+        +'</div>'
+        +'<div style="color:var(--text2);font-size:13px;margin-top:4px">Livraisons réussies</div>'
+        +'<div style="color:var(--text3);font-size:11px;margin-top:6px">Total cumulé</div>'
+      +'</div>'
+    +'</div>'
+
+    /* Compose form */
+    +'<div class="card" style="padding:24px;margin-bottom:24px">'
+      +'<h3 style="font-size:15px;font-weight:700;margin-bottom:18px">📨 Envoyer une notification</h3>'
+      +'<div style="margin-bottom:14px">'
+        +'<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">Modèle rapide</label>'
+        +'<select id="notifTemplate" onchange="applyNotifTemplate(this.value)" style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--surface)">'
+          +'<option value="">— Choisir un modèle —</option>'+tmplOpts
+        +'</select>'
+      +'</div>'
+      +'<div style="margin-bottom:14px">'
+        +'<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">Titre <span style="color:var(--red)">*</span></label>'
+        +'<input id="notifTitle" type="text" maxlength="100" placeholder="Ex: Nouveau voyage disponible !" style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px">'
+      +'</div>'
+      +'<div style="margin-bottom:14px">'
+        +'<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">Message <span style="color:var(--red)">*</span></label>'
+        +'<textarea id="notifBody" maxlength="200" rows="3" placeholder="Texte de la notification…" style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;resize:vertical"></textarea>'
+        +'<div style="text-align:right;font-size:11px;color:var(--text3);margin-top:3px"><span id="notifBodyCount">0</span>/200</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:12px;margin-top:6px">'
+        +'<button onclick="sendAdminNotification()" style="background:var(--red);color:#fff;padding:10px 24px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">🔔 Envoyer à tous ('+tokens.length+' appareils)</button>'
+        +'<span id="notifSendStatus" style="font-size:13px"></span>'
+      +'</div>'
+    +'</div>'
+
+    /* History table */
+    +'<div class="card" style="overflow:hidden">'
+      +'<div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700">📋 Historique des notifications</div>'
+      +'<div style="overflow-x:auto">'
+        +'<table>'
+          +'<thead><tr style="background:var(--surface3)">'
+            +'<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text2)">NOTIFICATION</th>'
+            +'<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text2)">DATE</th>'
+            +'<th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--text2)">SUCCÈS</th>'
+            +'<th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--text2)">ERREURS</th>'
+            +'<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text2)">ENVOYÉ PAR</th>'
+          +'</tr></thead>'
+          +'<tbody>'+histRows+'</tbody>'
+        +'</table>'
+      +'</div>'
+    +'</div>'
+  +'</div>';
+}
+
+function applyNotifTemplate(idx) {
+  if (idx === '') return;
+  var t = NOTIF_TEMPLATES[parseInt(idx)];
+  if (!t) return;
+  var titleEl = document.getElementById('notifTitle');
+  var bodyEl  = document.getElementById('notifBody');
+  if (titleEl) titleEl.value = t.title;
+  if (bodyEl)  { bodyEl.value = t.body; updateNotifCount(); }
+}
+
+function updateNotifCount() {
+  var el = document.getElementById('notifBody');
+  var cnt = document.getElementById('notifBodyCount');
+  if (el && cnt) cnt.textContent = el.value.length;
+}
+
+/* Wire up character counter dynamically after render */
+document.addEventListener('input', function(e) {
+  if (e.target && e.target.id === 'notifBody') updateNotifCount();
+});
+
+function sendAdminNotification() {
+  var title = (document.getElementById('notifTitle') || {}).value || '';
+  var body  = (document.getElementById('notifBody')  || {}).value || '';
+  var statusEl = document.getElementById('notifSendStatus');
+
+  if (!title.trim()) { if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">Titre requis</span>'; return; }
+  if (!body.trim())  { if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">Message requis</span>'; return; }
+  if (!DB.pushTokens.length) { if(statusEl) statusEl.innerHTML='<span style="color:var(--amber)">Aucun appareil enregistré</span>'; return; }
+
+  if(statusEl) statusEl.innerHTML='<span style="color:var(--text3)">Envoi en cours…</span>';
+
+  api('POST', '/admin/notifications/send', { title: title.trim(), body: body.trim() })
+    .then(function(r) {
+      if (r.error) {
+        if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">'+escH(r.error)+'</span>';
+        return;
+      }
+      /* Update local history */
+      if (r.notification) DB.pushNotifHistory.unshift(r.notification);
+      if(statusEl) statusEl.innerHTML='<span style="color:var(--green)">✓ Envoyée à '+r.successCount+'/'+r.sentTo+' appareil(s)</span>';
+      /* Refresh the history table */
+      var histEl = document.querySelector('#content tbody');
+      if(histEl) {
+        var history = DB.pushNotifHistory || [];
+        histEl.innerHTML = history.length ? history.map(function(n){
+          var ok=n.successCount||0; var err=n.failCount||0;
+          return '<tr><td style="padding:10px 14px"><strong>'+escH(n.title)+'</strong><div style="color:var(--text3);font-size:12px;margin-top:2px">'+escH(n.body).slice(0,80)+'</div></td>'
+            +'<td style="padding:10px 14px;color:var(--text2);font-size:12px">'+fmtDate(n.sentAt)+'</td>'
+            +'<td style="padding:10px 14px;text-align:center"><span style="background:var(--green-l);color:var(--green);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">✓ '+ok+'</span></td>'
+            +'<td style="padding:10px 14px;text-align:center">'+(err?'<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">✗ '+err+'</span>':'<span style="color:var(--text3)">—</span>')+'</td>'
+            +'<td style="padding:10px 14px;color:var(--text2);font-size:12px">'+escH(n.sentBy||'admin')+'</td></tr>';
+        }).join('') : '<tr><td colspan="5" style="padding:40px;text-align:center;color:var(--text3)">Aucune notification envoyée</td></tr>';
+      }
+      /* Clear form */
+      document.getElementById('notifTitle').value = '';
+      document.getElementById('notifBody').value  = '';
+      document.getElementById('notifTemplate').value = '';
+      updateNotifCount();
+    })
+    .catch(function(e) {
+      if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">Erreur: '+escH(e.message||'unknown')+'</span>';
+    });
 }
 
 /* Init */

@@ -489,6 +489,123 @@ router.patch('/itineraries/:id', auditMod.audit('admin:itinerary:update'), async
   res.json({ message: 'Updated' });
 });
 
+/* ── PUSH NOTIFICATIONS ──────────────────────────────────────── */
+
+/* List all registered device tokens */
+router.get('/push-tokens', function(req, res) {
+  var tokens = db.pushTokens.all().sort(function(a,b){ return new Date(b.createdAt) - new Date(a.createdAt); });
+  res.json({ tokens: tokens, total: tokens.length });
+});
+
+/* List notification history */
+router.get('/notifications', function(req, res) {
+  var list = db.notifications.all().sort(function(a,b){ return new Date(b.sentAt) - new Date(a.sentAt); });
+  res.json({ notifications: list, total: list.length });
+});
+
+/* Send push notification via Expo Push API */
+router.post('/notifications/send', auditMod.audit('admin:notification:send'), async function(req, res) {
+  var f = req.body || {};
+  var title = String(f.title || '').trim().slice(0, 200);
+  var body  = String(f.body  || '').trim().slice(0, 1000);
+  if (!title) return res.status(400).json({ error: 'Titre requis' });
+  if (!body)  return res.status(400).json({ error: 'Message requis' });
+
+  /* Collect active tokens — optionally filter by target */
+  var tokens = db.pushTokens.all(function(t){ return t.active !== false; });
+  if (f.targetToken) {
+    /* Send to a single specific token (for test) */
+    tokens = tokens.filter(function(t){ return t.token === f.targetToken; });
+  }
+
+  if (!tokens.length) {
+    return res.status(400).json({ error: 'Aucun appareil enregistré' });
+  }
+
+  /* Build Expo push messages (batch, max 100 per chunk) */
+  var messages = tokens.map(function(t) {
+    return {
+      to:    t.token,
+      sound: 'default',
+      title: title,
+      body:  body,
+      data:  f.data || {}
+    };
+  });
+
+  var chunks = [];
+  for (var i = 0; i < messages.length; i += 100) {
+    chunks.push(messages.slice(i, i + 100));
+  }
+
+  var successCount = 0;
+  var failCount    = 0;
+  var receipts     = [];
+
+  try {
+    var https = require('https');
+    for (var ci = 0; ci < chunks.length; ci++) {
+      var chunk     = chunks[ci];
+      var postBody  = JSON.stringify(chunk);
+      var response  = await new Promise(function(resolve, reject) {
+        var opts = {
+          hostname: 'exp.host',
+          path:     '/--/api/v2/push/send',
+          method:   'POST',
+          headers:  {
+            'Content-Type':   'application/json',
+            'Accept':         'application/json',
+            'Accept-Encoding': 'gzip, deflate'
+          }
+        };
+        var req2 = https.request(opts, function(resp) {
+          var data = '';
+          resp.on('data', function(d){ data += d; });
+          resp.on('end', function(){
+            try { resolve(JSON.parse(data)); }
+            catch(e) { resolve({}); }
+          });
+        });
+        req2.on('error', reject);
+        req2.write(postBody);
+        req2.end();
+      });
+
+      var data = response.data || [];
+      data.forEach(function(r) {
+        if (r.status === 'ok')    successCount++;
+        else                      failCount++;
+        receipts.push(r);
+      });
+    }
+  } catch(err) {
+    return res.status(502).json({ error: 'Expo Push API error: ' + err.message });
+  }
+
+  /* Store notification in history */
+  var notif = {
+    id:           uuidv4(),
+    title:        title,
+    body:         body,
+    data:         f.data || {},
+    sentTo:       tokens.length,
+    successCount: successCount,
+    failCount:    failCount,
+    sentAt:       new Date().toISOString(),
+    sentBy:       req.user && req.user.email ? req.user.email : 'admin'
+  };
+  db.notifications.insert(notif);
+  await db.notifications.flush();
+
+  res.json({
+    message:      'Notification envoyée',
+    sentTo:       tokens.length,
+    successCount: successCount,
+    failCount:    failCount,
+    notification: notif
+  });
+});
+
 function sanitizeCmsObject(obj) {
   if (typeof obj !== 'object' || obj === null) return obj;
   if (Array.isArray(obj)) {

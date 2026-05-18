@@ -49,7 +49,7 @@ if (process.env.MONGODB_URI) {
     return _mdb;
   }
 
-  const TABLES = ['users','bookings','plans','teams','contacts','experiences','activities','partners','settings','itineraries','reviews'];
+  const TABLES = ['users','bookings','plans','teams','contacts','experiences','activities','partners','settings','itineraries','reviews','pushTokens','notifications'];
   const _caches = {};
   TABLES.forEach(function(t){ _caches[t] = []; });
 
@@ -88,17 +88,19 @@ if (process.env.MONGODB_URI) {
   }
 
   const db = {
-    users:       makeTable('users'),
-    bookings:    makeTable('bookings'),
-    plans:       makeTable('plans'),
-    teams:       makeTable('teams'),
-    contacts:    makeTable('contacts'),
-    experiences: makeTable('experiences'),
-    activities:  makeTable('activities'),
-    partners:    makeTable('partners'),
-    settings:    makeTable('settings'),
-    itineraries: makeTable('itineraries'),
-    reviews:     makeTable('reviews')
+    users:         makeTable('users'),
+    bookings:      makeTable('bookings'),
+    plans:         makeTable('plans'),
+    teams:         makeTable('teams'),
+    contacts:      makeTable('contacts'),
+    experiences:   makeTable('experiences'),
+    activities:    makeTable('activities'),
+    partners:      makeTable('partners'),
+    settings:      makeTable('settings'),
+    itineraries:   makeTable('itineraries'),
+    reviews:       makeTable('reviews'),
+    pushTokens:    makeTable('pushTokens'),
+    notifications: makeTable('notifications')
   };
 
   /* Called once by server.js before accepting requests */
@@ -155,17 +157,19 @@ if (process.env.MONGODB_URI) {
   }
 
   const db = {
-    users:       createTable('users'),
-    bookings:    createTable('bookings'),
-    plans:       createTable('plans'),
-    teams:       createTable('teams'),
-    contacts:    createTable('contacts'),
-    experiences: createTable('experiences'),
-    activities:  createTable('activities'),
-    partners:    createTable('partners'),
-    settings:    createTable('settings'),
-    itineraries: createTable('itineraries'),
-    reviews:     createTable('reviews')
+    users:         createTable('users'),
+    bookings:      createTable('bookings'),
+    plans:         createTable('plans'),
+    teams:         createTable('teams'),
+    contacts:      createTable('contacts'),
+    experiences:   createTable('experiences'),
+    activities:    createTable('activities'),
+    partners:      createTable('partners'),
+    settings:      createTable('settings'),
+    itineraries:   createTable('itineraries'),
+    reviews:       createTable('reviews'),
+    pushTokens:    createTable('pushTokens'),
+    notifications: createTable('notifications')
   };
 
   db._init = async function(){ /* no-op for file mode */ };

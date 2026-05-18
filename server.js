@@ -300,6 +300,38 @@ app.get('/api/site-config', function(req, res) {
   });
 });
 
+/* ── PUSH TOKEN REGISTRATION (public — no auth) ─────────────── */
+app.post('/api/push-token', express.json({ limit: '10kb' }), async function(req, res) {
+  var token    = String(req.body.token    || '').trim();
+  var platform = String(req.body.platform || '').toLowerCase();
+  var deviceId = String(req.body.deviceId || '').trim();
+
+  if (!token || !token.startsWith('ExponentPushToken[')) {
+    return res.status(400).json({ error: 'Invalid Expo push token' });
+  }
+
+  /* Upsert: update existing or insert new */
+  var existing = db.pushTokens.find(function(t){ return t.token === token; });
+  if (existing) {
+    db.pushTokens.update(
+      function(t){ return t.token === token; },
+      { platform: platform || existing.platform, deviceId: deviceId || existing.deviceId, updatedAt: new Date().toISOString() }
+    );
+  } else {
+    db.pushTokens.insert({
+      id:        require('uuid').v4(),
+      token:     token,
+      platform:  platform || 'android',
+      deviceId:  deviceId || '',
+      active:    true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+  }
+  await db.pushTokens.flush();
+  res.json({ message: 'Token enregistré' });
+});
+
 /* ── PUBLIC ACTIVITIES ───────────────────────────────────────── */
 app.get('/api/activities', function(req, res) {
   var acts = db.activities.all()
