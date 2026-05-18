@@ -2652,8 +2652,6 @@ function openActivityModal(actId) {
   var incVal = a && a.inc        ? (Array.isArray(a.inc)        ? a.inc.join('\n')        : a.inc)        : '';
   var excVal = a && a.exc        ? (Array.isArray(a.exc)        ? a.exc.join('\n')        : a.exc)        : '';
   var imgs   = (a && Array.isArray(a.imgs)) ? a.imgs : [];
-  var latVal = (a && a.lat) ? String(a.lat) : '';
-  var lngVal = (a && a.lng) ? String(a.lng) : '';
   openModal('<div class="modal-header"><h3>'+(a?'Modifier':'Nouvelle')+' Activité</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
     + '<div class="modal-body">'
     /* ── COVER PHOTO ── */
@@ -2687,15 +2685,6 @@ function openActivityModal(actId) {
     /* ── LOCATION / MEETING POINT ── */
     + '<div class="fg-row"><div class="fg"><label class="fl">Localisation</label><input class="fi" id="maLoc" placeholder="ex : Merzouga, Erg Chebbi" value="'+(a&&a.location?_esc(a.location):'')+'"></div>'
     + '<div class="fg"><label class="fl">Point de rendez-vous</label><input class="fi" id="maMeetPt" placeholder="ex : Parking hôtel Auberge" value="'+(a&&a.meetingPoint?_esc(a.meetingPoint):'')+'"></div></div>'
-    /* ── MAP PICKER ── */
-    + '<div class="fg"><label class="fl">Position GPS</label>'
-    + '<div style="display:flex;gap:10px;align-items:center">'
-    + '<input class="fi" id="maLat" placeholder="Latitude" value="'+latVal+'" style="flex:1;font-size:12px">'
-    + '<input class="fi" id="maLng" placeholder="Longitude" value="'+lngVal+'" style="flex:1;font-size:12px">'
-    + '<button type="button" class="btn btn-secondary" onclick="openMapPicker()" style="white-space:nowrap;flex-shrink:0">📍 Choisir sur la carte</button>'
-    + '</div>'
-    + (latVal ? '<div style="font-size:11px;color:var(--green);margin-top:5px">✓ Position enregistrée : '+latVal+', '+lngVal+'</div>' : '<div style="font-size:11px;color:var(--text3);margin-top:5px">Aucune position — cliquez le bouton pour en choisir une</div>')
-    + '</div>'
     /* ── DESCRIPTION ── */
     + '<div class="fg"><label class="fl">Description</label><textarea class="fi fi-area" id="maDesc" style="min-height:80px">'+escH(a&&a.desc?a.desc:'')+'</textarea></div>'
     /* ── HIGHLIGHTS / INC / EXC ── */
@@ -2804,8 +2793,6 @@ function saveActivity(actId) {
     status:       document.getElementById('maStatus').value,
     img:          document.getElementById('actCover').value,
     imgs:         imgs,
-    lat:          document.getElementById('maLat').value || null,
-    lng:          document.getElementById('maLng').value || null,
     desc:         document.getElementById('maDesc').value,
     highlights:   document.getElementById('maHl').value,
     inc:          document.getElementById('maInc').value,
