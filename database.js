@@ -107,8 +107,15 @@ if (process.env.MONGODB_URI) {
       const docs = await mdb.collection(name).find({}, {projection:{_id:0}}).toArray();
       _caches[name] = docs;
     }));
-    _seedExperiences(db);
-    _seedActivities(db);
+    /* One-time migration: wipe demo seed data so Roamers can populate real content */
+    if (!db.settings.find(function(s){ return s.key === 'v1_seed_cleared'; })) {
+      _caches['activities']  = [];
+      _caches['experiences'] = [];
+      scheduleFlush('activities');
+      scheduleFlush('experiences');
+      db.settings.insert({ key: 'v1_seed_cleared', value: true, ts: new Date().toISOString() });
+      console.log('  ✓ Demo seed data cleared from MongoDB');
+    }
     _seedAdmin(db);
     console.log('  ✓ DB ready (MongoDB)');
   };
@@ -159,8 +166,6 @@ if (process.env.MONGODB_URI) {
 
   db._init = async function(){ /* no-op for file mode */ };
 
-  _seedExperiences(db);
-  _seedActivities(db);
   _seedAdmin(db);
 
   module.exports = db;
@@ -169,57 +174,6 @@ if (process.env.MONGODB_URI) {
 /* ══════════════════════════════════════════════════════════
    SEED FUNCTIONS (shared by both modes)
 ══════════════════════════════════════════════════════════ */
-function _seedExperiences(db) {
-  if (db.experiences.count() > 0) return;
-  var seed;
-  try { seed = require('./data/seed-experiences'); } catch(_){ return; }
-  if (!Array.isArray(seed) || !seed.length) return;
-  var months = ['Janv','Févr','Mars','Avril','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
-  function buildDates(seg, id) {
-    var list = [], seedNum = 0;
-    for (var i=0;i<id.length;i++) seedNum+=id.charCodeAt(i);
-    var startY=2026, startM=5;
-    var count = seg==='weekend'?5:seg==='groupe'?4:seg==='team'?3:4;
-    for (var i=0;i<count;i++) {
-      var add=seg==='weekend'?i*2:i*4, m=startM+add;
-      var y=startY+Math.floor((m-1)/12), mm=((m-1)%12)+1;
-      var day=((seedNum+i*9)%22)+5;
-      list.push({raw:y+'-'+(mm<10?'0':'')+mm+'-'+(day<10?'0':'')+day, label:day+' '+months[mm-1]+' '+y});
-    }
-    return list;
-  }
-  var now = new Date().toISOString();
-  seed.forEach(function(e,i){
-    db.experiences.insert({
-      id:e.id, segment:e.segment, type:e.type, title:e.title, loc:e.loc||'', dur:e.dur||'',
-      days:e.days||1, nights:e.nights||0, price:e.price, pChild:e.pChild||null,
-      rating:e.rating||4.8, rev:e.rev||0, maxP:e.maxP||20, minP:e.minP||1,
-      badge:e.badge||'', tags:e.tags||[], img:e.img||'', imgs:e.imgs||[],
-      desc:e.desc||'', hi:e.hi||[], inc:e.inc||[], exc:e.exc||[], it:e.it||[],
-      dif:e.dif||'Facile', dates:e.dates||buildDates(e.segment,e.id),
-      status:'open', booked:0, sortOrder:i, created:now, updated:now
-    });
-  });
-  console.log('  ✓ Seeded '+seed.length+' experiences');
-}
-
-function _seedActivities(db) {
-  if (db.activities.count() > 0) return;
-  var { v4: uuidv4 } = require('uuid');
-  var now = new Date().toISOString();
-  [
-    {title:'Camel Trekking at Sunset',    category:'adventure', duration:'2h',   price:350, status:'active',   desc:'Classic Sahara camel experience at golden hour'},
-    {title:'Traditional Cooking Class',   category:'culture',   duration:'3h',   price:280, status:'active',   desc:'Learn to cook tagine and couscous with a local family'},
-    {title:'Outdoor Leadership Workshop', category:'corporate', duration:'4h',   price:600, status:'active',   desc:'Facilitated team leadership session in nature'},
-    {title:'Medina Guided Walk — Fes',    category:'culture',   duration:'3h',   price:200, status:'active',   desc:'Expert-led walking tour through Fes el-Bali'},
-    {title:'Sandboarding & 4x4 Dune',     category:'adventure', duration:'3h',   price:450, status:'active',   desc:'Adrenaline-packed dune bashing and sandboarding'},
-    {title:'Yoga & Meditation at Sunrise',category:'wellness',  duration:'1.5h', price:180, status:'inactive', desc:'Morning wellness session on the Sahara dunes'},
-    {title:'CSR Community Service Day',   category:'corporate', duration:'8h',   price:400, status:'active',   desc:'Give back to local Berber communities'},
-    {title:'Surf Lesson — Taghazout',     category:'adventure', duration:'2h',   price:320, status:'active',   desc:'Beginner-friendly Atlantic surf lesson'}
-  ].forEach(function(a){ db.activities.insert(Object.assign({id:uuidv4(), created:now}, a)); });
-  console.log('  ✓ Seeded activities');
-}
-
 function _seedAdmin(db) {
   var adminEmail    = process.env.ADMIN_EMAIL    || 'admin@roamerscommunity.ma';
   var adminPassword = process.env.ADMIN_PASSWORD;
