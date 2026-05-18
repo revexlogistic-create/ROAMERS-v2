@@ -178,6 +178,8 @@ table tr:hover .tbl-actions{opacity:1}
 .badge-paid{background:var(--green-l);color:var(--green)}
 .badge-unpaid{background:var(--amber-l);color:var(--amber)}
 .badge-partial{background:rgba(124,58,237,.1);color:#7C3AED}
+.badge-refunded{background:rgba(220,38,38,.08);color:#DC2626}
+.badge-completed{background:var(--blue-l);color:var(--blue)}
 
 /* Forms & Modals */
 .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:500;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);animation:fadein .15s}
@@ -524,10 +526,13 @@ function mapExp(e) {
 }
 function mapBk(b) {
   return Object.assign({}, b, {
-    customer: b.name || b.customer || '',
-    tripTitle: b.expTitle || b.tripTitle || '',
-    tripId: b.expId || b.tripId || '',
-    nationality: b.country || b.nationality || ''
+    customer:      b.name || b.customer || '',
+    tripTitle:     b.expTitle || b.tripTitle || '',
+    tripId:        b.expId || b.tripId || '',
+    nationality:   b.country || b.nationality || '',
+    amountPaid:    typeof b.amountPaid === 'number' ? b.amountPaid : 0,
+    paymentMethod: b.paymentMethod || '',
+    paymentNotes:  b.paymentNotes  || ''
   });
 }
 function loadAll(cb) {
@@ -820,15 +825,63 @@ function renderOverview() {
    PAGE: BOOKINGS
 ══════════════════════════════════════════════════ */
 function renderBookings() {
-  var totalRev=DB.bookings.filter(function(b){return b.status!=='cancelled';}).reduce(function(s,b){return s+b.total;},0);
-  return '<div class="page-header"><div><h1>Réservations</h1><p>Gérez toutes les réservations clients par segment et statut</p></div>'
+  var active   = DB.bookings.filter(function(b){return b.status!=='cancelled';});
+  var totalRev = active.reduce(function(s,b){return s+b.total;},0);
+  var totalPaid= active.reduce(function(s,b){return s+(b.amountPaid||0);},0);
+  var totalRem = totalRev - totalPaid;
+  var paidPct  = totalRev>0 ? Math.round(totalPaid/totalRev*100) : 0;
+  var payStats = {
+    paid:    DB.bookings.filter(function(b){return b.payment==='paid';}).length,
+    partial: DB.bookings.filter(function(b){return b.payment==='partial';}).length,
+    unpaid:  DB.bookings.filter(function(b){return b.payment==='unpaid';}).length
+  };
+
+  return '<div class="page-header"><div><h1>Réservations</h1><p>Gérez toutes les réservations et le suivi des paiements</p></div>'
     +'<div class="ph-actions"><button class="btn btn-secondary" onclick="exportCSV(\'bookings\')">⬇ Export CSV</button><button class="btn btn-primary" onclick="openBookingModal()">+ Nouvelle réservation</button></div></div>'
 
-  +'<div class="grid-4" style="margin-bottom:20px">'
-  + miniStat('Total','📋',DB.bookings.length,'var(--blue-l)')
+  /* ── KPI row 1: booking stats ── */
+  +'<div class="grid-4" style="margin-bottom:14px">'
+  + miniStat('Total réservations','📋',DB.bookings.length,'var(--blue-l)')
   + miniStat('Confirmées','✅',DB.bookings.filter(function(b){return b.status==='confirmed';}).length,'var(--green-l)')
   + miniStat('En attente','⏳',DB.bookings.filter(function(b){return b.status==='pending';}).length,'var(--amber-l)')
-  + miniStat('CA Total','💰',fmt(totalRev)+' MAD','var(--red-l)')
+  + miniStat('CA Brut','💰',fmt(totalRev)+' MAD','var(--red-l)')
+  +'</div>'
+
+  /* ── KPI row 2: payment dashboard ── */
+  +'<div class="card" style="margin-bottom:20px;padding:18px 20px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'
+      +'<div style="font-size:14px;font-weight:700">💰 Tableau de bord paiements</div>'
+      +'<span style="font-size:12px;color:var(--text3)">Réservations actives (hors annulées)</span>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:14px">'
+      +'<div style="text-align:center;background:var(--green-l);border-radius:var(--r);padding:12px">'
+        +'<div style="font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Encaissé</div>'
+        +'<div style="font-size:20px;font-weight:900;color:var(--green);margin-top:4px">'+fmt(totalPaid)+' MAD</div>'
+      +'</div>'
+      +'<div style="text-align:center;background:var(--amber-l);border-radius:var(--r);padding:12px">'
+        +'<div style="font-size:11px;color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Solde dû</div>'
+        +'<div style="font-size:20px;font-weight:900;color:var(--amber);margin-top:4px">'+fmt(totalRem)+' MAD</div>'
+      +'</div>'
+      +'<div style="text-align:center;background:rgba(124,58,237,.08);border-radius:var(--r);padding:12px">'
+        +'<div style="font-size:11px;color:#7C3AED;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Taux collecte</div>'
+        +'<div style="font-size:20px;font-weight:900;color:#7C3AED;margin-top:4px">'+paidPct+'%</div>'
+      +'</div>'
+      +'<div style="background:var(--surface3);border-radius:var(--r);padding:12px">'
+        +'<div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:8px">Statuts paiement</div>'
+        +'<div style="display:flex;flex-direction:column;gap:4px">'
+          +'<div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:var(--green)">✅ Payé</span><strong style="font-size:12px">'+payStats.paid+'</strong></div>'
+          +'<div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:#7C3AED">◑ Partiel</span><strong style="font-size:12px">'+payStats.partial+'</strong></div>'
+          +'<div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:var(--amber)">○ Non payé</span><strong style="font-size:12px">'+payStats.unpaid+'</strong></div>'
+        +'</div>'
+      +'</div>'
+    +'</div>'
+    /* Global progress bar */
+    +'<div style="display:flex;align-items:center;gap:12px">'
+      +'<div style="flex:1;height:8px;background:var(--border);border-radius:100px;overflow:hidden">'
+        +'<div style="height:100%;width:'+paidPct+'%;background:linear-gradient(90deg,var(--green),#16a34a);border-radius:100px;transition:width .5s"></div>'
+      +'</div>'
+      +'<span style="font-size:12px;font-weight:700;color:var(--green);white-space:nowrap">'+paidPct+'% collecté</span>'
+    +'</div>'
   +'</div>'
 
   /* Segment filter pills */
@@ -842,32 +895,66 @@ function renderBookings() {
 
   +'<div class="tbl-wrap"><div class="tbl-toolbar">'
   +'<div class="tbl-search"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6" cy="6" r="4" stroke="#94A3B8" stroke-width="1.3"/><path d="M9.5 9.5l2 2" stroke="#94A3B8" stroke-width="1.3" stroke-linecap="round"/></svg><input type="text" placeholder="Rechercher…" oninput="filterTable(this.value,\'bkTable\')"></div>'
-  +'<div class="tbl-filter"><select class="fi fi-select" style="width:auto" onchange="filterTableByStatus(this.value,\'bkTable\')"><option value="">Tous statuts</option><option>confirmed</option><option>pending</option><option>cancelled</option></select><select class="fi fi-select" style="width:auto" onchange="filterTableByStatus(this.value,\'bkTable\')"><option value="">Tout paiement</option><option>paid</option><option>partial</option><option>unpaid</option></select></div>'
+  +'<div class="tbl-filter">'
+    +'<select class="fi fi-select" style="width:auto" onchange="filterTableByStatus(this.value,\'bkTable\')">'
+      +'<option value="">Tous statuts</option><option>confirmed</option><option>pending</option><option>cancelled</option>'
+    +'</select>'
+    +'<select class="fi fi-select" style="width:auto" onchange="filterBkPayment(this.value)">'
+      +'<option value="">Tout paiement</option><option value="paid">✅ Payé</option><option value="partial">◑ Partiel</option><option value="unpaid">○ Non payé</option>'
+    +'</select>'
+  +'</div>'
   +'<span class="tbl-count" id="bkCount">'+DB.bookings.length+' réservations</span></div>'
-  +'<table id="bkTable"><thead><tr><th><input type="checkbox" class="tbl-check" onclick="toggleAll(this,\'bkTable\')"></th><th>Réf.</th><th>Client</th><th>Voyage</th><th>Segment</th><th>Date</th><th>Pers.</th><th>Total</th><th>Statut</th><th>Paiement</th><th>Actions</th></tr></thead><tbody>'
+  +'<table id="bkTable"><thead><tr>'
+    +'<th><input type="checkbox" class="tbl-check" onclick="toggleAll(this,\'bkTable\')"></th>'
+    +'<th>Réf.</th><th>Client</th><th>Voyage</th><th>Date départ</th>'
+    +'<th>Pers.</th><th>Montant</th><th>Paiement</th><th>Statut</th><th>Actions</th>'
+  +'</tr></thead><tbody>'
   + DB.bookings.map(function(b){
-      var trip=DB.trips.find(function(t){return t.id===b.tripId;})||{};
-      return '<tr data-search="'+b.id+' '+b.customer+' '+b.tripTitle+' '+b.status+' '+(b.payment||'')+' '+(trip.segment||'')+'">'
+      var trip    = DB.trips.find(function(t){return t.id===b.tripId;})||{};
+      var paid    = b.amountPaid || 0;
+      var pct     = b.total>0 ? Math.min(100,Math.round(paid/b.total*100)) : 0;
+      var payCol  = b.payment==='paid' ? 'var(--green)' : b.payment==='partial' ? '#7C3AED' : 'var(--amber)';
+      var payIcon = b.payment==='paid' ? '✅' : b.payment==='partial' ? '◑' : '○';
+      return '<tr data-search="'+b.id+' '+(b.customer||b.name||'')+' '+b.tripTitle+' '+b.status+' '+(b.payment||'')+' '+(trip.segment||'')+'">'
         +'<td><input type="checkbox" class="tbl-check"></td>'
         +'<td><span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--red)">'+b.id+'</span></td>'
-        +'<td><div style="display:flex;align-items:center;gap:8px"><div class="avatar av-sm" style="background:'+hashColor(b.customer)+'">'+initials(b.customer)+'</div><div><div style="font-weight:600">'+b.customer+'</div><div class="text-muted text-xs">'+b.email+'</div></div></div></td>'
-        +'<td style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px">'+b.tripTitle+'</td>'
-        +'<td><div style="display:flex;flex-direction:column;gap:3px">'+segBadge(trip.segment)+typeBadge(trip.type)+'</div></td>'
-        +'<td style="font-size:12px">'+fmtDate(b.date)+'</td>'
-        +'<td>'+b.adults+(b.children?' +'+b.children+'c':'')+'</td>'
-        +'<td style="font-weight:700">'+fmt(b.total)+' MAD</td>'
+        +'<td><div style="display:flex;align-items:center;gap:8px"><div class="avatar av-sm" style="background:'+hashColor(b.customer||b.name||'?')+'">'+initials(b.customer||b.name||'?')+'</div><div><div style="font-weight:600;font-size:13px">'+(b.customer||b.name||'—')+'</div><div class="text-muted text-xs">'+(b.email||'')+'</div></div></div></td>'
+        +'<td style="max-width:140px"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+b.tripTitle+'</div><div>'+segBadge(trip.segment)+'</div></td>'
+        +'<td style="font-size:12px;white-space:nowrap">'+fmtDate(b.date)+'</td>'
+        +'<td style="font-size:13px">'+b.adults+(b.children?' +'+b.children+'👶':'')+'</td>'
+        +'<td>'
+          +'<div style="font-weight:700;font-size:13px">'+fmt(b.total)+' MAD</div>'
+          +(paid>0?'<div style="font-size:11px;color:var(--green)">+'+fmt(paid)+' reçu</div>':'')
+        +'</td>'
+        +'<td style="min-width:110px">'
+          +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
+            +'<span style="font-size:12px">'+payIcon+'</span>'
+            +'<span style="font-size:12px;font-weight:700;color:'+payCol+'">'
+              +(b.payment==='paid'?'Payé':b.payment==='partial'?'Partiel':'Non payé')
+            +'</span>'
+          +'</div>'
+          +(b.total>0?'<div style="height:4px;background:var(--border);border-radius:100px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+payCol+';border-radius:100px;transition:width .4s"></div></div>':'')
+        +'</td>'
         +'<td><span class="badge badge-'+b.status+'">'+cap(b.status)+'</span></td>'
-        +'<td><span class="badge badge-'+b.payment+'">'+cap(b.payment)+'</span></td>'
         +'<td><div class="tbl-actions">'
-          +'<button class="btn btn-secondary btn-sm btn-icon" onclick="viewBooking(\''+b.id+'\')" title="Voir">👁</button>'
-          +'<button class="btn btn-success btn-sm btn-icon" onclick="confirmBooking(\''+b.id+'\')" title="Confirmer">✓</button>'
+          +'<button class="btn btn-secondary btn-sm btn-icon" onclick="viewBooking(\''+b.id+'\')" title="Détails">👁</button>'
+          +'<button class="btn btn-primary btn-sm btn-icon" onclick="openPaymentModal(\''+b.id+'\')" title="Gérer paiement" style="background:var(--green);border-color:var(--green)">💰</button>'
+          +(b.status==='pending'?'<button class="btn btn-success btn-sm btn-icon" onclick="confirmBooking(\''+b.id+'\')" title="Confirmer">✓</button>':'')
           +'<button class="btn btn-danger btn-sm btn-icon" onclick="deleteItem(\'bookings\',\''+b.id+'\')" title="Supprimer">🗑</button>'
         +'</div></td>'
       +'</tr>';
     }).join('')
   +'</tbody></table>'
-  +'<div class="tbl-pagination"><span id="bkPageInfo">'+DB.bookings.length+' réservations</span><div class="tbl-pg-btns"><div class="tbl-pg-btn active">1</div><div class="tbl-pg-btn">→</div></div></div>'
+  +'<div class="tbl-pagination"><span id="bkPageInfo">'+DB.bookings.length+' réservations</span></div>'
   +'</div>';
+}
+
+function filterBkPayment(val) {
+  var rows = document.querySelectorAll('#bkTable tbody tr');
+  rows.forEach(function(r){
+    if (!val) { r.style.display=''; return; }
+    r.style.display = (r.dataset.search||'').includes(val) ? '' : 'none';
+  });
 }
 
 function filterBookingsSeg(seg, btn){
@@ -2312,30 +2399,236 @@ function saveBooking() {
 }
 
 function viewBooking(id) {
+  var b    = DB.bookings.find(function(x){ return x.id===id; });
+  if (!b) return;
+  var name = b.customer || b.name || '—';
+  var paid = b.amountPaid || 0;
+  var rem  = b.total - paid;
+  var acompte = Math.round(b.total * 0.3);
+  var pct  = b.total>0 ? Math.min(100,Math.round(paid/b.total*100)) : 0;
+  var payColor = b.payment==='paid'?'var(--green)':b.payment==='partial'?'#7C3AED':'var(--amber)';
+  var methLabels = {virement:'🏦 Virement bancaire',carte:'💳 Carte bancaire',especes:'💵 Espèces',cheque:'📃 Chèque',autre:'📌 Autre'};
+
+  openModal(
+    '<div class="modal-header">'
+      +'<div><h3>Réservation '+b.id+'</h3><div style="font-size:12px;color:var(--text3)">'+fmtDate(b.created)+'</div></div>'
+      +'<div class="modal-close" onclick="closeModal()">✕</div>'
+    +'</div>'
+    +'<div class="modal-body">'
+
+    /* ── Client header ── */
+    +'<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">'
+      +'<div class="avatar av-lg" style="background:'+hashColor(name)+'">'+initials(name)+'</div>'
+      +'<div style="flex:1">'
+        +'<div style="font-size:16px;font-weight:700">'+name+'</div>'
+        +'<div style="font-size:13px;color:var(--text2)">'+b.email+'</div>'
+        +'<div style="font-size:13px;color:var(--text2)">'+b.phone+(b.country?' · '+b.country:'')+'</div>'
+      +'</div>'
+      +'<div style="text-align:right">'
+        +'<span class="badge badge-'+b.status+'" style="font-size:12px;display:block;margin-bottom:6px">'+cap(b.status)+'</span>'
+        +'<div style="font-size:22px;font-weight:900;color:var(--red)">'+fmt(b.total)+' MAD</div>'
+        +'<span class="badge badge-'+b.payment+'" style="font-size:12px">'+cap(b.payment)+'</span>'
+      +'</div>'
+    +'</div>'
+
+    /* ── Booking info ── */
+    +'<div class="grid-2" style="gap:10px;margin-bottom:16px">'
+      +'<div style="background:var(--surface3);border-radius:var(--r);padding:12px"><div class="text-xs text-muted">🗺️ Voyage</div><div style="font-weight:600;margin-top:3px;font-size:13px">'+b.tripTitle+'</div>'+(b.expLoc?'<div style="font-size:11px;color:var(--text3)">📍 '+b.expLoc+'</div>':'')+'</div>'
+      +'<div style="background:var(--surface3);border-radius:var(--r);padding:12px"><div class="text-xs text-muted">📅 Date départ</div><div style="font-weight:600;margin-top:3px">'+fmtDate(b.date)+'</div></div>'
+      +'<div style="background:var(--surface3);border-radius:var(--r);padding:12px"><div class="text-xs text-muted">👥 Participants</div><div style="font-weight:600;margin-top:3px">'+b.adults+' adulte'+(b.adults>1?'s':'')+(b.children?' + '+b.children+' enfant'+(b.children>1?'s':''):'')+'</div></div>'
+      +'<div style="background:var(--surface3);border-radius:var(--r);padding:12px"><div class="text-xs text-muted">🗓 Créé le</div><div style="font-weight:600;margin-top:3px">'+fmtDate(b.created)+'</div></div>'
+    +'</div>'
+
+    /* ── Payment status panel ── */
+    +'<div style="background:linear-gradient(135deg,rgba(22,163,74,.06),rgba(22,163,74,.02));border:1px solid rgba(22,163,74,.2);border-radius:var(--r-lg);padding:16px;margin-bottom:14px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+        +'<div style="font-size:13px;font-weight:700;color:var(--green)">💰 État du paiement</div>'
+        +'<button class="btn btn-primary btn-sm" onclick="closeModal();openPaymentModal(\''+b.id+'\')" style="font-size:12px">✏️ Mettre à jour</button>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">'
+        +'<div style="text-align:center"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Total</div><div style="font-size:17px;font-weight:900;color:var(--text)">'+fmt(b.total)+' MAD</div></div>'
+        +'<div style="text-align:center"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Reçu</div><div style="font-size:17px;font-weight:900;color:var(--green)">'+fmt(paid)+' MAD</div></div>'
+        +'<div style="text-align:center"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Reste dû</div><div style="font-size:17px;font-weight:900;color:'+(rem>0?'var(--amber)':'var(--green)')+'">'+fmt(Math.max(0,rem))+' MAD</div></div>'
+      +'</div>'
+      +'<div style="height:8px;background:var(--border);border-radius:100px;overflow:hidden;margin-bottom:6px">'
+        +'<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#16a34a,#22c55e);border-radius:100px;transition:width .5s"></div>'
+      +'</div>'
+      +'<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3)">'
+        +'<span>Acompte recommandé: '+fmt(acompte)+' MAD (30%)</span>'
+        +'<span style="font-weight:700;color:'+payColor+'">'+pct+'% collecté</span>'
+      +'</div>'
+      +(b.paymentMethod?'<div style="margin-top:10px;font-size:12px;color:var(--text2)">Méthode : '+(methLabels[b.paymentMethod]||b.paymentMethod)+'</div>':'')
+      +(b.paymentNotes?'<div style="margin-top:8px;background:var(--amber-l);border-radius:var(--r-sm);padding:8px;font-size:12px;color:var(--text)">📝 '+b.paymentNotes+'</div>':'')
+    +'</div>'
+
+    +(b.notes?'<div style="background:var(--surface3);border-radius:var(--r);padding:12px;margin-bottom:14px"><div class="text-xs text-muted" style="margin-bottom:5px">💬 Notes client</div><div style="font-size:13px;color:var(--text)">'+b.notes+'</div></div>':'')
+
+    +'</div>'
+    +'<div class="modal-footer">'
+      +'<button class="btn btn-ghost" onclick="closeModal()">Fermer</button>'
+      +'<button class="btn btn-ghost" onclick="sendWhatsApp(\''+b.phone+'\',\''+name+'\')">💬 WhatsApp</button>'
+      +(b.status==='pending'?'<button class="btn btn-success" onclick="closeModal();confirmBooking(\''+b.id+'\')">✓ Confirmer</button>':'')
+      +'<button class="btn btn-primary" onclick="closeModal();openPaymentModal(\''+b.id+'\')" style="background:var(--green);border-color:var(--green)">💰 Gérer paiement</button>'
+    +'</div>',
+    'modal-lg');
+}
+
+function openPaymentModal(id) {
   var b = DB.bookings.find(function(x){ return x.id===id; });
   if (!b) return;
-  openModal('<div class="modal-header"><h3>Booking Details — '+b.id+'</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
-    + '<div class="modal-body">'
-    + '<div style="display:flex;gap:16px;margin-bottom:16px">'
-      + '<div class="avatar av-lg" style="background:'+hashColor(b.customer)+'">'+initials(b.customer)+'</div>'
-      + '<div><div style="font-size:16px;font-weight:700">'+b.customer+'</div><div style="font-size:13px;color:var(--text2)">'+b.email+'</div><div style="font-size:13px;color:var(--text2)">'+b.phone+'</div><div style="font-size:12px;color:var(--text3);margin-top:4px">🌍 '+b.nationality+'</div></div>'
-      + '<div style="margin-left:auto;text-align:right"><span class="badge badge-'+b.status+'" style="font-size:12px">'+cap(b.status)+'</span><div style="font-size:22px;font-weight:700;color:var(--red);margin-top:8px">'+fmt(b.total)+' MAD</div><span class="badge badge-'+b.payment+'">'+cap(b.payment)+'</span></div>'
-    + '</div>'
-    + '<div class="divider"></div>'
-    + '<div class="grid-2" style="gap:12px;margin-bottom:12px">'
-      + '<div style="background:var(--surface3);border-radius:var(--r);padding:12px"><div class="text-xs text-muted">Trip</div><div style="font-weight:600;margin-top:3px">'+b.tripTitle+'</div></div>'
-      + '<div style="background:var(--surface3);border-radius:var(--r);padding:12px"><div class="text-xs text-muted">Departure Date</div><div style="font-weight:600;margin-top:3px">'+fmtDate(b.date)+'</div></div>'
-      + '<div style="background:var(--surface3);border-radius:var(--r);padding:12px"><div class="text-xs text-muted">Guests</div><div style="font-weight:600;margin-top:3px">'+b.adults+' Adults'+(b.children?' + '+b.children+' Children':'')+'</div></div>'
-      + '<div style="background:var(--surface3);border-radius:var(--r);padding:12px"><div class="text-xs text-muted">Booked</div><div style="font-weight:600;margin-top:3px">'+fmtDate(b.created)+'</div></div>'
-    + '</div>'
-    + (b.notes?'<div class="fg"><label class="fl">Notes</label><div style="background:var(--amber-l);border-radius:var(--r-sm);padding:10px;font-size:13px;color:var(--text)">'+b.notes+'</div></div>':'')
-    + '</div>'
-    + '<div class="modal-footer">'
-      + '<button class="btn btn-ghost" onclick="closeModal()">Close</button>'
-      + '<button class="btn btn-ghost" onclick="sendWhatsApp(\''+b.phone+'\',\''+b.customer+'\')">💬 WhatsApp</button>'
-      + '<button class="btn btn-success" onclick="confirmBooking(\''+b.id+'\')">✓ Confirm Booking</button>'
-    + '</div>',
-    'modal-md');
+  var name    = b.customer || b.name || '—';
+  var paid    = b.amountPaid || 0;
+  var acompte = Math.round(b.total * 0.3);
+  var pct     = b.total>0 ? Math.min(100,Math.round(paid/b.total*100)) : 0;
+
+  openModal(
+    '<div class="modal-header">'
+      +'<div><h3>💰 Gestion du paiement</h3><div style="font-size:12px;color:var(--text3)">'+b.id+' · '+name+'</div></div>'
+      +'<div class="modal-close" onclick="closeModal()">✕</div>'
+    +'</div>'
+    +'<div class="modal-body">'
+
+    /* ── Recap banner ── */
+    +'<div style="display:flex;gap:0;margin-bottom:18px;border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--border)">'
+      +'<div style="flex:1;padding:14px 16px;background:var(--surface3);border-right:1px solid var(--border)">'
+        +'<div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Voyage</div>'
+        +'<div style="font-size:13px;font-weight:700">'+b.tripTitle+'</div>'
+        +'<div style="font-size:12px;color:var(--text3)">📅 '+fmtDate(b.date)+'</div>'
+      +'</div>'
+      +'<div style="flex:0 0 auto;padding:14px 20px;background:var(--surface3);border-right:1px solid var(--border);text-align:center">'
+        +'<div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Total</div>'
+        +'<div style="font-size:20px;font-weight:900;color:var(--red)">'+fmt(b.total)+' MAD</div>'
+      +'</div>'
+      +'<div style="flex:0 0 auto;padding:14px 20px;background:rgba(22,163,74,.05);text-align:center">'
+        +'<div style="font-size:10px;color:var(--green);text-transform:uppercase;margin-bottom:4px">Acompte 30%</div>'
+        +'<div style="font-size:20px;font-weight:900;color:var(--green)">'+fmt(acompte)+' MAD</div>'
+      +'</div>'
+    +'</div>'
+
+    /* ── Current payment progress ── */
+    +'<div style="background:var(--surface3);border-radius:var(--r);padding:14px;margin-bottom:18px">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:8px">'
+        +'<span style="font-size:12px;font-weight:600">Montant déjà encaissé</span>'
+        +'<span style="font-size:13px;font-weight:900;color:var(--green)">'+fmt(paid)+' MAD ('+pct+'%)</span>'
+      +'</div>'
+      +'<div style="height:8px;background:var(--border);border-radius:100px;overflow:hidden">'
+        +'<div id="pmBar" style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#16a34a,#22c55e);border-radius:100px;transition:width .4s"></div>'
+      +'</div>'
+    +'</div>'
+
+    /* ── Inputs ── */
+    +'<div class="fg-row-3">'
+      +'<div class="fg"><label class="fl">💵 Montant reçu (MAD) *</label>'
+        +'<input class="fi" id="pmAmount" type="number" min="0" max="'+b.total+'" step="1" placeholder="'+acompte+'" value="'+paid+'" oninput="pmUpdateBar('+b.total+',this.value)">'
+        +'<div style="font-size:11px;color:var(--text3);margin-top:3px">Acompte recommandé : '+fmt(acompte)+' MAD</div>'
+      +'</div>'
+      +'<div class="fg"><label class="fl">🏷️ Méthode de paiement</label>'
+        +'<select class="fi fi-select" id="pmMethod">'
+          +'<option value="">-- Choisir --</option>'
+          +'<option value="virement"'+(b.paymentMethod==='virement'?' selected':'')+'>🏦 Virement bancaire</option>'
+          +'<option value="carte"'+(b.paymentMethod==='carte'?' selected':'')+'>💳 Carte bancaire</option>'
+          +'<option value="especes"'+(b.paymentMethod==='especes'?' selected':'')+'>💵 Espèces</option>'
+          +'<option value="cheque"'+(b.paymentMethod==='cheque'?' selected':'')+'>📃 Chèque</option>'
+          +'<option value="autre"'+(b.paymentMethod==='autre'?' selected':'')+'>📌 Autre</option>'
+        +'</select>'
+      +'</div>'
+      +'<div class="fg"><label class="fl">📊 Statut paiement</label>'
+        +'<select class="fi fi-select" id="pmStatus">'
+          +'<option value="unpaid"'+(b.payment==='unpaid'?' selected':'')+'>○ Non payé</option>'
+          +'<option value="partial"'+(b.payment==='partial'?' selected':'')+'>◑ Partiel / Acompte</option>'
+          +'<option value="paid"'+(b.payment==='paid'?' selected':'')+'>✅ Intégralement payé</option>'
+          +'<option value="refunded"'+(b.payment==='refunded'?' selected':'')+'>↩️ Remboursé</option>'
+        +'</select>'
+        +'<div style="font-size:11px;color:var(--text3);margin-top:3px">Auto-calculé si vous entrez un montant</div>'
+      +'</div>'
+    +'</div>'
+
+    +'<div class="fg"><label class="fl">📝 Notes paiement</label>'
+      +'<textarea class="fi fi-area" id="pmNotes" style="min-height:64px" placeholder="Ex: Acompte reçu par virement le 15/05, référence REF123…">'+(b.paymentNotes||'')+'</textarea>'
+    +'</div>'
+
+    /* ── Status booking change ── */
+    +'<div class="fg" style="margin-bottom:0"><label class="fl">🔖 Statut réservation</label>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+        +[{v:'pending',l:'⏳ En attente',c:'var(--amber)'},{v:'confirmed',l:'✅ Confirmée',c:'var(--green)'},{v:'completed',l:'🏁 Terminée',c:'var(--blue)'},{v:'cancelled',l:'✗ Annulée',c:'#DC2626'}].map(function(s){
+          var sel = b.status===s.v;
+          return '<label style="flex:1;border:2px solid '+(sel?s.c:'var(--border)')+';border-radius:var(--r-sm);padding:7px 8px;cursor:pointer;text-align:center;background:'+(sel?s.c+'15':'var(--surface3)')+';transition:all .2s;min-width:80px">'
+            +'<input type="radio" name="pmBookingStatus" value="'+s.v+'" '+(sel?'checked':'')+' style="display:none"><span style="font-size:12px;font-weight:700;color:'+(sel?s.c:'var(--text2)')+'">'+s.l+'</span></label>';
+        }).join('')
+      +'</div>'
+    +'</div>'
+
+    +'</div>'
+    +'<div class="modal-footer">'
+      +'<button class="btn btn-ghost" onclick="closeModal()">Annuler</button>'
+      +'<button class="btn btn-ghost" onclick="pmSendWhatsApp(\''+b.id+'\')">💬 WhatsApp acompte</button>'
+      +'<button class="btn btn-primary" onclick="savePayment(\''+b.id+'\')" style="background:var(--green);border-color:var(--green);min-width:160px">💾 Enregistrer paiement</button>'
+    +'</div>',
+    'modal-lg');
+}
+
+function pmUpdateBar(total, val) {
+  var pct = total>0 ? Math.min(100,Math.max(0,Math.round(parseFloat(val||0)/total*100))) : 0;
+  var bar = document.getElementById('pmBar');
+  if (bar) bar.style.width = pct+'%';
+  /* Auto-set status select */
+  var sel = document.getElementById('pmStatus');
+  if (sel) {
+    var v = parseFloat(val||0);
+    if (v <= 0)     sel.value = 'unpaid';
+    else if (v >= total) sel.value = 'paid';
+    else            sel.value = 'partial';
+  }
+}
+
+function savePayment(id) {
+  var b = DB.bookings.find(function(x){ return x.id===id; });
+  if (!b) return;
+  var amount  = parseFloat((document.getElementById('pmAmount')||{value:0}).value)||0;
+  var method  = (document.getElementById('pmMethod')||{value:''}).value;
+  var status  = (document.getElementById('pmStatus')||{value:b.payment}).value;
+  var notes   = (document.getElementById('pmNotes')||{value:''}).value.trim();
+  var bkStatus= document.querySelector('input[name="pmBookingStatus"]:checked');
+
+  var body = {
+    amountPaid:    amount,
+    paymentMethod: method,
+    payment:       status,
+    paymentNotes:  notes
+  };
+  if (bkStatus) body.status = bkStatus.value;
+
+  api('PATCH', '/admin/bookings/'+id, body).then(function(d){
+    if (d.error) { showToast(d.error,'error'); return; }
+    /* Update in-memory */
+    var idx = DB.bookings.findIndex(function(x){return x.id===id;});
+    if (idx>-1 && d.booking) DB.bookings[idx] = mapBk(d.booking);
+    closeModal();
+    goPage('bookings');
+    showToast('💰 Paiement mis à jour pour '+id,'success');
+    if (bkStatus && bkStatus.value==='confirmed') sendWhatsAppAuto(b);
+  }).catch(function(){ showToast('Erreur réseau','error'); });
+}
+
+function pmSendWhatsApp(id) {
+  var b = DB.bookings.find(function(x){ return x.id===id; });
+  if (!b || !b.phone) return;
+  var acompte = Math.round(b.total*0.3);
+  var name = b.customer||b.name||'';
+  var msg = encodeURIComponent(
+    'Bonjour '+name+' 👋\n\n'
+    +'Voici les informations de paiement pour votre réservation (Réf: '+b.id+') — '+b.tripTitle+' 🌄\n\n'
+    +'💰 Total : '+fmt(b.total)+' MAD\n'
+    +'💳 Acompte (30%) : '+fmt(acompte)+' MAD\n\n'
+    +'🏦 Coordonnées bancaires :\n'
+    +'  Banque : Attijariwafa Bank\n'
+    +'  Titulaire : ROAMERS SARL\n'
+    +'  RIB : 007 780 0021456300001 23\n\n'
+    +'📌 Référence : '+b.id+'\n\n'
+    +'Merci de mentionner votre référence lors du virement et de nous envoyer le justificatif.\n'
+    +'À très bientôt chez Roamers Community ! 🏔️'
+  );
+  window.open('https://wa.me/'+b.phone.replace(/\D/g,'')+'?text='+msg, '_blank');
 }
 
 function openActivityModal(actId) {

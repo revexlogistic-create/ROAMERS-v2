@@ -46,7 +46,8 @@ router.get('/bookings', function(req, res) {
 
 /* Whitelist: only operational fields can be changed by admin (issue #2) */
 var BOOKING_ALLOWED_STATUS  = ['pending','confirmed','completed','cancelled'];
-var BOOKING_ALLOWED_PAYMENT = ['unpaid','paid','refunded'];
+var BOOKING_ALLOWED_PAYMENT = ['unpaid','partial','paid','refunded'];
+var BOOKING_ALLOWED_METHOD  = ['virement','carte','especes','cheque','autre'];
 
 router.patch('/bookings/:id', auditMod.audit('admin:booking:update'), async function(req, res) {
   var f  = req.body || {};
@@ -62,13 +63,34 @@ router.patch('/bookings/:id', auditMod.audit('admin:booking:update'), async func
     if (!BOOKING_ALLOWED_PAYMENT.includes(f.payment)) return res.status(400).json({ error: 'Invalid payment value' });
     changes.payment = f.payment;
   }
-  if (f.notes   !== undefined) changes.notes   = String(f.notes || '').slice(0, 2000);
+  if (f.paymentMethod !== undefined) {
+    var pm = String(f.paymentMethod || '').toLowerCase();
+    if (pm && !BOOKING_ALLOWED_METHOD.includes(pm)) return res.status(400).json({ error: 'Invalid payment method' });
+    changes.paymentMethod = pm || '';
+  }
+  if (f.amountPaid !== undefined) {
+    var ap = parseFloat(f.amountPaid);
+    if (!Number.isFinite(ap) || ap < 0) return res.status(400).json({ error: 'amountPaid must be a non-negative number' });
+    changes.amountPaid = ap;
+    /* Auto-derive payment status from amount */
+    if (ap <= 0) {
+      changes.payment = 'unpaid';
+    } else if (ap >= bk.total) {
+      changes.payment = 'paid';
+    } else {
+      changes.payment = 'partial';
+    }
+  }
+  if (f.paymentNotes !== undefined) changes.paymentNotes = String(f.paymentNotes || '').slice(0, 1000);
+  if (f.notes        !== undefined) changes.notes        = String(f.notes || '').slice(0, 2000);
 
   if (!Object.keys(changes).length) return res.status(400).json({ error: 'Nothing to update' });
 
+  changes.updatedAt = new Date().toISOString();
   db.bookings.update(function(b){ return b.id === req.params.id; }, changes);
   await db.bookings.flush();
-  res.json({ message: 'Updated' });
+  var updated = db.bookings.find(function(b){ return b.id === req.params.id; });
+  res.json({ message: 'Updated', booking: updated });
 });
 
 router.delete('/bookings/:id', auditMod.audit('admin:booking:delete'), async function(req, res) {
