@@ -16,6 +16,7 @@ var db       = require('../database');
 var authMw   = require('../middleware/auth');
 var validate = require('../middleware/validate');
 var audit    = require('../middleware/audit');
+var notify   = require('../utils/notify');
 
 var auth         = authMw.auth;
 var optionalAuth = authMw.optionalAuth;
@@ -81,6 +82,15 @@ router.post('/', optionalAuth, audit.audit('booking:create'), async function(req
   var mailer = require('../mailer');
   mailer.sendBookingConfirmation(booking).catch(function(){});
 
+  /* Push notification — booking created */
+  notify.notifyByEmail(booking.email, 'booking_created', {
+    name:      booking.name,
+    tripTitle: booking.expTitle,
+    date:      booking.date,
+    total:     Number(booking.total).toLocaleString('fr-MA'),
+    ref:       id
+  }).catch(function(){});
+
   await db.bookings.flush();
   res.status(201).json({ booking: booking, ref: id });
 });
@@ -120,6 +130,13 @@ router.patch('/:id/cancel', auth, audit.audit('booking:cancel'), async function(
   }
   if (b.status === 'cancelled') return res.status(400).json({ error: 'Booking is already cancelled' });
   db.bookings.update(function(x){ return x.id === req.params.id; }, { status: 'cancelled' });
+
+  /* Push notification — booking cancelled */
+  notify.notifyByEmail(b.email, 'booking_cancelled', {
+    name:      b.name,
+    tripTitle: b.expTitle
+  }).catch(function(){});
+
   await db.bookings.flush();
   res.json({ message: 'Booking cancelled' });
 });

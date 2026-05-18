@@ -18,6 +18,7 @@ var db       = require('../database');
 var authMw   = require('../middleware/auth');
 var auditMod = require('../middleware/audit');
 var validate = require('../middleware/validate');
+var notify   = require('../utils/notify');
 
 var adminOnly  = authMw.adminOnly;
 var VALID_ROLES = authMw.VALID_ROLES;
@@ -90,6 +91,35 @@ router.patch('/bookings/:id', auditMod.audit('admin:booking:update'), async func
   db.bookings.update(function(b){ return b.id === req.params.id; }, changes);
   await db.bookings.flush();
   var updated = db.bookings.find(function(b){ return b.id === req.params.id; });
+
+  /* ── Push notifications ────────────────────────────────────── */
+  var notifEmail = bk.email;
+  var notifName  = bk.name;
+  var notifTrip  = bk.expTitle;
+
+  /* Status changed → confirmed */
+  if (changes.status === 'confirmed') {
+    notify.notifyByEmail(notifEmail, 'booking_confirmed', {
+      name: notifName, tripTitle: notifTrip
+    }).catch(function(){});
+  }
+  /* Status changed → cancelled (by admin) */
+  if (changes.status === 'cancelled') {
+    notify.notifyByEmail(notifEmail, 'booking_cancelled', {
+      name: notifName, tripTitle: notifTrip
+    }).catch(function(){});
+  }
+  /* Payment updated */
+  if (changes.amountPaid !== undefined) {
+    var eventType = changes.payment === 'paid' ? 'payment_completed' : 'payment_received';
+    notify.notifyByEmail(notifEmail, eventType, {
+      name:      notifName,
+      tripTitle: notifTrip,
+      amount:    Number(changes.amountPaid).toLocaleString('fr-MA'),
+      total:     Number(bk.total).toLocaleString('fr-MA')
+    }).catch(function(){});
+  }
+
   res.json({ message: 'Updated', booking: updated });
 });
 
@@ -428,7 +458,7 @@ var SETTINGS_ALLOWED_KEYS = [
   'settHeroImg', 'settHeroVideo',
   'settImgGroupe', 'settImgWeekend', 'settImgExpress', 'settImgMesure', 'settImgTeam',
   'settBankBenef', 'settBankName', 'settBankRib', 'settBankIban', 'settBankSwift',
-  'cms'
+  'cms', 'notifTemplates'
 ];
 
 router.get('/settings', function(req, res) {
@@ -460,6 +490,37 @@ router.put('/settings', auditMod.audit('admin:settings:update'), async function(
   await db.settings.flush();
   var updated = db.settings.find(function(){ return true; });
   res.json({ settings: updated, message: 'Settings saved' });
+});
+
+/* ── NOTIFICATION TEMPLATES (fast save) ─────────────────────── */
+router.put('/notif-templates', auditMod.audit('admin:notif-templates:update'), async function(req, res) {
+  var body = req.body || {};
+  if (typeof body !== 'object' || Array.isArray(body)) {
+    return res.status(400).json({ error: 'Invalid payload' });
+  }
+
+  var NOTIF_TYPES = require('../utils/notify').DEFAULT_TEMPLATES;
+  var sanitized = {};
+
+  Object.keys(body).forEach(function(type) {
+    if (!NOTIF_TYPES[type]) return;     /* ignore unknown types */
+    var t = body[type] || {};
+    sanitized[type] = {
+      enabled: t.enabled !== false,
+      title:   String(t.title || '').slice(0, 200),
+      body:    String(t.body  || '').slice(0, 500)
+    };
+  });
+
+  var now = new Date().toISOString();
+  var existing = db.settings.find(function(){ return true; });
+  if (existing) {
+    db.settings.update(function(){ return true; }, { notifTemplates: sanitized, updated: now });
+  } else {
+    db.settings.insert({ id: 'main', notifTemplates: sanitized, created: now, updated: now });
+  }
+  await db.settings.flush();
+  res.json({ message: 'Templates sauvegardés', notifTemplates: sanitized });
 });
 
 /* ── CMS HTML SANITISER ──────────────────────────────────────── */

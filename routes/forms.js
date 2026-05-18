@@ -15,6 +15,7 @@ var mailer   = require('../mailer');
 var authMw   = require('../middleware/auth');
 var validate = require('../middleware/validate');
 var audit    = require('../middleware/audit');
+var notify   = require('../utils/notify');
 
 var auth = authMw.auth;
 
@@ -84,6 +85,13 @@ router.post('/plan', audit.audit('form:plan'), async function(req, res) {
   });
 
   mailer.sendPlanRequest(doc).catch(function(){});
+
+  /* Push notification — plan request received */
+  notify.notifyByEmail(doc.email, 'plan_request', {
+    name: doc.fname,
+    ref:  id
+  }).catch(function(){});
+
   await db.plans.flush();
   res.status(201).json({ message: 'Plan request submitted', ref: id });
 });
@@ -129,6 +137,14 @@ router.post('/team', audit.audit('form:team-building'), async function(req, res)
   });
 
   mailer.sendTeamRequest(doc).catch(function(){});
+
+  /* Push notification — team building request received */
+  notify.notifyByEmail(doc.email, 'team_request', {
+    name:    doc.contactFn,
+    company: doc.company,
+    ref:     id
+  }).catch(function(){});
+
   await db.teams.flush();
   res.status(201).json({ message: 'Team request submitted', ref: id });
 });

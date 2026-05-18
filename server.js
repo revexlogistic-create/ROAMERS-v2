@@ -305,29 +305,41 @@ app.post('/api/push-token', express.json({ limit: '10kb' }), async function(req,
   var token    = String(req.body.token    || '').trim();
   var platform = String(req.body.platform || '').toLowerCase();
   var deviceId = String(req.body.deviceId || '').trim();
+  var email    = req.body.email ? String(req.body.email).toLowerCase().trim() : '';
 
   if (!token || !token.startsWith('ExponentPushToken[')) {
     return res.status(400).json({ error: 'Invalid Expo push token' });
   }
 
-  /* Upsert: update existing or insert new */
+  var now = new Date().toISOString();
+
+  /* Upsert by token — update existing or insert new */
   var existing = db.pushTokens.find(function(t){ return t.token === token; });
   if (existing) {
-    db.pushTokens.update(
-      function(t){ return t.token === token; },
-      { platform: platform || existing.platform, deviceId: deviceId || existing.deviceId, updatedAt: new Date().toISOString() }
-    );
+    var up = { platform: platform || existing.platform, deviceId: deviceId || existing.deviceId, updatedAt: now };
+    if (email) up.email = email;
+    db.pushTokens.update(function(t){ return t.token === token; }, up);
   } else {
     db.pushTokens.insert({
       id:        require('uuid').v4(),
       token:     token,
+      email:     email || '',
       platform:  platform || 'android',
       deviceId:  deviceId || '',
       active:    true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: now,
+      updatedAt: now
     });
   }
+
+  /* If email provided, deactivate old tokens for same email on different devices */
+  if (email) {
+    db.pushTokens.update(
+      function(t){ return t.email === email && t.token !== token; },
+      { active: false }
+    );
+  }
+
   await db.pushTokens.flush();
   res.json({ message: 'Token enregistré' });
 });

@@ -3682,12 +3682,52 @@ function hashColor(s) {
 /* ═══════════════════════════════════════════════
    PAGE: NOTIFICATIONS
 ═══════════════════════════════════════════════ */
-var NOTIF_TEMPLATES = [
-  { label:'📣 Nouveau voyage',   title:'Nouveau voyage disponible !', body:'Un nouveau voyage vient d\'être ajouté — découvrez-le maintenant sur l\'app Roamers.' },
+/* Quick-send templates (manual broadcast) */
+var NOTIF_QUICK_TEMPLATES = [
+  { label:'📣 Nouveau voyage',    title:'Nouveau voyage disponible !',      body:'Un nouveau voyage vient d\'être ajouté — découvrez-le maintenant sur l\'app Roamers.' },
   { label:'⏰ Rappel réservation', title:'Rappel : votre voyage approche !', body:'Votre aventure commence bientôt. Vérifiez les détails de votre réservation dans l\'app.' },
-  { label:'💰 Promo flash',       title:'Offre exclusive — 48h seulement', body:'Une promotion spéciale est disponible sur une sélection de voyages. Ne la manquez pas !' },
-  { label:'🎉 Confirmation',      title:'Réservation confirmée ✅', body:'Votre réservation a été confirmée par notre équipe. À très bientôt sur les pistes !' }
+  { label:'💰 Promo flash',        title:'Offre exclusive — 48h seulement',  body:'Une promotion spéciale est disponible sur une sélection de voyages. Ne la manquez pas !' },
+  { label:'🎉 Confirmation',       title:'Réservation confirmée ✅',          body:'Votre réservation a été confirmée par notre équipe. À très bientôt sur les pistes !' }
 ];
+
+/* Auto-notification event types (must match utils/notify.js) */
+var AUTO_NOTIF_EVENTS = [
+  { key:'booking_created',   label:'📋 Réservation créée',        vars:['{{name}}','{{tripTitle}}','{{date}}','{{total}}','{{ref}}'] },
+  { key:'booking_confirmed', label:'✅ Réservation confirmée',     vars:['{{name}}','{{tripTitle}}'] },
+  { key:'booking_cancelled', label:'❌ Réservation annulée',       vars:['{{name}}','{{tripTitle}}'] },
+  { key:'payment_received',  label:'💰 Paiement reçu (partiel)',   vars:['{{name}}','{{tripTitle}}','{{amount}}','{{total}}'] },
+  { key:'payment_completed', label:'✅ Paiement complet',          vars:['{{name}}','{{tripTitle}}','{{total}}'] },
+  { key:'plan_request',      label:'🗺️ Demande Plan My Trip',      vars:['{{name}}','{{ref}}'] },
+  { key:'team_request',      label:'🤝 Demande Team Building',     vars:['{{name}}','{{company}}','{{ref}}'] },
+  { key:'itinerary_saved',   label:'🛤️ Itinéraire sauvegardé',    vars:['{{name}}'] }
+];
+
+/* Default templates (same as utils/notify.js) */
+var AUTO_NOTIF_DEFAULTS = {
+  booking_created:   { title:'Réservation enregistrée ✅', body:'Bonjour {{name}}, votre réservation pour {{tripTitle}} ({{date}}) a bien été reçue. Réf : {{ref}}' },
+  booking_confirmed: { title:'Réservation confirmée 🎉',   body:'Bonjour {{name}}, votre réservation pour {{tripTitle}} est confirmée par notre équipe. À très bientôt !' },
+  booking_cancelled: { title:'Réservation annulée',        body:'Votre réservation pour {{tripTitle}} a été annulée. Contactez-nous pour plus d\'informations.' },
+  payment_received:  { title:'Paiement reçu 💰',           body:'Nous avons bien reçu {{amount}} MAD pour {{tripTitle}}. Merci {{name}} !' },
+  payment_completed: { title:'Paiement complet ✅',        body:'Votre voyage {{tripTitle}} est entièrement réglé. Préparez vos bagages, {{name}} !' },
+  plan_request:      { title:'Demande de voyage reçue 🗺️', body:'Bonjour {{name}}, votre demande de voyage sur mesure ({{ref}}) a bien été reçue. Notre équipe vous répond sous 48h.' },
+  team_request:      { title:'Demande team building reçue 🤝', body:'Bonjour {{name}}, votre demande team building pour {{company}} ({{ref}}) a été enregistrée. Nous vous contactons rapidement.' },
+  itinerary_saved:   { title:'Itinéraire sauvegardé 🛤️',   body:'Bonjour {{name}}, votre itinéraire personnalisé a bien été sauvegardé dans l\'app.' }
+};
+
+/* Get effective template value (admin-saved OR default) */
+function getAutoTplValue(key, field) {
+  var settings = DB.settings || {};
+  var stored   = (settings.notifTemplates || {})[key];
+  if (stored && stored[field] != null) return stored[field];
+  var def = AUTO_NOTIF_DEFAULTS[key];
+  return def ? def[field] : '';
+}
+function getAutoTplEnabled(key) {
+  var settings = DB.settings || {};
+  var stored   = (settings.notifTemplates || {})[key];
+  if (stored && stored.enabled === false) return false;
+  return true;
+}
 
 function renderNotifications() {
   var tokens  = DB.pushTokens || [];
@@ -3695,7 +3735,7 @@ function renderNotifications() {
   var android = tokens.filter(function(t){ return t.platform==='android'; }).length;
   var ios     = tokens.filter(function(t){ return t.platform==='ios'; }).length;
 
-  var tmplOpts = NOTIF_TEMPLATES.map(function(t,i){
+  var tmplOpts = NOTIF_QUICK_TEMPLATES.map(function(t,i){
     return '<option value="'+i+'">'+t.label+'</option>';
   }).join('');
 
@@ -3711,7 +3751,47 @@ function renderNotifications() {
       +'</tr>';
   }).join('') : '<tr><td colspan="5" style="padding:40px;text-align:center;color:var(--text3)">Aucune notification envoyée</td></tr>';
 
-  return '<div style="max-width:900px">'
+  /* Build auto-templates cards */
+  var tplCards = AUTO_NOTIF_EVENTS.map(function(ev) {
+    var enabled = getAutoTplEnabled(ev.key);
+    var title   = escH(getAutoTplValue(ev.key, 'title'));
+    var body    = escH(getAutoTplValue(ev.key, 'body'));
+    var vars    = ev.vars.map(function(v){ return '<code style="background:var(--surface3);padding:1px 5px;border-radius:3px;font-size:10px">'+v+'</code>'; }).join(' ');
+    return '<div class="card" style="padding:18px;margin-bottom:12px">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
+        +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer">'
+          +'<input type="checkbox" id="tpl_en_'+ev.key+'" '+(enabled?'checked':'')
+            +' onchange="autoTplToggle(\''+ev.key+'\')" style="width:16px;height:16px;cursor:pointer">'
+          +'<span style="font-size:14px;font-weight:700">'+ev.label+'</span>'
+        +'</label>'
+        +'<span style="margin-left:auto;font-size:11px;color:var(--text3)">Variables : '+vars+'</span>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+        +'<div>'
+          +'<label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Titre</label>'
+          +'<input id="tpl_t_'+ev.key+'" value="'+title+'" maxlength="200"'
+            +' style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r-sm);font-size:12px">'
+        +'</div>'
+        +'<div>'
+          +'<label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Message</label>'
+          +'<input id="tpl_b_'+ev.key+'" value="'+body+'" maxlength="300"'
+            +' style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r-sm);font-size:12px">'
+        +'</div>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+
+  return '<div style="max-width:980px">'
+
+    /* Tabs */
+    +'<div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);padding-bottom:0">'
+      +'<button id="ntab-send" onclick="switchNotifTab(\'send\')" style="padding:8px 18px;border-radius:8px 8px 0 0;font-size:13px;font-weight:600;background:var(--red);color:#fff;border:none;cursor:pointer">📨 Envoyer</button>'
+      +'<button id="ntab-auto" onclick="switchNotifTab(\'auto\')" style="padding:8px 18px;border-radius:8px 8px 0 0;font-size:13px;font-weight:600;background:var(--surface3);color:var(--text2);border:none;cursor:pointer">⚙️ Templates auto</button>'
+      +'<button id="ntab-hist" onclick="switchNotifTab(\'hist\')" style="padding:8px 18px;border-radius:8px 8px 0 0;font-size:13px;font-weight:600;background:var(--surface3);color:var(--text2);border:none;cursor:pointer">📋 Historique ('+history.length+')</button>'
+    +'</div>'
+
+    /* ── TAB: ENVOYER ── */
+    +'<div id="ntab-send-content">'
 
     /* KPI row */
     +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">'
@@ -3758,9 +3838,25 @@ function renderNotifications() {
       +'</div>'
     +'</div>'
 
-    /* History table */
+    /* History table — inside send tab */
+    +'</div>'  /* close ntab-send-content */
+
+    /* ── TAB: TEMPLATES AUTO ── */
+    +'<div id="ntab-auto-content" style="display:none">'
+      +'<div style="background:var(--blue-l);border:1px solid var(--blue);border-radius:var(--r);padding:12px 16px;margin-bottom:18px;font-size:13px;color:var(--blue)">'
+        +'<strong>⚙️ Notifications automatiques</strong> — Ces messages sont envoyés automatiquement aux utilisateurs lors d\'événements clés. Utilisez les variables pour personnaliser le message.'
+      +'</div>'
+      + tplCards
+      +'<div style="display:flex;align-items:center;gap:12px;margin-top:8px">'
+        +'<button onclick="saveAutoTemplates()" style="background:var(--red);color:#fff;padding:10px 24px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer">💾 Sauvegarder tous les templates</button>'
+        +'<span id="tplSaveStatus" style="font-size:13px"></span>'
+      +'</div>'
+    +'</div>'
+
+    /* ── TAB: HISTORIQUE ── */
+    +'<div id="ntab-hist-content" style="display:none">'
     +'<div class="card" style="overflow:hidden">'
-      +'<div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700">📋 Historique des notifications</div>'
+      +'<div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700">📋 Historique des notifications manuelles</div>'
       +'<div style="overflow-x:auto">'
         +'<table>'
           +'<thead><tr style="background:var(--surface3)">'
@@ -3774,17 +3870,60 @@ function renderNotifications() {
         +'</table>'
       +'</div>'
     +'</div>'
+    +'</div>'
   +'</div>';
+}
+
+function switchNotifTab(tab) {
+  ['send','auto','hist'].forEach(function(t) {
+    var btn = document.getElementById('ntab-'+t);
+    var cnt = document.getElementById('ntab-'+t+'-content');
+    var active = t === tab;
+    if (btn) { btn.style.background = active ? 'var(--red)' : 'var(--surface3)'; btn.style.color = active ? '#fff' : 'var(--text2)'; }
+    if (cnt) cnt.style.display = active ? '' : 'none';
+  });
 }
 
 function applyNotifTemplate(idx) {
   if (idx === '') return;
-  var t = NOTIF_TEMPLATES[parseInt(idx)];
+  var t = NOTIF_QUICK_TEMPLATES[parseInt(idx)];
   if (!t) return;
   var titleEl = document.getElementById('notifTitle');
   var bodyEl  = document.getElementById('notifBody');
   if (titleEl) titleEl.value = t.title;
   if (bodyEl)  { bodyEl.value = t.body; updateNotifCount(); }
+}
+
+function autoTplToggle(key) {
+  /* visual feedback only — actual save on button click */
+}
+
+function saveAutoTemplates() {
+  var payload = {};
+  AUTO_NOTIF_EVENTS.forEach(function(ev) {
+    var enEl = document.getElementById('tpl_en_'+ev.key);
+    var tEl  = document.getElementById('tpl_t_'+ev.key);
+    var bEl  = document.getElementById('tpl_b_'+ev.key);
+    payload[ev.key] = {
+      enabled: enEl ? enEl.checked : true,
+      title:   tEl  ? tEl.value.trim()  : '',
+      body:    bEl  ? bEl.value.trim()  : ''
+    };
+  });
+  var statusEl = document.getElementById('tplSaveStatus');
+  if(statusEl) statusEl.innerHTML = '<span style="color:var(--text3)">Sauvegarde…</span>';
+  api('PUT', '/admin/notif-templates', payload)
+    .then(function(r) {
+      if (r.error) { if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">'+escH(r.error)+'</span>'; return; }
+      /* Update local settings cache */
+      if (!DB.settings) DB.settings = {};
+      DB.settings.notifTemplates = r.notifTemplates || payload;
+      if(statusEl) statusEl.innerHTML='<span style="color:var(--green)">✓ Templates sauvegardés</span>';
+      setTimeout(function(){ if(statusEl) statusEl.innerHTML=''; }, 3000);
+    })
+    .catch(function(e) {
+      if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">Erreur: '+escH(e.message||'unknown')+'</span>';
+    });
 }
 
 function updateNotifCount() {
