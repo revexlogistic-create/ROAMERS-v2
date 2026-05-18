@@ -1731,7 +1731,9 @@ var SETTINGS = {
   /* SEO */
   seoTitle:       'Roamers Community — Morocco Adventure Booking',
   seoDescription: 'Morocco\'s premier experiential travel platform. Book desert treks, mountain adventures, and cultural tours.',
-  seoKeywords:    'morocco travel,sahara trek,atlas mountains,marrakech tour,team building morocco'
+  seoKeywords:    'morocco travel,sahara trek,atlas mountains,marrakech tour,team building morocco',
+  /* Bank virement — populated from site-config */
+  bankBenef:'', bankName:'', bankRib:'', bankIban:'', bankSwift:''
 };
 /* helper: build a wa.me URL with optional pre-filled text */
 function waUrl(msg){ return 'https://wa.me/'+SETTINGS.whatsapp+(msg?'?text='+encodeURIComponent(msg):''); }
@@ -2143,6 +2145,7 @@ function openBk(id){
   if(!exp)return;
   var u=ST.user;
   ST.bk={exp:exp,step:1,date:'',adults:2,children:0,addons:{},
+    payMethod: ST.stripeKey ? 'stripe' : (SETTINGS.bankRib||SETTINGS.bankIban||SETTINGS.bankBenef ? 'virement' : 'stripe'),
     name:u?u.fname:'',last:u?u.lname:'',email:u?u.email:'',
     phone:u?u.phone||'':'',country:u?u.country||'Morocco':'Morocco',notes:'',ref:''};
   document.getElementById('bkModal').style.display='flex';
@@ -2249,11 +2252,19 @@ function confirmBk(){
     var r={id:d.ref,ref:d.ref,expId:b.exp.id,expTitle:b.exp.title,expImg:b.exp.img,expLoc:b.exp.loc,dur:b.exp.dur,date:b.date,adults:b.adults,children:b.children,addons:Object.assign({},b.addons),name:b.name+' '+b.last,email:b.email,phone:b.phone,country:b.country,notes:b.notes,total:p.total,status:'pending',created:new Date().toISOString()};
     ST.res.unshift(r);
     localStorage.setItem('rc_res',JSON.stringify(ST.res));
-    /* Go to payment step if Stripe is configured, else skip to done */
-    if(ST.stripeKey){
+    /* Route based on chosen payment method */
+    var pm = b.payMethod || (ST.stripeKey ? 'stripe' : (SETTINGS.bankRib||SETTINGS.bankIban ? 'virement' : ''));
+    if(pm==='stripe' && ST.stripeKey){
+      ST.bk.payMethod='stripe';
       ST.bk.step=4;
       renderBk();
       initStripePayment(b.bookingId, p.total);
+    } else if(pm==='virement' || (SETTINGS.bankRib||SETTINGS.bankIban||SETTINGS.bankBenef)){
+      ST.bk.payMethod='virement';
+      ST.bk.step=4;
+      renderBk();
+      syncNav();
+      toast('Réservation enregistrée ! Effectuez votre virement avec la réf : '+b.ref);
     } else {
       ST.bk.step=5;
       renderBk();
@@ -2318,6 +2329,8 @@ function submitStripePayment(){
 
 function renderBk(){
   var b=ST.bk;
+  var hasStripe = !!ST.stripeKey;
+  var hasBank   = !!(SETTINGS.bankRib || SETTINGS.bankIban || SETTINGS.bankBenef);
   var steps=['Dates','Details','Add-ons','Payment','Done'];
   var prog=b.step<5?'<div style="margin-bottom:16px"><div class="sp">'+steps.map(function(_,i){return '<div class="sd '+(i<b.step-1?'sd-d':i===b.step-1?'sd-a':'sd-p')+'">'+(i<b.step-1?'✓':i+1)+'</div>'+(i<steps.length-1?'<div class="sl '+(i<b.step-1?'sl-d':'')+'"></div>':'');}).join('')+'</div><div style="display:flex;justify-content:space-between;margin-top:4px">'+steps.map(function(s,i){return '<div style="font-size:10px;color:'+(i===b.step-1?'var(--red)':'var(--mut)')+';text-align:center;flex:'+(i<steps.length-1?1:'auto')+'">'+s+'</div>';}).join('')+'</div></div>':'';
   var mini=b.step<5?'<div class="mini-exp"><img src="'+b.exp.img+'" alt="'+b.exp.title+'"><div><h4>'+b.exp.title+'</h4><p>'+b.exp.loc+' · '+b.exp.dur+'</p></div></div>':'';
@@ -2330,9 +2343,64 @@ function renderBk(){
   } else if(b.step===2){
     body='<div class="mm"><div class="fr"><div class="fg"><label class="fl">First Name *</label><input type="text" class="fi" id="bFn" value="'+b.name+'" oninput="ST.bk.name=this.value"></div><div class="fg"><label class="fl">Last Name *</label><input type="text" class="fi" id="bLn" value="'+b.last+'" oninput="ST.bk.last=this.value"></div></div><div class="fg"><label class="fl">Email *</label><input type="email" class="fi" id="bEm" value="'+b.email+'" oninput="ST.bk.email=this.value"></div><div class="fr"><div class="fg"><label class="fl">Phone / WhatsApp *</label><input type="tel" class="fi" id="bPh" value="'+b.phone+'" oninput="ST.bk.phone=this.value"></div><div class="fg"><label class="fl">Country</label><select class="fi" onchange="ST.bk.country=this.value">'+['Morocco','France','China','Japan','USA','UK','Germany','UAE','Canada','Other'].map(function(c){return '<option'+(b.country===c?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div></div><div class="fg"><label class="fl">Special Requests</label><textarea class="fi" rows="3" placeholder="Dietary requirements, special occasions..." oninput="ST.bk.notes=this.value">'+b.notes+'</textarea></div></div><div class="mf"><button class="btn btn-s" onclick="ST.bk.step=1;renderBk()">Back</button><button class="btn btn-r btn-lg" onclick="var fn=document.getElementById(\'bFn\');var em=document.getElementById(\'bEm\');var ph=document.getElementById(\'bPh\');if(!fn||!fn.value.trim()){toast(\'Enter your first name\',\'warn\');return;}if(!em||!em.value.includes(\'@\')){toast(\'Enter a valid email\',\'warn\');return;}if(!ph||ph.value.trim().length<8){toast(\'Enter a valid phone number\',\'warn\');return;}ST.bk.step=3;renderBk()">Next: Add-ons</button></div>';
   } else if(b.step===3){
-    body='<div class="mm"><p style="font-size:13px;color:var(--mut);margin-bottom:14px">Enhance your experience with optional add-ons:</p>'+ADDONS.map(function(ao){return '<div class="ao"><div style="flex:1;margin-right:12px"><div style="font-size:14px;font-weight:600;margin-bottom:2px">'+ao.label+'</div><div style="font-size:12px;color:var(--mut)">'+ao.desc+' <strong style="color:var(--red)">+'+ao.price+' MAD'+ao.unit+'</strong></div></div><div class="at'+(b.addons[ao.id]?' on':'')+'" onclick="togAO(\''+ao.id+'\')"></div></div>';}).join('')+'<div class="pb" style="margin-top:16px">'+pRows(p,b)+'</div><div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:9px;padding:10px 13px;font-size:13px;color:#16A34A">No payment now — we will contact you within 24h to confirm and arrange payment</div></div><div class="mf"><button class="btn btn-s" onclick="ST.bk.step=2;renderBk()">Back</button><button class="btn btn-r btn-lg" onclick="confirmBk()">Confirm Booking</button></div>';
+    body='<div class="mm"><p style="font-size:13px;color:var(--mut);margin-bottom:14px">Enhance your experience with optional add-ons:</p>'+ADDONS.map(function(ao){return '<div class="ao"><div style="flex:1;margin-right:12px"><div style="font-size:14px;font-weight:600;margin-bottom:2px">'+ao.label+'</div><div style="font-size:12px;color:var(--mut)">'+ao.desc+' <strong style="color:var(--red)">+'+ao.price+' MAD'+ao.unit+'</strong></div></div><div class="at'+(b.addons[ao.id]?' on':'')+'" onclick="togAO(\''+ao.id+'\')"></div></div>';}).join('')+'<div class="pb" style="margin-top:16px">'+pRows(p,b)+'</div>'
+    +(function(){
+        var pm = b.payMethod || 'stripe';
+        var btnLabel = 'Confirmer la réservation';
+        var picker   = '';
+        if(hasStripe && hasBank){
+          picker = '<div style="margin-top:14px"><p style="font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Mode de paiement</p><div style="display:flex;gap:8px">'
+            +'<div onclick="ST.bk.payMethod=\'stripe\';renderBk()" style="flex:1;border:2px solid '+(pm==='stripe'?'var(--red)':'rgba(255,255,255,.1)')+';border-radius:10px;padding:12px 10px;cursor:pointer;text-align:center;background:'+(pm==='stripe'?'rgba(184,23,46,.08)':'rgba(255,255,255,.03)')+'">'
+              +'<div style="font-size:18px;margin-bottom:4px">💳</div>'
+              +'<div style="font-size:12px;font-weight:700;color:var(--text)">Carte bancaire</div>'
+              +'<div style="font-size:10px;color:var(--mut)">Visa · Mastercard</div>'
+            +'</div>'
+            +'<div onclick="ST.bk.payMethod=\'virement\';renderBk()" style="flex:1;border:2px solid '+(pm==='virement'?'var(--sand)':'rgba(255,255,255,.1)')+';border-radius:10px;padding:12px 10px;cursor:pointer;text-align:center;background:'+(pm==='virement'?'rgba(217,184,122,.08)':'rgba(255,255,255,.03)')+'">'
+              +'<div style="font-size:18px;margin-bottom:4px">🏦</div>'
+              +'<div style="font-size:12px;font-weight:700;color:var(--text)">Virement bancaire</div>'
+              +'<div style="font-size:10px;color:var(--mut)">RIB / IBAN direct</div>'
+            +'</div>'
+          +'</div></div>';
+          btnLabel = pm==='stripe' ? '💳 Payer par carte' : '🏦 Confirmer & virer';
+        } else if(hasStripe){
+          picker = '<div style="background:rgba(184,23,46,.07);border:1px solid rgba(184,23,46,.2);border-radius:9px;padding:10px 13px;font-size:13px;color:var(--red);margin-top:12px">💳 Paiement par carte sécurisé — le formulaire s\'ouvrira à l\'étape suivante</div>';
+          btnLabel = '💳 Payer par carte';
+        } else if(hasBank){
+          picker = '<div style="background:rgba(217,184,122,.07);border:1px solid rgba(217,184,122,.2);border-radius:9px;padding:10px 13px;font-size:13px;color:var(--sand);margin-top:12px">🏦 Virement bancaire — les coordonnées bancaires s\'afficheront à l\'étape suivante</div>';
+          btnLabel = '🏦 Confirmer & voir le RIB';
+        } else {
+          picker = '<div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:9px;padding:10px 13px;font-size:13px;color:#16A34A;margin-top:12px">Pas de paiement maintenant — notre équipe vous contactera dans les 24h pour confirmer et organiser le paiement</div>';
+        }
+        return picker+'</div><div class="mf"><button class="btn btn-s" onclick="ST.bk.step=2;renderBk()">Retour</button><button class="btn btn-r btn-lg" onclick="confirmBk()">'+btnLabel+'</button></div>';
+    })();
   } else if(b.step===4){
-    body='<div class="mm"><div style="margin-bottom:6px;text-align:center"><p style="font-size:13px;color:var(--mut);margin-bottom:4px">Montant à régler</p><p style="font-size:22px;font-weight:700;color:var(--red)">'+p.total.toLocaleString()+' MAD</p></div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;margin-bottom:4px"><div id="stripe-payment-element" style="min-height:64px"></div></div><p style="font-size:11px;color:var(--mut);text-align:center;margin-top:6px">🔒 Paiement sécurisé par Stripe — vos données bancaires ne nous sont jamais transmises</p></div><div class="mf"><button class="btn btn-s" onclick="ST.bk.step=3;renderBk()">Retour</button><button id="stripe-pay-btn" class="btn btn-r btn-lg" onclick="submitStripePayment()">💳 Payer '+p.total.toLocaleString()+' MAD</button></div>';
+    if(b.payMethod==='virement'){
+      /* ── Virement bancaire ── */
+      var hasBankInfo = SETTINGS.bankRib||SETTINGS.bankIban||SETTINGS.bankBenef;
+      body='<div class="mm">'
+        +'<div style="text-align:center;margin-bottom:16px">'
+          +'<div style="font-size:32px;margin-bottom:4px">🏦</div>'
+          +'<h3 style="font-size:16px;font-weight:700;margin-bottom:3px">Effectuez votre virement</h3>'
+          +'<p style="font-size:13px;color:var(--mut)">Montant : <strong style="color:var(--sand)">'+p.total.toLocaleString()+' MAD</strong></p>'
+        +'</div>'
+        +'<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;margin-bottom:12px">'
+          +(SETTINGS.bankBenef?'<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:12px;color:var(--mut)">Bénéficiaire</span><span style="font-size:13px;font-weight:600;color:var(--text)">'+SETTINGS.bankBenef+'</span></div>':'')
+          +(SETTINGS.bankName?'<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:12px;color:var(--mut)">Banque</span><span style="font-size:13px;font-weight:600;color:var(--text)">'+SETTINGS.bankName+'</span></div>':'')
+          +(SETTINGS.bankRib?'<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:12px;color:var(--mut)">RIB</span><span style="font-size:12px;font-weight:700;font-family:monospace;color:var(--sand);cursor:pointer;letter-spacing:.04em" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+SETTINGS.bankRib+'\').then(function(){toast(\'RIB copié !\')});" title="Cliquer pour copier">'+SETTINGS.bankRib+' 📋</span></div>':'')
+          +(SETTINGS.bankIban?'<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:12px;color:var(--mut)">IBAN</span><span style="font-size:12px;font-weight:700;font-family:monospace;color:var(--sand);cursor:pointer;letter-spacing:.04em" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+SETTINGS.bankIban+'\').then(function(){toast(\'IBAN copié !\')});" title="Cliquer pour copier">'+SETTINGS.bankIban+' 📋</span></div>':'')
+          +(SETTINGS.bankSwift?'<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:12px;color:var(--mut)">SWIFT / BIC</span><span style="font-size:13px;font-weight:600;font-family:monospace;color:var(--text)">'+SETTINGS.bankSwift+'</span></div>':'')
+          +'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0"><span style="font-size:12px;color:var(--mut)">Référence à indiquer</span><span style="font-size:13px;font-weight:800;color:var(--red);cursor:pointer" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+b.ref+'\').then(function(){toast(\'Référence copiée !\')});" title="Cliquer pour copier">'+b.ref+' 📋</span></div>'
+        +'</div>'
+        +(hasBankInfo?''
+          :'<div style="background:rgba(217,184,122,.08);border:1px solid rgba(217,184,122,.25);border-radius:9px;padding:11px 14px;font-size:12px;color:var(--sand);text-align:center;margin-bottom:10px">⚠️ Les coordonnées bancaires ne sont pas encore configurées. Notre équipe vous contactera pour organiser le paiement.</div>'
+        )
+        +'<p style="font-size:11px;color:var(--mut);text-align:center;line-height:1.6">Indiquez la référence <strong>'+b.ref+'</strong> dans le libellé du virement. Votre réservation sera validée dès réception.</p>'
+        +'</div>'
+        +'<div class="mf"><button class="btn btn-s" onclick="ST.bk.step=3;renderBk()">Retour</button><button class="btn btn-r btn-lg" onclick="ST.bk.step=5;renderBk();syncNav();toast(\'✓ Réservation confirmée ! Réf : '+b.ref+'\')">✓ J\'ai effectué le virement</button></div>';
+    } else {
+      /* ── Stripe card payment ── */
+      body='<div class="mm"><div style="margin-bottom:6px;text-align:center"><p style="font-size:13px;color:var(--mut);margin-bottom:4px">Montant à régler</p><p style="font-size:22px;font-weight:700;color:var(--red)">'+p.total.toLocaleString()+' MAD</p></div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;margin-bottom:4px"><div id="stripe-payment-element" style="min-height:64px"></div></div><p style="font-size:11px;color:var(--mut);text-align:center;margin-top:6px">🔒 Paiement sécurisé par Stripe — vos données bancaires ne nous sont jamais transmises</p></div><div class="mf"><button class="btn btn-s" onclick="ST.bk.step=3;renderBk()">Retour</button><button id="stripe-pay-btn" class="btn btn-r btn-lg" onclick="submitStripePayment()">💳 Payer '+p.total.toLocaleString()+' MAD</button></div>';
+    }
   } else if(b.step===5){
     var dep=new Date(b.date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
     var wmsg=encodeURIComponent('NEW BOOKING - ROAMERS COMMUNITY\nRef: '+b.ref+'\nTrip: '+b.exp.title+'\nDate: '+b.date+'\nGuests: '+b.adults+' adults'+(b.children?', '+b.children+' children':'')+'\nName: '+b.name+' '+b.last+'\nEmail: '+b.email+'\nPhone: '+b.phone+'\nTotal: '+p.total.toLocaleString()+' MAD');
@@ -6146,6 +6214,7 @@ syncNav();
 function loadSiteConfig(){
   fetch('/api/site-config').then(function(r){ return r.json(); }).then(function(d){
     Object.assign(SETTINGS, d);
+    ST.stripeKey = d.stripePublishableKey || '';
     /* Apply SEO tags */
     if(d.seoTitle)       document.title = d.seoTitle;
     var dm = document.querySelector('meta[name="description"]');

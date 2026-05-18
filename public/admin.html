@@ -1384,6 +1384,13 @@ function renderSettings() {
       {label:'Taux TVA (%)',        id:'settVAT',      val:s.settVAT||'0'},
       {label:'Acompte requis (%)',  id:'settDeposit',  val:s.settDeposit||'30'}
     ])
+  + settingsCard('🏦 Virement bancaire (coordonnées bancaires société)',[
+      {label:'Bénéficiaire (nom exact)',  id:'settBankBenef', val:s.settBankBenef||''},
+      {label:'Banque',                   id:'settBankName',  val:s.settBankName||''},
+      {label:'RIB (20 chiffres)',         id:'settBankRib',   val:s.settBankRib||''},
+      {label:'IBAN',                     id:'settBankIban',  val:s.settBankIban||''},
+      {label:'Code SWIFT / BIC',         id:'settBankSwift', val:s.settBankSwift||''}
+    ])
   +'</div>'
 
   +'<div>'
@@ -1598,7 +1605,8 @@ function saveSettings() {
   var fields = ['settCompanyName','settCompanyEmail','settCompanyPhone','settCompanyAddr','settCompanySite','settHours',
                 'settWhatsappNum','settWhatsappTpl','settCurrency','settVAT','settDeposit','settBookingEmail',
                 'settHeroImg','settHeroVideo',
-                'settImgGroupe','settImgWeekend','settImgExpress','settImgMesure','settImgTeam'];
+                'settImgGroupe','settImgWeekend','settImgExpress','settImgMesure','settImgTeam',
+                'settBankBenef','settBankName','settBankRib','settBankIban','settBankSwift'];
   var s = {};
   fields.forEach(function(id){ var el=document.getElementById(id); if(el) s[id]=el.value; });
 

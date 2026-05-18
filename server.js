@@ -289,7 +289,13 @@ app.get('/api/site-config', function(req, res) {
     seoDescription: seo.description || 'Morocco\'s premier experiential travel platform. Book desert treks, mountain adventures, and cultural tours.',
     seoKeywords:    seo.keywords    || 'morocco travel,sahara trek,atlas mountains,marrakech tour,team building morocco',
     /* Stripe publishable key — safe to expose in frontend */
-    stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || ''
+    stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+    /* Bank transfer / Virement bancaire */
+    bankBenef: s.settBankBenef || '',
+    bankName:  s.settBankName  || '',
+    bankRib:   s.settBankRib   || '',
+    bankIban:  s.settBankIban  || '',
+    bankSwift: s.settBankSwift || ''
   });
 });
 

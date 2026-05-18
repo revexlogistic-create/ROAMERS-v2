@@ -405,6 +405,7 @@ var SETTINGS_ALLOWED_KEYS = [
   'settCompanyAddr', 'settHours', 'settCompanySite', 'settWhatsappNum',
   'settHeroImg', 'settHeroVideo',
   'settImgGroupe', 'settImgWeekend', 'settImgExpress', 'settImgMesure', 'settImgTeam',
+  'settBankBenef', 'settBankName', 'settBankRib', 'settBankIban', 'settBankSwift',
   'cms'
 ];
 
