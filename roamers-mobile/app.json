@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "Roamers Community",
+    "slug": "roamers-community",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "backgroundColor": "#0e0e0e",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0e0e0e"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ma.roamerscommunity.app"
+    },
+    "android": {
+      "package": "ma.roamerscommunity.app",
+      "versionCode": 16,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "apiBase": "https://roamers-v2.vercel.app",
+      "eas": {
+        "projectId": "06333419-b790-4476-9d61-2f6673870118"
+      }
+    },
+    "owner": "amineroamers"
+  }
+}

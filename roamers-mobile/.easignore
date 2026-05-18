@@ -1,0 +1,18 @@
+# EAS Build — explicit ignore list
+# Keeps the upload archive small and builds fast
+
+node_modules/
+.git/
+android/
+ios/
+.expo/
+dist/
+web-build/
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.orig.*
+.DS_Store
+*.tsbuildinfo
+*.log
