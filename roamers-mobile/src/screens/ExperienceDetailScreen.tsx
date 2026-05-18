@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Image, ActivityIndicator, Dimensions, TextInput,
-  FlatList, NativeScrollEvent, NativeSyntheticEvent,
+  Image, ActivityIndicator, Dimensions, TextInput, FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -128,6 +127,9 @@ export default function ExperienceDetailScreen({ route, navigation }: any) {
   const [revErr, setRevErr]           = useState('');
   const [revSubmitting, setRevSubmitting] = useState(false);
 
+  /* ── MUST be before any conditional return (Rules of Hooks) ── */
+  const heroRef = useRef<FlatList<string>>(null);
+
   useEffect(() => {
     getExperience(id)
       .then((e) => { setExp(e); setLoading(false); })
@@ -161,6 +163,16 @@ export default function ExperienceDetailScreen({ route, navigation }: any) {
     }
   };
 
+  function onHeroScroll(e: { nativeEvent: { contentOffset: { x: number } } }) {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+    setImgIdx(idx);
+  }
+
+  function goToImage(idx: number) {
+    setImgIdx(idx);
+    heroRef.current?.scrollToIndex({ index: idx, animated: true });
+  }
+
   if (loading) return (
     <View style={s.loader}><ActivityIndicator color={COLORS.primary} size="large" /></View>
   );
@@ -170,23 +182,10 @@ export default function ExperienceDetailScreen({ route, navigation }: any) {
     </View>
   );
 
-  const isClosed    = exp.status === 'closed' || exp.status === 'full';
-  const segColor    = SEG_COLORS[exp.segment] || COLORS.primary;
+  const isClosed = exp.status === 'closed' || exp.status === 'full';
+  const segColor = SEG_COLORS[exp.segment] || COLORS.primary;
   const imgs: string[] = exp.imgs?.length ? exp.imgs : (exp.img ? [exp.img] : []);
   const itinerary: any[] = exp.it || exp.itinerary || [];
-
-  /* ── scroll ref for thumbnail-tap navigation ── */
-  const heroRef = useRef<FlatList>(null);
-
-  function onHeroScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / width);
-    setImgIdx(idx);
-  }
-
-  function goToImage(idx: number) {
-    setImgIdx(idx);
-    heroRef.current?.scrollToIndex({ index: idx, animated: true });
-  }
 
   return (
     <View style={s.container}>
