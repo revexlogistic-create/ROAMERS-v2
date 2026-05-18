@@ -4,6 +4,7 @@ import {
   Alert, Image, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import {
   getMyBookings, getExperiences,
@@ -14,7 +15,7 @@ import RInput from '../components/RInput';
 import RButton from '../components/RButton';
 import { COLORS, RADIUS, SHADOW } from '../constants/theme';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 /* ── Member level ───────────────────────────────────────────────────────── */
 const LEVELS = [
@@ -117,16 +118,89 @@ export default function ProfileScreen({ navigation }: any) {
   const upcomingB   = bookings.find((b) => b.status === 'confirmed' && new Date(b.date) >= new Date());
   const earnedBadges = BADGE_DEFS.filter((bd) => bd.check(bookings, wishlist, totalSpent));
 
-  /* ── Not logged in ──────────────────────────────────────────────────────── */
+  /* ── Not logged in — premium landing ───────────────────────────────────── */
   if (!user) return (
-    <View style={[styles.center, { paddingTop: insets.top }]}>
-      <Text style={styles.lockIcon}>👤</Text>
-      <Text style={styles.lockTitle}>Votre espace Roamers</Text>
-      <Text style={styles.lockSub}>Connectez-vous pour accéder à votre tableau de bord, vos réservations et vos badges.</Text>
-      <RButton label="Se connecter" onPress={() => navigation.navigate('Login')} style={{ marginTop: 20, minWidth: 220 }} />
-      <TouchableOpacity onPress={() => navigation.navigate('Register')} style={{ marginTop: 14 }}>
-        <Text style={styles.registerLink}>Pas encore de compte ? <Text style={{ color: COLORS.primary }}>S'inscrire</Text></Text>
-      </TouchableOpacity>
+    <View style={{ flex: 1, backgroundColor: '#080808' }}>
+      {/* Hero background */}
+      <Image
+        source={{ uri: 'https://images.unsplash.com/photo-1539020140153-e479b8c22e70?w=900&q=75' }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: height * 0.58 }}
+        resizeMode="cover"
+      />
+      <LinearGradient
+        colors={['rgba(8,8,8,0)', 'rgba(8,8,8,0.6)', '#080808']}
+        locations={[0, 0.5, 1]}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: height * 0.62 }}
+      />
+
+      <ScrollView
+        contentContainerStyle={{ minHeight: height, paddingTop: insets.top + 18, paddingHorizontal: 26, paddingBottom: insets.bottom + 36 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Brand */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+          <View style={{ width: 28, height: 28, borderRadius: 7, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900' }}>R</Text>
+          </View>
+          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 3.5 }}>ROAMERS</Text>
+        </View>
+
+        {/* Spacer — pushes content toward bottom */}
+        <View style={{ height: height * 0.28 }} />
+
+        {/* Headline */}
+        <Text style={{ color: '#fff', fontSize: 38, fontWeight: '900', lineHeight: 42, letterSpacing: -0.5, marginBottom: 12 }}>
+          Votre Maroc{'\n'}commence ici.
+        </Text>
+        <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15, lineHeight: 23, marginBottom: 34 }}>
+          Réservez des voyages authentiques, suivez vos aventures et débloquez des badges exclusifs.
+        </Text>
+
+        {/* Benefits */}
+        <View style={{ gap: 12, marginBottom: 36 }}>
+          {[
+            { icon: '🗺️', title: 'Réservations en temps réel', sub: 'Suivez chaque étape de votre voyage' },
+            { icon: '🏆', title: 'Badges & récompenses',        sub: 'Débloquez des niveaux exclusifs' },
+            { icon: '❤️', title: 'Wishlist personnelle',        sub: 'Sauvegardez vos coups de cœur' },
+            { icon: '✂️', title: 'Voyages sur mesure',          sub: 'Créez votre itinéraire unique' },
+          ].map((b) => (
+            <View key={b.icon} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(184,23,46,0.2)', borderWidth: 1, borderColor: 'rgba(184,23,46,0.35)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Text style={{ fontSize: 20 }}>{b.icon}</Text>
+              </View>
+              <View>
+                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700', marginBottom: 1 }}>{b.title}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>{b.sub}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Social proof */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 28 }}>
+          <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+          <Text style={{ color: 'rgba(255,255,255,0.28)', fontSize: 11, fontWeight: '600', letterSpacing: 0.3 }}>500+ voyageurs nous font confiance</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+        </View>
+
+        {/* Primary CTA */}
+        <TouchableOpacity
+          style={{ backgroundColor: COLORS.primary, borderRadius: 15, paddingVertical: 17, alignItems: 'center', marginBottom: 12, shadowColor: COLORS.primary, shadowOpacity: 0.55, shadowOffset: { width: 0, height: 10 }, shadowRadius: 22, elevation: 14 }}
+          onPress={() => navigation.navigate('Login')}
+          activeOpacity={0.87}
+        >
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.4 }}>Se connecter</Text>
+        </TouchableOpacity>
+
+        {/* Secondary CTA */}
+        <TouchableOpacity
+          style={{ borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)', borderRadius: 15, paddingVertical: 16, alignItems: 'center' }}
+          onPress={() => navigation.navigate('Register')}
+          activeOpacity={0.87}
+        >
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 15, fontWeight: '700' }}>Créer un compte gratuit</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 
@@ -135,24 +209,32 @@ export default function ProfileScreen({ navigation }: any) {
     <View style={[styles.container, { paddingTop: insets.top }]}>
 
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.logo}>ROAMERS</Text>
+      <LinearGradient
+        colors={['#120004', '#0e0e0e']}
+        style={styles.header}
+      >
+        <Text style={styles.logo}>✦ ROAMERS</Text>
         <View style={styles.headerRow}>
-          <View style={styles.avatarSm}>
+          <View style={[styles.avatarSm, { borderWidth: 2, borderColor: level.color + '88' }]}>
             <Text style={styles.avatarSmTxt}>{user.fname[0]}{user.lname?.[0] || ''}</Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.headerName}>{user.fname} {user.lname}</Text>
-            <Text style={[styles.levelBadgeTxt, { color: level.color }]}>{level.icon} {level.label}</Text>
+            <View style={[styles.levelPill, { backgroundColor: level.color + '20', borderColor: level.color + '55', alignSelf: 'flex-start', marginTop: 2 }]}>
+              <Text style={[styles.levelPillTxt, { color: level.color }]}>{level.icon} {level.label}</Text>
+            </View>
           </View>
-          <TouchableOpacity onPress={() => Alert.alert('Déconnexion', 'Êtes-vous sûr ?', [
-            { text: 'Annuler', style: 'cancel' },
-            { text: 'Déconnecter', style: 'destructive', onPress: logout },
-          ])}>
-            <Text style={styles.logoutIcon}>🚪</Text>
+          <TouchableOpacity
+            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
+            onPress={() => Alert.alert('Déconnexion', 'Êtes-vous sûr ?', [
+              { text: 'Annuler', style: 'cancel' },
+              { text: 'Déconnecter', style: 'destructive', onPress: logout },
+            ])}
+          >
+            <Text style={{ fontSize: 15 }}>🚪</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Tab bar */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar} contentContainerStyle={styles.tabBarInner}>
@@ -247,88 +329,149 @@ function OverviewTab({ user, bookings, loading, confirmed, totalSpent, wishlist,
   return (
     <View style={styles.tabContent}>
 
-      {/* Greeting */}
-      <View style={styles.greetingBanner}>
-        <Text style={styles.greetingHi}>{greeting}, {user.fname} 👋</Text>
-        <Text style={styles.greetingSub}>
-          {upcomingB
-            ? `Prochain voyage : ${upcomingB.expTitle}`
-            : 'Explorez votre prochain voyage marocain'}
-        </Text>
-      </View>
+      {/* ── Hero greeting card ── */}
+      <LinearGradient
+        colors={['#1a0208', '#120005', '#0e0e0e']}
+        style={[styles.card, { padding: 0, overflow: 'hidden', borderColor: COLORS.primary + '33' }]}
+      >
+        {/* Top row */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, paddingBottom: 14 }}>
+          <View style={[styles.avatarSm, { width: 52, height: 52, borderRadius: 26, borderWidth: 2.5, borderColor: level.color + '99' }]}>
+            <Text style={[styles.avatarSmTxt, { fontSize: 19 }]}>{user.fname[0]}{user.lname?.[0] || ''}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: '600', marginBottom: 2 }}>{greeting} 👋</Text>
+            <Text style={{ color: '#fff', fontSize: 19, fontWeight: '900', lineHeight: 22 }}>{user.fname} {user.lname}</Text>
+          </View>
+          {upcomingB && (
+            <View style={{ backgroundColor: COLORS.primary, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 }}>
+              <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 }}>✈️ VOYAGE PRÉVU</Text>
+            </View>
+          )}
+        </View>
 
-      {/* 4 KPI stats */}
+        {/* Level progress */}
+        <View style={{ paddingHorizontal: 18, paddingBottom: 18 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 7 }}>
+            <Text style={{ color: level.color, fontSize: 12, fontWeight: '800' }}>{level.icon} {level.label}</Text>
+            {level.next && (
+              <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>
+                {totalSpent.toLocaleString('fr-MA')} / {level.next.toLocaleString('fr-MA')} MAD
+              </Text>
+            )}
+          </View>
+          <View style={{ height: 5, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+            <View style={{ height: 5, borderRadius: 3, backgroundColor: level.color, width: `${nextProg * 100}%` as any }} />
+          </View>
+        </View>
+
+        {/* Bottom divider message */}
+        {!upcomingB && bookings.length === 0 && (
+          <View style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)', paddingHorizontal: 18, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>Commencez votre aventure</Text>
+            <TouchableOpacity
+              style={{ backgroundColor: COLORS.primary, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 }}
+              onPress={() => navigation.navigate('Explorer')}
+              activeOpacity={0.85}
+            >
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>Explorer →</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </LinearGradient>
+
+      {/* ── 4 KPI stats ── */}
       <View style={styles.statsRow}>
         {[
-          { icon: '🗺️', label: 'Réservations', value: bookings.length },
-          { icon: '✅', label: 'Confirmées',    value: confirmed.length },
-          { icon: '❤️', label: 'Wishlist',      value: wishlist.length },
-          { icon: '💰', label: 'Investis (MAD)', value: totalSpent.toLocaleString('fr-MA') },
+          { icon: '🗺️', label: 'Réservations', value: bookings.length,                          color: COLORS.primary },
+          { icon: '✅', label: 'Confirmées',    value: confirmed.length,                          color: '#22c55e' },
+          { icon: '❤️', label: 'Wishlist',      value: wishlist.length,                          color: '#ec4899' },
+          { icon: '💰', label: 'MAD investis',  value: totalSpent > 0 ? (totalSpent / 1000).toFixed(1) + 'k' : '0', color: '#f59e0b' },
         ].map((s) => (
-          <View key={s.label} style={styles.statCard}>
+          <View key={s.label} style={[styles.statCard, { borderColor: s.color + '28' }]}>
             <Text style={styles.statIcon}>{s.icon}</Text>
-            <Text style={styles.statValue}>{s.value}</Text>
+            <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
             <Text style={styles.statLabel}>{s.label}</Text>
           </View>
         ))}
       </View>
 
-      {/* Member level */}
-      <View style={[styles.card, { borderColor: level.color + '44' }]}>
-        <View style={styles.cardHeaderRow}>
-          <Text style={styles.cardTitle}>Niveau membre</Text>
-          <View style={[styles.levelPill, { backgroundColor: level.color + '22', borderColor: level.color }]}>
-            <Text style={[styles.levelPillTxt, { color: level.color }]}>{level.icon} {level.label}</Text>
-          </View>
-        </View>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${nextProg * 100}%` as any, backgroundColor: level.color }]} />
-        </View>
-        {level.next && (
-          <Text style={styles.progressLbl}>
-            {totalSpent.toLocaleString('fr-MA')} / {level.next.toLocaleString('fr-MA')} MAD vers le niveau suivant
-          </Text>
-        )}
-        <View style={styles.benefitsRow}>
-          {['Planification offerte', 'Support prioritaire', 'Offres exclusives', 'Guide -10%'].map((b) => (
-            <View key={b} style={styles.benefitPill}>
-              <Text style={styles.benefitTxt}>✓ {b}</Text>
+      {/* ── First booking CTA (no bookings) ── */}
+      {bookings.length === 0 && !loading && (
+        <LinearGradient
+          colors={['#1a0208', '#0e0e0e']}
+          style={[styles.card, { borderColor: COLORS.primary + '44', padding: 0, overflow: 'hidden' }]}
+        >
+          <Image
+            source={{ uri: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=700&q=70' }}
+            style={{ width: '100%', height: 120, opacity: 0.35 }}
+            resizeMode="cover"
+          />
+          <View style={{ padding: 18, paddingTop: 14 }}>
+            <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', marginBottom: 6 }}>Votre première aventure vous attend</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, lineHeight: 20, marginBottom: 16 }}>
+              Déserts, montagnes, médinas — découvrez des expériences uniques au Maroc et réservez en quelques minutes.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 13, alignItems: 'center', shadowColor: COLORS.primary, shadowOpacity: 0.45, shadowOffset: { width: 0, height: 6 }, shadowRadius: 14, elevation: 10 }}
+                onPress={() => navigation.navigate('Explorer')}
+                activeOpacity={0.87}
+              >
+                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900' }}>🧭 Voir les voyages</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }}
+                onPress={() => navigation.navigate('Activities')}
+                activeOpacity={0.87}
+              >
+                <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: '700' }}>⚡ Activités express</Text>
+              </TouchableOpacity>
             </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Upcoming booking card */}
-      {upcomingB && (
-        <View style={[styles.card, { backgroundColor: '#110508', borderColor: COLORS.primary + '44' }]}>
-          <Text style={styles.cardTitle}>🎒 Prochain voyage</Text>
-          <Text style={styles.nextTripTitle}>{upcomingB.expTitle}</Text>
-          <View style={styles.nextTripDetails}>
-            {[
-              { icon: '📍', val: upcomingB.expLoc || '—' },
-              { icon: '📅', val: new Date(upcomingB.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) },
-              { icon: '👥', val: `${upcomingB.adults} adulte${upcomingB.adults > 1 ? 's' : ''}${upcomingB.children ? ` · ${upcomingB.children} enfant(s)` : ''}` },
-              { icon: '🔖', val: upcomingB.id },
-            ].map((d) => (
-              <View key={d.icon} style={styles.nextTripRow}>
-                <Text style={styles.nextTripIcon}>{d.icon}</Text>
-                <Text style={styles.nextTripVal}>{d.val}</Text>
-              </View>
-            ))}
           </View>
-          <View style={styles.nextTripPrice}>
-            <Text style={styles.priceLbl}>Total payé</Text>
-            <Text style={styles.priceVal}>{Number(upcomingB.total).toLocaleString('fr-MA')} MAD</Text>
-          </View>
-        </View>
+        </LinearGradient>
       )}
 
-      {/* Recent bookings timeline */}
+      {/* ── Upcoming booking ── */}
+      {upcomingB && (
+        <LinearGradient
+          colors={['#0d0517', '#110508', '#0e0e0e']}
+          style={[styles.card, { borderColor: COLORS.primary + '55', padding: 0, overflow: 'hidden' }]}
+        >
+          <View style={{ paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ color: COLORS.primary, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>🎒 PROCHAIN VOYAGE</Text>
+            <View style={{ backgroundColor: '#22c55e22', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: '#22c55e44' }}>
+              <Text style={{ color: '#22c55e', fontSize: 10, fontWeight: '800' }}>✅ CONFIRMÉ</Text>
+            </View>
+          </View>
+          <View style={{ padding: 16 }}>
+            <Text style={styles.nextTripTitle}>{upcomingB.expTitle}</Text>
+            <View style={styles.nextTripDetails}>
+              {[
+                { icon: '📍', val: upcomingB.expLoc || '—' },
+                { icon: '📅', val: new Date(upcomingB.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) },
+                { icon: '👥', val: `${upcomingB.adults} adulte${upcomingB.adults > 1 ? 's' : ''}${upcomingB.children ? ` · ${upcomingB.children} enfant(s)` : ''}` },
+              ].map((d) => (
+                <View key={d.icon} style={styles.nextTripRow}>
+                  <Text style={styles.nextTripIcon}>{d.icon}</Text>
+                  <Text style={styles.nextTripVal}>{d.val}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={styles.nextTripPrice}>
+              <Text style={styles.priceLbl}>Total réservé</Text>
+              <Text style={styles.priceVal}>{Number(upcomingB.total).toLocaleString('fr-MA')} MAD</Text>
+            </View>
+          </View>
+        </LinearGradient>
+      )}
+
+      {/* ── Recent bookings timeline ── */}
       {bookings.length > 0 && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📖 Mon histoire au Maroc</Text>
           <Text style={styles.cardSub}>Chaque réservation est un chapitre</Text>
-          {bookings.slice(0, 4).map((b, i) => {
+          {bookings.slice(0, 4).map((b: any, i: number) => {
             const st = STATUS_CONFIG[b.status] || STATUS_CONFIG.pending;
             const isLast = i === bookings.slice(0, 4).length - 1;
             return (
@@ -348,35 +491,46 @@ function OverviewTab({ user, bookings, loading, confirmed, totalSpent, wishlist,
         </View>
       )}
 
-      {/* Badges preview */}
+      {/* ── Badges preview ── */}
       <View style={styles.card}>
         <View style={styles.cardHeaderRow}>
           <Text style={styles.cardTitle}>🎖️ Badges obtenus</Text>
-          <Text style={styles.cardSub2}>{earnedBadges.length}/{BADGE_DEFS.length}</Text>
+          <Text style={[styles.cardSub2, { color: earnedBadges.length > 0 ? level.color : COLORS.muted }]}>
+            {earnedBadges.length}/{BADGE_DEFS.length}
+          </Text>
         </View>
         <View style={styles.badgesPreview}>
           {BADGE_DEFS.slice(0, 8).map((bd) => {
             const earned = earnedBadges.some((e: any) => e.id === bd.id);
             return (
-              <View key={bd.id} style={[styles.badgeMini, !earned && styles.badgeMiniLocked]}>
-                <Text style={[styles.badgeMiniEmoji, !earned && { opacity: 0.25 }]}>{bd.emoji}</Text>
+              <View key={bd.id} style={[styles.badgeMini, !earned && styles.badgeMiniLocked, earned && { borderColor: level.color + '55', backgroundColor: level.color + '18' }]}>
+                <Text style={[styles.badgeMiniEmoji, !earned && { opacity: 0.2 }]}>{bd.emoji}</Text>
               </View>
             );
           })}
         </View>
+        {earnedBadges.length === 0 && (
+          <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, marginTop: 10, fontStyle: 'italic' }}>
+            Réservez votre premier voyage pour débloquer vos badges
+          </Text>
+        )}
       </View>
 
-      {/* Quick actions */}
+      {/* ── Quick actions — premium grid ── */}
+      <Text style={{ color: COLORS.text, fontSize: 15, fontWeight: '800', marginBottom: -8 }}>Accès rapide</Text>
       <View style={styles.quickGrid}>
         {[
-          { icon: '🧭', label: 'Voyages Groupe',  screen: 'Explorer' },
-          { icon: '⚡', label: 'Activités',        screen: 'Activities' },
-          { icon: '✂️', label: 'Sur Mesure',        screen: 'Plan' },
-          { icon: '🗺️', label: 'Carte',             screen: 'Map' },
+          { icon: '🧭', label: 'Voyages Groupe', sub: 'Groupe & Week-end', screen: 'Explorer',    color: '#1d4ed8' },
+          { icon: '⚡', label: 'Activités',       sub: 'Express & Culture', screen: 'Activities',  color: '#7c3aed' },
+          { icon: '✂️', label: 'Sur Mesure',       sub: 'Mon itinéraire',    screen: 'Plan',        color: '#d97706' },
+          { icon: '🗺️', label: 'Carte',            sub: 'Toutes destinations', screen: 'Map',       color: '#059669' },
         ].map((a) => (
-          <TouchableOpacity key={a.label} style={styles.quickCard} onPress={() => navigation.navigate(a.screen)}>
-            <Text style={styles.quickIcon}>{a.icon}</Text>
-            <Text style={styles.quickLabel}>{a.label}</Text>
+          <TouchableOpacity key={a.label} style={[styles.quickCard, { borderColor: a.color + '33' }]} onPress={() => navigation.navigate(a.screen)} activeOpacity={0.82}>
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: a.color + '20', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+              <Text style={{ fontSize: 20 }}>{a.icon}</Text>
+            </View>
+            <Text style={[styles.quickLabel, { color: '#fff', fontWeight: '800', marginBottom: 2 }]}>{a.label}</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10 }}>{a.sub}</Text>
           </TouchableOpacity>
         ))}
       </View>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
-  KeyboardAvoidingView, Platform, Dimensions, Modal, TextInput,
+  KeyboardAvoidingView, Platform, Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -92,33 +92,6 @@ const NEEDS = [
 
 const SOURCES = ['Instagram', 'Google', 'Recommandation', 'Facebook', 'Agence', 'Autre'];
 
-const PLAN_CITIES = [
-  { name: 'Marrakech',   lat: 31.6295, lng: -7.9811 },
-  { name: 'Casablanca',  lat: 33.5731, lng: -7.5898 },
-  { name: 'Fes',         lat: 34.0331, lng: -5.0003 },
-  { name: 'Rabat',       lat: 34.0209, lng: -6.8416 },
-  { name: 'Tanger',      lat: 35.7595, lng: -5.8340 },
-  { name: 'Agadir',      lat: 30.4278, lng: -9.5981 },
-  { name: 'Merzouga',    lat: 31.0800, lng: -4.0124 },
-  { name: 'Ouarzazate',  lat: 30.9335, lng: -6.9370 },
-  { name: 'Essaouira',   lat: 31.5085, lng: -9.7595 },
-  { name: 'Chefchaouen', lat: 35.1688, lng: -5.2636 },
-  { name: 'Meknès',      lat: 33.8935, lng: -5.5473 },
-  { name: 'Ifrane',      lat: 33.5228, lng: -5.1073 },
-  { name: 'Zagora',      lat: 30.3325, lng: -5.8378 },
-  { name: 'Midelt',      lat: 32.6815, lng: -4.7327 },
-  { name: 'Al Hoceima',  lat: 35.2517, lng: -3.9372 },
-  { name: 'Safi',        lat: 32.2994, lng: -9.2372 },
-  { name: 'El Jadida',   lat: 33.2316, lng: -8.5007 },
-  { name: 'Tiznit',      lat: 29.6974, lng: -9.7316 },
-  { name: 'Taroudant',   lat: 30.4702, lng: -8.8770 },
-  { name: 'Errachidia',  lat: 31.9314, lng: -4.4249 },
-  { name: 'Guelmim',     lat: 28.9870, lng: -10.0574 },
-  { name: 'Tafraoute',   lat: 29.7178, lng: -8.9775 },
-  { name: 'Nador',       lat: 35.1740, lng: -2.9287 },
-  { name: 'Dakhla',      lat: 23.6848, lng: -15.9571 },
-  { name: 'Saidia',      lat: 34.9333, lng: -2.2328 },
-];
 
 const STEPS = ['Itinéraire', 'Votre voyage', 'Votre profil', 'Coordonnées'];
 
@@ -159,8 +132,6 @@ export default function PlanScreen({ navigation, route }: any) {
   const [sent, setSent] = useState(false);
 
   const [waypoints, setWaypoints] = useState<Array<{ name: string; lat: number; lng: number }>>([]);
-  const [cityModal, setCityModal] = useState(false);
-  const [citySearch, setCitySearch] = useState('');
 
   const [form, setForm] = useState({
     moods: [] as string[], who: '', segment: '', destination: '',
@@ -172,15 +143,11 @@ export default function PlanScreen({ navigation, route }: any) {
     departCity: '', source: '', message: '',
   });
 
-  /* Pre-fill waypoints when arriving from MapScreen with a traced itinerary */
+  /* Pre-fill waypoints when returning from MapScreen after city selection */
   useEffect(() => {
-    const itin = route?.params?.itinerary;
-    if (!itin?.stops || itin.stops.length < 2) return;
-    const resolved = (itin.stops as string[])
-      .map((name) => PLAN_CITIES.find((c) => c.name.toLowerCase() === name.toLowerCase()))
-      .filter(Boolean) as typeof PLAN_CITIES;
-    if (resolved.length >= 2) setWaypoints(resolved);
-  }, [route?.params?.itinerary]);
+    const wps = route?.params?.waypoints;
+    if (Array.isArray(wps) && wps.length >= 2) setWaypoints(wps);
+  }, [route?.params?.waypoints]);
 
   const set  = (k: string) => (v: any) => setForm((f) => ({ ...f, [k]: v }));
   const togM = (v: string) => setForm((f) => ({ ...f, moods: toggle(f.moods, v) }));
@@ -198,6 +165,7 @@ export default function PlanScreen({ navigation, route }: any) {
   );
 
   function nextStep() {
+    if (step === 2 && !user) { navigation.navigate('Login'); return; }
     if (step < 3) { setStep((s) => s + 1); return; }
     submit();
   }
@@ -238,14 +206,18 @@ export default function PlanScreen({ navigation, route }: any) {
           {step === 0 && (<>
 
             <Text style={styles.qTitle}>🗺️ Tracez votre itinéraire</Text>
-            <Text style={styles.qSub}>Ajoutez les étapes de votre voyage au Maroc (optionnel)</Text>
+            <Text style={styles.qSub}>Sélectionnez vos étapes directement sur la carte</Text>
 
             {waypoints.length === 0 ? (
-              <View style={styles.itinEmpty}>
-                <Text style={styles.itinEmptyIcon}>🗺️</Text>
-                <Text style={styles.itinEmptyTxt}>Aucune ville ajoutée</Text>
-                <Text style={styles.itinEmptyHint}>Commencez par choisir votre première destination</Text>
-              </View>
+              <TouchableOpacity
+                style={styles.mapOpenBtn}
+                onPress={() => navigation.navigate('Map', { selectForPlan: true })}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.mapOpenIcon}>🗺️</Text>
+                <Text style={styles.mapOpenTxt}>Ouvrir la carte</Text>
+                <Text style={styles.mapOpenSub}>Appuyez pour sélectionner vos villes</Text>
+              </TouchableOpacity>
             ) : (
               <View style={styles.itinList}>
                 {waypoints.map((wp, i) => (
@@ -262,58 +234,15 @@ export default function PlanScreen({ navigation, route }: any) {
                     </TouchableOpacity>
                   </View>
                 ))}
+                <TouchableOpacity
+                  style={styles.mapEditBtn}
+                  onPress={() => navigation.navigate('Map', { selectForPlan: true, existingWaypoints: waypoints })}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.mapEditBtnTxt}>✏️ Modifier sur la carte</Text>
+                </TouchableOpacity>
               </View>
             )}
-
-            <View style={styles.itinBtns}>
-              <TouchableOpacity style={styles.itinAddBtn} onPress={() => setCityModal(true)}>
-                <Text style={styles.itinAddBtnTxt}>＋ Ajouter une ville</Text>
-              </TouchableOpacity>
-              {waypoints.length >= 2 && (
-                <TouchableOpacity
-                  style={styles.itinMapBtn}
-                  onPress={() => navigation.navigate('Map', { itinerary: { stops: waypoints.map((w) => w.name), ref: null } })}
-                >
-                  <Text style={styles.itinMapBtnTxt}>🗺️ Voir sur la carte</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* City picker modal */}
-            <Modal visible={cityModal} animationType="slide" transparent onRequestClose={() => { setCityModal(false); setCitySearch(''); }}>
-              <View style={styles.cityOverlay}>
-                <View style={styles.cityBox}>
-                  <View style={styles.cityHeader}>
-                    <Text style={styles.cityTitle}>Choisir une ville</Text>
-                    <TouchableOpacity onPress={() => { setCityModal(false); setCitySearch(''); }}>
-                      <Text style={styles.cityClose}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <TextInput
-                    style={styles.citySearch}
-                    placeholder="Rechercher…"
-                    placeholderTextColor={COLORS.muted}
-                    value={citySearch}
-                    onChangeText={setCitySearch}
-                    autoFocus
-                  />
-                  <ScrollView keyboardShouldPersistTaps="handled">
-                    {PLAN_CITIES
-                      .filter((c) => !waypoints.find((w) => w.name === c.name))
-                      .filter((c) => c.name.toLowerCase().includes(citySearch.toLowerCase()))
-                      .map((c) => (
-                        <TouchableOpacity
-                          key={c.name}
-                          style={styles.cityItem}
-                          onPress={() => { setWaypoints((ws) => [...ws, c]); setCityModal(false); setCitySearch(''); }}
-                        >
-                          <Text style={styles.cityItemTxt}>📍 {c.name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                  </ScrollView>
-                </View>
-              </View>
-            </Modal>
           </>)}
 
           {/* ══ STEP 1 (ex-0) ════════════════════════════════════════════ */}
@@ -678,10 +607,10 @@ const styles = StyleSheet.create({
   backBtnTxt:   { color: COLORS.sub, fontWeight: '700', fontSize: 14 },
 
   /* ── Itinerary step 0 ── */
-  itinEmpty:     { alignItems: 'center', padding: 32, backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1.5, borderColor: '#2a2a2a', marginBottom: 16 },
-  itinEmptyIcon: { fontSize: 40, marginBottom: 10 },
-  itinEmptyTxt:  { color: COLORS.text, fontSize: 15, fontWeight: '700', marginBottom: 4 },
-  itinEmptyHint: { color: COLORS.muted, fontSize: 12, textAlign: 'center' },
+  mapOpenBtn:    { alignItems: 'center', padding: 36, backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1.5, borderColor: COLORS.primary + '55', marginBottom: 16 },
+  mapOpenIcon:   { fontSize: 44, marginBottom: 12 },
+  mapOpenTxt:    { color: COLORS.text, fontSize: 17, fontWeight: '800', marginBottom: 6 },
+  mapOpenSub:    { color: COLORS.muted, fontSize: 13, textAlign: 'center' },
   itinList:      { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1.5, borderColor: '#2a2a2a', padding: 14, marginBottom: 14 },
   itinRow:       { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
   itinDotWrap:   { alignItems: 'center', marginRight: 12, width: 24 },
@@ -690,21 +619,8 @@ const styles = StyleSheet.create({
   itinDotLine:   { width: 2, height: 18, backgroundColor: '#334155', marginTop: 2 },
   itinCityName:  { color: COLORS.text, fontSize: 14, fontWeight: '700', flex: 1, paddingTop: 2 },
   itinRemove:    { color: '#ef4444', fontSize: 16, paddingLeft: 8, paddingTop: 2 },
-  itinBtns:      { flexDirection: 'row', gap: 10, marginBottom: 20 },
-  itinAddBtn:    { flex: 1, backgroundColor: COLORS.card, borderRadius: RADIUS.pill, paddingVertical: 13, alignItems: 'center', borderWidth: 1.5, borderColor: COLORS.primary },
-  itinAddBtnTxt: { color: COLORS.primary, fontWeight: '700', fontSize: 13 },
-  itinMapBtn:    { flex: 1, backgroundColor: '#0f1e38', borderRadius: RADIUS.pill, paddingVertical: 13, alignItems: 'center', borderWidth: 1.5, borderColor: '#3b82f6' },
-  itinMapBtnTxt: { color: '#93c5fd', fontWeight: '700', fontSize: 13 },
-
-  /* ── City modal ── */
-  cityOverlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,.72)', justifyContent: 'flex-end' },
-  cityBox:       { backgroundColor: COLORS.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 32, maxHeight: '75%' },
-  cityHeader:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
-  cityTitle:     { color: COLORS.text, fontSize: 18, fontWeight: '800' },
-  cityClose:     { color: COLORS.muted, fontSize: 20, padding: 4 },
-  citySearch:    { backgroundColor: COLORS.bg, borderRadius: RADIUS.md, paddingHorizontal: 14, paddingVertical: 11, color: COLORS.text, fontSize: 15, marginBottom: 10, borderWidth: 1, borderColor: COLORS.border },
-  cityItem:      { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#1c1c1c' },
-  cityItemTxt:   { color: COLORS.text, fontSize: 15, fontWeight: '600' },
+  mapEditBtn:    { marginTop: 12, borderWidth: 1.5, borderColor: '#3b82f6', borderRadius: RADIUS.pill, paddingVertical: 10, alignItems: 'center' },
+  mapEditBtnTxt: { color: '#93c5fd', fontWeight: '700', fontSize: 13 },
 });
 
 const sb = StyleSheet.create({
