@@ -108,13 +108,13 @@ if (process.env.MONGODB_URI) {
       _caches[name] = docs;
     }));
     /* One-time migration: wipe demo seed data so Roamers can populate real content */
-    if (!db.settings.find(function(s){ return s.key === 'v2_seed_cleared'; })) {
+    if (!db.settings.find(function(s){ return s.key === 'v3_seed_cleared'; })) {
       _caches['activities']  = [];
       _caches['experiences'] = [];
       /* Await the direct MongoDB deletes so the data is gone before we set the flag */
       await mdb.collection('activities').deleteMany({});
       await mdb.collection('experiences').deleteMany({});
-      db.settings.insert({ key: 'v2_seed_cleared', value: true, ts: new Date().toISOString() });
+      db.settings.insert({ key: 'v3_seed_cleared', value: true, ts: new Date().toISOString() });
       await db.settings.flush();
       console.log('  ✓ Demo seed data cleared from MongoDB');
     }
