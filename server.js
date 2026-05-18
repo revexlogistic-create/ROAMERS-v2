@@ -205,6 +205,7 @@ app.use('/api/bookings',              require('./routes/bookings'));
 app.use('/api/forms',       frmLim,   require('./routes/forms'));
 app.use('/api/experiences',           require('./routes/experiences'));
 app.use('/api/admin',       adminLim, require('./routes/admin'));
+app.use('/api/payments',              require('./routes/payments'));
 
 /* ── HEALTH ──────────────────────────────────────────────────── */
 /* Removed env name — no information disclosure (issue #28) */
@@ -286,7 +287,9 @@ app.get('/api/site-config', function(req, res) {
     /* SEO */
     seoTitle:       seo.title       || 'Roamers Community — Morocco Adventure Booking',
     seoDescription: seo.description || 'Morocco\'s premier experiential travel platform. Book desert treks, mountain adventures, and cultural tours.',
-    seoKeywords:    seo.keywords    || 'morocco travel,sahara trek,atlas mountains,marrakech tour,team building morocco'
+    seoKeywords:    seo.keywords    || 'morocco travel,sahara trek,atlas mountains,marrakech tour,team building morocco',
+    /* Stripe publishable key — safe to expose in frontend */
+    stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || ''
   });
 });
 

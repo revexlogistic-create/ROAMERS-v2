@@ -10,6 +10,9 @@
 <link rel="shortcut icon" type="image/png" href="ROAMERS_LOGO.png">
 <link rel="apple-touch-icon" href="ROAMERS_LOGO.png">
 
+<!-- ── Stripe.js (loaded async — only used on booking step) ── -->
+<script src="https://js.stripe.com/v3/" async></script>
+
 <!-- ── PWA ── -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#B8172E">
@@ -2229,6 +2232,9 @@ function togAO(id){ST.bk.addons[id]=!ST.bk.addons[id];renderBk();}
 
 function confirmBk(){
   var b=ST.bk,p=calcP();
+  /* Disable button while working */
+  var btn=document.querySelector('.mf .btn-r');
+  if(btn){btn.disabled=true;btn.textContent='⏳ En cours…';}
   apiPost('/bookings',{
     expId:b.exp.id, expTitle:b.exp.title, expImg:b.exp.img||'', expLoc:b.exp.loc||'',
     duration:b.exp.dur||'', segment:b.exp.segment||'', type:b.exp.type||'',
@@ -2238,31 +2244,83 @@ function confirmBk(){
     total:p.total
   }).then(function(d){
     b.ref=d.ref;
+    b.bookingId=d.booking&&d.booking.id||d.ref;
+    /* Save locally for "Mes Réservations" */
     var r={id:d.ref,ref:d.ref,expId:b.exp.id,expTitle:b.exp.title,expImg:b.exp.img,expLoc:b.exp.loc,dur:b.exp.dur,date:b.date,adults:b.adults,children:b.children,addons:Object.assign({},b.addons),name:b.name+' '+b.last,email:b.email,phone:b.phone,country:b.country,notes:b.notes,total:p.total,status:'pending',created:new Date().toISOString()};
     ST.res.unshift(r);
     localStorage.setItem('rc_res',JSON.stringify(ST.res));
-    ST.bk.step=4;
-    renderBk();
-    syncNav();
-    toast('Réservation confirmée ! Réf : '+b.ref);
-  }).catch(function(err){
-    /* Fallback: save locally if API fails */
+    /* Go to payment step if Stripe is configured, else skip to done */
+    if(ST.stripeKey){
+      ST.bk.step=4;
+      renderBk();
+      initStripePayment(b.bookingId, p.total);
+    } else {
+      ST.bk.step=5;
+      renderBk();
+      syncNav();
+      toast('Réservation confirmée ! Réf : '+b.ref);
+    }
+  }).catch(function(){
     b.ref='RC-'+Math.random().toString(36).substr(2,4).toUpperCase()+Date.now().toString().slice(-4);
     var r={id:Date.now(),ref:b.ref,expId:b.exp.id,expTitle:b.exp.title,expImg:b.exp.img,expLoc:b.exp.loc,dur:b.exp.dur,date:b.date,adults:b.adults,children:b.children,addons:Object.assign({},b.addons),name:b.name+' '+b.last,email:b.email,phone:b.phone,country:b.country,notes:b.notes,total:p.total,status:'pending',created:new Date().toISOString()};
     ST.res.unshift(r);
     localStorage.setItem('rc_res',JSON.stringify(ST.res));
-    ST.bk.step=4;
+    ST.bk.step=5;
     renderBk();
     syncNav();
     toast('Réservation enregistrée ! Réf : '+b.ref);
   });
 }
 
+/* ── Stripe payment step ─────────────────────────────────────────────── */
+var _stripeElements=null;
+function initStripePayment(bookingId, total){
+  if(!ST.stripeKey||typeof Stripe==='undefined'){
+    ST.bk.step=5; renderBk(); syncNav();
+    toast('Réservation confirmée ! Réf : '+ST.bk.ref); return;
+  }
+  var stripe=Stripe(ST.stripeKey);
+  apiPost('/payments/intent',{bookingId:bookingId}).then(function(d){
+    if(!d||!d.clientSecret){
+      ST.bk.step=5; renderBk(); syncNav(); return;
+    }
+    var elements=stripe.elements({clientSecret:d.clientSecret,appearance:{theme:'night',variables:{colorPrimary:'#B8172E',fontFamily:'inherit'}}});
+    var payEl=elements.create('payment');
+    payEl.mount('#stripe-payment-element');
+    _stripeElements={stripe:stripe,elements:elements};
+  }).catch(function(){
+    ST.bk.step=5; renderBk(); syncNav();
+    toast('Réservation confirmée ! Réf : '+ST.bk.ref);
+  });
+}
+
+function submitStripePayment(){
+  if(!_stripeElements)return;
+  var btn=document.getElementById('stripe-pay-btn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Traitement…';}
+  _stripeElements.stripe.confirmPayment({
+    elements:_stripeElements.elements,
+    redirect:'if_required'
+  }).then(function(result){
+    if(result.error){
+      var btn2=document.getElementById('stripe-pay-btn');
+      if(btn2){btn2.disabled=false;btn2.textContent='💳 Payer '+ST.bk.total+' MAD';}
+      toast(result.error.message,'warn');
+    } else {
+      /* Payment successful */
+      ST.bk.step=5;
+      renderBk();
+      syncNav();
+      toast('✓ Paiement confirmé ! Réf : '+ST.bk.ref);
+    }
+  });
+}
+
 function renderBk(){
   var b=ST.bk;
-  var steps=['Dates','Details','Add-ons','Done'];
-  var prog=b.step<4?'<div style="margin-bottom:16px"><div class="sp">'+steps.map(function(_,i){return '<div class="sd '+(i<b.step-1?'sd-d':i===b.step-1?'sd-a':'sd-p')+'">'+(i<b.step-1?'✓':i+1)+'</div>'+(i<steps.length-1?'<div class="sl '+(i<b.step-1?'sl-d':'')+'"></div>':'');}).join('')+'</div><div style="display:flex;justify-content:space-between;margin-top:4px">'+steps.map(function(s,i){return '<div style="font-size:10px;color:'+(i===b.step-1?'var(--red)':'var(--mut)')+';text-align:center;flex:'+(i<steps.length-1?1:'auto')+'">'+s+'</div>';}).join('')+'</div></div>':'';
-  var mini=b.step<4?'<div class="mini-exp"><img src="'+b.exp.img+'" alt="'+b.exp.title+'"><div><h4>'+b.exp.title+'</h4><p>'+b.exp.loc+' · '+b.exp.dur+'</p></div></div>':'';
+  var steps=['Dates','Details','Add-ons','Payment','Done'];
+  var prog=b.step<5?'<div style="margin-bottom:16px"><div class="sp">'+steps.map(function(_,i){return '<div class="sd '+(i<b.step-1?'sd-d':i===b.step-1?'sd-a':'sd-p')+'">'+(i<b.step-1?'✓':i+1)+'</div>'+(i<steps.length-1?'<div class="sl '+(i<b.step-1?'sl-d':'')+'"></div>':'');}).join('')+'</div><div style="display:flex;justify-content:space-between;margin-top:4px">'+steps.map(function(s,i){return '<div style="font-size:10px;color:'+(i===b.step-1?'var(--red)':'var(--mut)')+';text-align:center;flex:'+(i<steps.length-1?1:'auto')+'">'+s+'</div>';}).join('')+'</div></div>':'';
+  var mini=b.step<5?'<div class="mini-exp"><img src="'+b.exp.img+'" alt="'+b.exp.title+'"><div><h4>'+b.exp.title+'</h4><p>'+b.exp.loc+' · '+b.exp.dur+'</p></div></div>':'';
   var today=new Date().toISOString().split('T')[0];
   var body='';
   var p=calcP();
@@ -2274,6 +2332,8 @@ function renderBk(){
   } else if(b.step===3){
     body='<div class="mm"><p style="font-size:13px;color:var(--mut);margin-bottom:14px">Enhance your experience with optional add-ons:</p>'+ADDONS.map(function(ao){return '<div class="ao"><div style="flex:1;margin-right:12px"><div style="font-size:14px;font-weight:600;margin-bottom:2px">'+ao.label+'</div><div style="font-size:12px;color:var(--mut)">'+ao.desc+' <strong style="color:var(--red)">+'+ao.price+' MAD'+ao.unit+'</strong></div></div><div class="at'+(b.addons[ao.id]?' on':'')+'" onclick="togAO(\''+ao.id+'\')"></div></div>';}).join('')+'<div class="pb" style="margin-top:16px">'+pRows(p,b)+'</div><div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:9px;padding:10px 13px;font-size:13px;color:#16A34A">No payment now — we will contact you within 24h to confirm and arrange payment</div></div><div class="mf"><button class="btn btn-s" onclick="ST.bk.step=2;renderBk()">Back</button><button class="btn btn-r btn-lg" onclick="confirmBk()">Confirm Booking</button></div>';
   } else if(b.step===4){
+    body='<div class="mm"><div style="margin-bottom:6px;text-align:center"><p style="font-size:13px;color:var(--mut);margin-bottom:4px">Montant à régler</p><p style="font-size:22px;font-weight:700;color:var(--red)">'+p.total.toLocaleString()+' MAD</p></div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;margin-bottom:4px"><div id="stripe-payment-element" style="min-height:64px"></div></div><p style="font-size:11px;color:var(--mut);text-align:center;margin-top:6px">🔒 Paiement sécurisé par Stripe — vos données bancaires ne nous sont jamais transmises</p></div><div class="mf"><button class="btn btn-s" onclick="ST.bk.step=3;renderBk()">Retour</button><button id="stripe-pay-btn" class="btn btn-r btn-lg" onclick="submitStripePayment()">💳 Payer '+p.total.toLocaleString()+' MAD</button></div>';
+  } else if(b.step===5){
     var dep=new Date(b.date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
     var wmsg=encodeURIComponent('NEW BOOKING - ROAMERS COMMUNITY\nRef: '+b.ref+'\nTrip: '+b.exp.title+'\nDate: '+b.date+'\nGuests: '+b.adults+' adults'+(b.children?', '+b.children+' children':'')+'\nName: '+b.name+' '+b.last+'\nEmail: '+b.email+'\nPhone: '+b.phone+'\nTotal: '+p.total.toLocaleString()+' MAD');
     body='<div class="mm" style="text-align:center;padding-top:4px"><div class="conf-icon">✓</div><h2 style="font-size:24px;margin-bottom:4px">Booking Received!</h2><p style="color:var(--mut);font-size:14px">Your reference:</p><div class="conf-ref">'+b.ref+'</div><p style="color:var(--mut);font-size:13px;margin-bottom:14px">We will contact you within 24 hours to confirm</p><table class="conf-tbl"><tr><td>Experience</td><td>'+b.exp.title+'</td></tr><tr><td>Location</td><td>'+b.exp.loc+'</td></tr><tr><td>Departure</td><td>'+dep+'</td></tr><tr><td>Duration</td><td>'+b.exp.dur+'</td></tr><tr><td>Guests</td><td>'+b.adults+' adult'+(b.adults>1?'s':'')+(b.children?' + '+b.children+' child'+(b.children>1?'ren':''):'')+' </td></tr><tr><td>Name</td><td>'+b.name+' '+b.last+'</td></tr><tr><td>Total</td><td style="color:var(--red);font-size:16px;font-weight:700">'+p.total.toLocaleString()+' MAD</td></tr></table><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:16px 0"><a href="https://wa.me/'+SETTINGS.whatsapp+'?text='+wmsg+'" target="_blank" class="btn btn-r">Share on WhatsApp</a><button class="btn btn-s" onclick="closeBk();go(\'dashboard\',\'trips\')">View My Trips</button></div><p style="font-size:12px;color:var(--mut)">Confirmation email sent to '+b.email+'</p></div>';
