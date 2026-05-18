@@ -5,10 +5,12 @@
  * Automatic push notification service.
  * Called by route handlers after key events.
  * Templates are managed by admin in Settings > notifTemplates.
+ *
+ * Delivery: Firebase Admin SDK (direct FCM) via utils/fcm.js
  */
 
-var https = require('https');
-var db    = require('../database');
+var db  = require('../database');
+var fcm = require('./fcm');
 
 /* ─── Default templates ──────────────────────────────────────── */
 var DEFAULT_TEMPLATES = {
@@ -76,29 +78,6 @@ function getTemplate(eventType) {
   };
 }
 
-/* ─── Core send ──────────────────────────────────────────────── */
-function sendToExpo(messages) {
-  return new Promise(function(resolve, reject) {
-    var payload = JSON.stringify(messages);
-    var req = https.request({
-      hostname: 'exp.host',
-      path:     '/--/api/v2/push/send',
-      method:   'POST',
-      headers:  {
-        'Content-Type':    'application/json',
-        'Accept':          'application/json',
-        'Accept-Encoding': 'gzip, deflate'
-      }
-    }, function(resp) {
-      var buf = '';
-      resp.on('data', function(d){ buf += d; });
-      resp.on('end',  function(){ resolve(buf); });
-    });
-    req.on('error', reject);
-    req.write(payload);
-    req.end();
-  });
-}
 
 /**
  * Send an automatic notification to a specific email.
@@ -124,15 +103,9 @@ async function notifyByEmail(email, eventType, vars) {
     var title = fillVars(tpl.title, vars);
     var body  = fillVars(tpl.body,  vars);
 
-    await sendToExpo([{
-      to:    tokenDoc.token,
-      sound: 'default',
-      title: title,
-      body:  body,
-      data:  { eventType: eventType }
-    }]);
+    var ok = await fcm.sendOne(tokenDoc.token, title, body, { eventType: eventType });
 
-    console.log('[Notify]', eventType, '->', email, '— OK');
+    console.log('[Notify]', eventType, '->', email, ok ? '— OK' : '— FAIL (check FCM config)');
   } catch(err) {
     console.warn('[Notify]', eventType, '->', email, '— Error:', err.message);
   }
