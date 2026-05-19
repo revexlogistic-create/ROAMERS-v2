@@ -3255,9 +3255,9 @@ function renderPlanRequests() {
   var inprog = DB.plans.filter(function(r){return r.status==='in_progress';}).length;
   var done = DB.plans.filter(function(r){return r.status==='done';}).length;
 
-  var MOOD_LABELS = {desert:'🏜️ Désert',mountain:'⛰️ Montagne',coastal:'🌊 Côtier',cultural:'🏛️ Culturel',adventure:'⚡ Aventure',wellness:'🧘 Bien-être',luxury:'💎 Luxe',family:'👨‍👩‍👧 Famille'};
-  var WHO_LABELS  = {couple:'👫 Couple',family:'👨‍👩‍👧 Famille',friends:'👯 Amis',solo:'🧍 Solo',corporate:'🏢 Entreprise'};
-  var BUDGET_LABELS = {'low':'< 3 000 MAD','mid':'3 000 – 8 000 MAD','high':'8 000 – 20 000 MAD','premium':'> 20 000 MAD'};
+  var MOOD_LABELS = {desert:'🏜️ Désert & Sahara',atlas:'⛰️ Atlas & Randonnée',coast:'🌊 Côte Atlantique',medina:'🏛️ Villes Impériales',oasis:'🌴 Oasis & Vallées',surprise:'✨ Surprenez-moi'};
+  var WHO_LABELS  = {couple:'👫 En couple',famille:'👨‍👩‍👧 En famille',amis:'🎉 Entre amis',solo:'🧳 En solo',corporate:'💼 Corporate',scolaire:'🎓 Groupe / Asso'};
+  var BUDGET_LABELS = {'<500':'< 500 MAD','500-1500':'500 – 1 500 MAD','1500-3000':'1 500 – 3 000 MAD','3000-5000':'3 000 – 5 000 MAD','5000+':'5 000+ MAD','discuss':'À discuter'};
 
   function statusBadgePlan(s){
     var map={new:'badge-pending',in_progress:'badge-info',done:'badge-confirmed',cancelled:'badge-cancelled'};
@@ -3356,25 +3356,39 @@ function viewPlanRequest(id) {
   var r = DB.plans.find(function(x){return x.id===id;});
   if(!r) return;
   var name = [r.fname,r.lname].filter(Boolean).join(' ')||'—';
-  var MOOD_LABELS = {desert:'🏜️ Désert',mountain:'⛰️ Montagne',coastal:'🌊 Côtier',cultural:'🏛️ Culturel',adventure:'⚡ Aventure',wellness:'🧘 Bien-être',luxury:'💎 Luxe',family:'👨‍👩‍👧 Famille'};
-  var WHO_LABELS  = {couple:'👫 Couple',family:'👨‍👩‍👧 Famille',friends:'👯 Amis',solo:'🧍 Solo',corporate:'🏢 Entreprise'};
-  var BUDGET_LABELS = {'low':'< 3 000 MAD','mid':'3 000 – 8 000 MAD','high':'8 000 – 20 000 MAD','premium':'> 20 000 MAD'};
+  var MOOD_LABELS = {desert:'🏜️ Désert & Sahara',atlas:'⛰️ Atlas & Randonnée',coast:'🌊 Côte Atlantique',medina:'🏛️ Villes Impériales',oasis:'🌴 Oasis & Vallées',surprise:'✨ Surprenez-moi'};
+  var WHO_LABELS  = {couple:'👫 En couple',famille:'👨‍👩‍👧 En famille',amis:'🎉 Entre amis',solo:'🧳 En solo',corporate:'💼 Corporate',scolaire:'🎓 Groupe / Asso'};
+  var BUDGET_LABELS = {'<500':'< 500 MAD','500-1500':'500 – 1 500 MAD','1500-3000':'1 500 – 3 000 MAD','3000-5000':'3 000 – 5 000 MAD','5000+':'5 000+ MAD','discuss':'À discuter'};
+  var SEG_LABELS = {groupe:'👥 Voyage Groupe',weekend:'🌄 Weekend à Thème',express:'⚡ Activité Express',mesure:'✂️ Sur Mesure'};
+  var LANG_LABELS = {fr:'🇫🇷 Français',ar:'🇲🇦 Arabe',en:'🇬🇧 English',zh:'🇨🇳 中文',es:'🇪🇸 Español',de:'🇩🇪 Deutsch'};
   var moodsHtml = (r.moods||[]).map(function(m){return '<span class="chip">'+( MOOD_LABELS[m]||m)+'</span>';}).join(' ')||'—';
-  var row = function(l,v){return '<div class="stat-row"><span class="text-muted text-sm">'+l+'</span><span style="font-weight:600;text-align:right">'+v+'</span></div>';};
+  var needsHtml = (r.needs||[]).map(function(n){return '<span class="chip">'+n.replace('need_','').replace('_',' ')+'</span>';}).join(' ')||'—';
+  var langHtml  = (r.lang||[]).map(function(l){return '<span class="chip">'+(LANG_LABELS[l]||l)+'</span>';}).join(' ')||'—';
+  var itin = (r.itineraryStops||[]);
+  var itinHtml = itin.length ? itin.map(function(s,i){return '<span style="font-size:12px;font-weight:600;color:var(--text)">'+(i>0?' → ':'')+s+'</span>';}).join(''):'<span class="text-muted">—</span>';
+  var row = function(l,v){return '<div class="stat-row"><span class="text-muted text-sm">'+l+'</span><span style="font-weight:600;text-align:right;flex:1;text-align:right">'+v+'</span></div>';};
   var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">'
     +'<div>'
       +'<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Contact</div>'
-      + row('Nom',name) + row('Email',r.email||'—') + row('Téléphone',r.phone||'—') + row('Source',r.source||'—')
+      + row('Nom',name) + row('Email',r.email||'—') + row('Téléphone',r.phone||'—')
+      + row('Ville départ',r.departCity||'—') + row('Source',r.source||'—')
     +'</div>'
     +'<div>'
       +'<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Voyage</div>'
-      + row('Destination',r.destination||'—') + row('Moods','<div style="display:flex;gap:4px;flex-wrap:wrap">'+moodsHtml+'</div>')
-      + row('Qui',WHO_LABELS[r.who]||r.who||'—') + row('Groupe',r.groupSize||'—')
-      + row('Durée',r.duration||'—') + row('Budget',BUDGET_LABELS[r.budget]||r.budget||'—')
-      + row('Départ',r.departCity||'—') + row('Dates',(r.dateFrom||'—')+' → '+(r.dateTo||'—'))
+      + row('Type',SEG_LABELS[r.segment]||r.segment||'—')
+      + row('Destination',r.destination||'—')
+      + row('Qui',WHO_LABELS[r.who]||r.who||'—')
+      + row('Groupe',r.groupSize||'—')
+      + row('Durée',r.duration||'—')
+      + row('Budget',BUDGET_LABELS[r.budget]||r.budget||'—')
+      + row('Dates',(r.dateFrom||'—')+' → '+(r.dateTo||'—')+(r.flexDate?' (flexible)':''))
+      + row('Langue(s)','<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">'+langHtml+'</div>')
     +'</div>'
   +'</div>'
-  +(r.message?'<div style="margin-top:16px"><div class="text-muted text-sm" style="margin-bottom:6px">Message</div><div style="background:var(--surface2);border-radius:var(--r);padding:12px;font-size:13px;line-height:1.6">'+r.message+'</div></div>':'')
+  +(itin.length?'<div style="margin-top:14px"><div class="text-muted text-sm" style="margin-bottom:6px">🛤 Itinéraire ('+itin.length+' étapes)</div><div style="background:var(--surface2);border-radius:var(--r);padding:10px 14px;font-size:13px;line-height:1.8">'+itinHtml+'</div></div>':'')
+  +'<div style="margin-top:14px"><div class="text-muted text-sm" style="margin-bottom:6px">🌍 Ambiances</div><div style="display:flex;gap:5px;flex-wrap:wrap">'+moodsHtml+'</div></div>'
+  +(r.needs&&r.needs.length?'<div style="margin-top:12px"><div class="text-muted text-sm" style="margin-bottom:6px">⚙️ Besoins particuliers</div><div style="display:flex;gap:5px;flex-wrap:wrap">'+needsHtml+'</div></div>':'')
+  +(r.message?'<div style="margin-top:14px"><div class="text-muted text-sm" style="margin-bottom:6px">💬 Message</div><div style="background:var(--surface2);border-radius:var(--r);padding:12px;font-size:13px;line-height:1.6">'+r.message+'</div></div>':'')
   +'<div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">'
     +'<a href="https://wa.me/'+( r.phone||'').replace(/[^0-9]/g,'')+'" target="_blank" class="btn btn-success" style="text-decoration:none">💬 WhatsApp</a>'
     +'<a href="mailto:'+r.email+'" class="btn btn-secondary" style="text-decoration:none">📧 Email</a>'
@@ -3384,9 +3398,14 @@ function viewPlanRequest(id) {
 }
 
 function exportPlanCSV() {
-  var cols=['Réf','Date','Prénom','Nom','Email','Téléphone','Destination','Qui','Groupe','Durée','Budget','Départ','DateFrom','DateTo','Statut','Message'];
+  var cols=['Réf','Date','Prénom','Nom','Email','Téléphone','Type','Destination','Itinéraire','Ambiances','Qui','Groupe','Durée','Budget','Dates','Flexible','Langue(s)','Besoins','Ville départ','Source','Statut','Message'];
   var rows=DB.plans.map(function(r){
-    return [r.id,fmtDate(r.created),r.fname||'',r.lname||'',r.email||'',r.phone||'',r.destination||'',(r.who||''),(r.groupSize||''),(r.duration||''),(r.budget||''),(r.departCity||''),(r.dateFrom||''),(r.dateTo||''),r.status||'',(r.message||'').replace(/"/g,'""')];
+    var itin=(r.itineraryStops||[]).join(' → ');
+    var moods=(r.moods||[]).join(', ');
+    var langs=(r.lang||[]).join(', ');
+    var needs=(r.needs||[]).join(', ');
+    var dates=(r.dateFrom||'')+(r.dateTo?' → '+r.dateTo:'');
+    return [r.id,fmtDate(r.created),r.fname||'',r.lname||'',r.email||'',r.phone||'',r.segment||'',r.destination||'',itin,moods,(r.who||''),(r.groupSize||''),(r.duration||''),(r.budget||''),dates,r.flexDate?'oui':'non',langs,needs,(r.departCity||''),(r.source||''),r.status||'',(r.message||'').replace(/"/g,'""')];
   });
   var csv=[cols].concat(rows).map(function(r){return r.map(function(c){return '"'+c+'"';}).join(',');}).join('\n');
   var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='plan-requests-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
