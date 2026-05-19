@@ -197,16 +197,21 @@ function _seedAdmin(db) {
     console.error('\n  FATAL: ADMIN_PASSWORD environment variable is not set.\n  Set it in your .env file.\n');
     process.exit(1);
   }
-  if (!db.users.find(function(u){ return u.email===adminEmail; })) {
+  var hash = bcrypt.hashSync(adminPassword, 12);
+  var existing = db.users.find(function(u){ return u.email===adminEmail; });
+  if (!existing) {
     db.users.insert({
       id: adminUUID(adminEmail),
       fname:'Youssef', lname:'El Fassi', email:adminEmail,
-      password:     bcrypt.hashSync(adminPassword, 12),
+      password: hash,
       phone:'+212 6 00 00 00 00', country:'Morocco', role:'admin',
       bio:'', joined:new Date().toISOString(), wishlist:[], notifs:[],
       tokenVersion: 0,
       loginFailCount: 0, loginLockUntil: null
     });
     console.log('  ✓ Admin seeded:', adminEmail);
+  } else {
+    /* Always sync password from env var so committed users.json hash never blocks login */
+    db.users.update(function(u){ return u.email===adminEmail; }, { password: hash, loginFailCount: 0, loginLockUntil: null });
   }
 }
