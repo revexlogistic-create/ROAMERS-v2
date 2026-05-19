@@ -217,6 +217,16 @@ app.get('/api/health', function(req, res) {
   res.json({ status: 'ok', app: 'Roamers Community', time: new Date().toISOString() });
 });
 
+/* ── APP VERSION (mobile update check) ──────────────────────── */
+app.get('/api/app-version', function(req, res) {
+  res.json({
+    versionCode: 26,
+    versionName: '1.0.0',
+    downloadUrl: '/downloads/roamers.apk',
+    releaseNotes: 'Icônes minimalistes sur la carte, amélioration des demandes Plan My Trip, corrections de bugs.'
+  });
+});
+
 /* ── SITE CONFIG (public CMS delivery) ──────────────────────── */
 app.get('/api/site-config', function(req, res) {
   var s   = db.settings.find(function(){ return true; }) || {};
