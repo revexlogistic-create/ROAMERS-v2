@@ -3297,11 +3297,12 @@ function renderPlanRequests() {
       var moodsHtml = (r.moods||[]).map(function(m){return '<span class="chip">'+( MOOD_LABELS[m]||m)+'</span>';}).join('');
       var whoHtml = WHO_LABELS[r.who]||r.who||'—';
       var budgetLbl = BUDGET_LABELS[r.budget]||r.budget||'—';
-      return '<tr data-search="'+r.id+' '+name+' '+(r.email||'')+' '+(r.destination||'')+' '+r.status+'">'
+      var destDisplay = r.destination || ((r.itineraryStops&&r.itineraryStops.length) ? r.itineraryStops.join(' → ') : '');
+      return '<tr data-search="'+r.id+' '+name+' '+(r.email||'')+' '+destDisplay+' '+r.status+'">'
         +'<td><span style="font-family:monospace;font-weight:700;font-size:11px;color:var(--red)">'+r.id+'</span></td>'
         +'<td style="font-size:12px;white-space:nowrap">'+fmtDate(r.created)+'</td>'
         +'<td><div style="display:flex;align-items:center;gap:8px"><div class="avatar av-sm" style="background:'+hashColor(name)+'">'+initials(name)+'</div><div><div style="font-weight:600">'+name+'</div><div class="text-muted text-xs">'+r.email+'</div><div class="text-muted text-xs">'+r.phone+'</div></div></div></td>'
-        +'<td style="font-weight:600;font-size:12px">'+(r.destination||'<span class="text-muted">—</span>')+'</td>'
+        +'<td style="font-weight:600;font-size:12px">'+(destDisplay||'<span class="text-muted">—</span>')+'</td>'
         +'<td><div style="display:flex;gap:3px;flex-wrap:wrap">'+(moodsHtml||'<span class="text-muted">—</span>')+'</div></td>'
         +'<td style="font-size:12px">'+whoHtml+'</td>'
         +'<td style="font-size:12px;font-weight:600">'+( r.groupSize||'—')+'</td>'

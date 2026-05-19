@@ -250,7 +250,7 @@ router.get('/plan-requests', function(req, res) {
   res.json({ requests: db.plans.all().sort(function(a, b){ return new Date(b.created) - new Date(a.created); }) });
 });
 router.patch('/plan-requests/:id', auditMod.audit('admin:plan:update'), async function(req, res) {
-  var allowed = ['new','reviewing','quoted','closed'];
+  var allowed = ['new','in_progress','done','cancelled'];
   if (req.body.status && !allowed.includes(req.body.status)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
