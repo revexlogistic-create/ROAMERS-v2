@@ -220,7 +220,7 @@ app.get('/api/health', function(req, res) {
 /* ── APP VERSION (mobile update check) ──────────────────────── */
 app.get('/api/app-version', function(req, res) {
   res.json({
-    versionCode: 29,
+    versionCode: 28,
     versionName: '1.0.0',
     downloadUrl: '/downloads/roamers.apk',
     releaseNotes: 'Icônes minimalistes sur la carte, amélioration des demandes Plan My Trip, corrections de bugs.'
