@@ -1,0 +1,82 @@
+[
+  {
+    "id": "5e019f5b-4a86-4d67-a2ff-dc67adbc4df6",
+    "created": "2026-05-07T21:51:53.246Z",
+    "title": "Camel Trekking at Sunset",
+    "category": "adventure",
+    "duration": "2h",
+    "price": 350,
+    "status": "active",
+    "desc": "Classic Sahara camel experience at golden hour"
+  },
+  {
+    "id": "586e42d9-b002-49a6-9cd8-6306040ca18f",
+    "created": "2026-05-07T21:51:53.246Z",
+    "title": "Traditional Cooking Class",
+    "category": "culture",
+    "duration": "3h",
+    "price": 280,
+    "status": "active",
+    "desc": "Learn to cook tagine and couscous with a local family"
+  },
+  {
+    "id": "7468003d-6e48-4924-aafa-389af19e851f",
+    "created": "2026-05-07T21:51:53.246Z",
+    "title": "Outdoor Leadership Workshop",
+    "category": "corporate",
+    "duration": "4h",
+    "price": 600,
+    "status": "active",
+    "desc": "Facilitated team leadership session in nature"
+  },
+  {
+    "id": "228492fa-0a7e-499e-827f-769f07710e7f",
+    "created": "2026-05-07T21:51:53.246Z",
+    "title": "Medina Guided Walk — Fes",
+    "category": "culture",
+    "duration": "3h",
+    "price": 200,
+    "status": "active",
+    "desc": "Expert-led walking tour through Fes el-Bali"
+  },
+  {
+    "id": "0e188d58-64fa-43e2-9f0e-ebc8cf22278e",
+    "created": "2026-05-07T21:51:53.246Z",
+    "title": "Sandboarding & 4x4 Dune Adventure",
+    "category": "adventure",
+    "duration": "3h",
+    "price": 450,
+    "status": "active",
+    "desc": "Adrenaline-packed dune bashing and sandboarding"
+  },
+  {
+    "id": "03177359-63bf-4707-addf-41edf6e405d9",
+    "created": "2026-05-07T21:51:53.246Z",
+    "title": "Yoga & Meditation at Sunrise",
+    "category": "wellness",
+    "duration": "1.5h",
+    "price": 180,
+    "status": "inactive",
+    "desc": "Morning wellness session on the Sahara dunes"
+  },
+  {
+    "id": "f5de9f78-2b93-419a-b1c2-e2979a5c048c",
+    "created": "2026-05-07T21:51:53.246Z",
+    "title": "CSR Community Service Day",
+    "category": "corporate",
+    "duration": "8h",
+    "price": 400,
+    "status": "active",
+    "desc": "Give back to local Berber communities — team bonding with impact"
+  },
+  {
+    "id": "2ad151bd-6b24-418f-b3ad-aaba936e0709",
+    "created": "2026-05-07T21:51:53.246Z",
+    "title": "Surf Lesson — Taghazout",
+    "category": "adventure",
+    "duration": "2h",
+    "price": 320,
+    "status": "active",
+    "desc": "Beginner-friendly Atlantic surf lesson with certified instructor"
+  }
+]

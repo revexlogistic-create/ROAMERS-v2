@@ -1,0 +1,32 @@
+[
+  {
+    "id": "7eb40dcf-0e58-4759-b252-f86d9bbfd74e",
+    "fname": "Youssef",
+    "lname": "El Fassi",
+    "email": "admin@roamerscommunity.ma",
+    "password": "$2a$10$JZwJaF17/t47/OaoE6581eTW5Pc6Zn/BWCcraxL8/q0bgFEbz1j8S",
+    "phone": "+212 6 00 00 00 00",
+    "country": "Morocco",
+    "role": "admin",
+    "bio": "",
+    "joined": "2026-05-04T06:59:36.917Z",
+    "wishlist": [],
+    "notifs": [],
+    "loginFailCount": 0,
+    "loginLockUntil": null
+  },
+  {
+    "id": "5d232f29-5d6f-42ac-a3f7-e6a82d4a1988",
+    "fname": "mansour",
+    "lname": "amine",
+    "email": "amine.mansour011@gmail.com",
+    "password": "$2a$10$.IEm5V3zC.NetqIw5G2HRey/iW9ygjmbTKtPXQr5kyxBK2unFxDoC",
+    "phone": "0614717349",
+    "country": "Morocco",
+    "role": "user",
+    "bio": "",
+    "joined": "2026-05-04T15:12:36.384Z",
+    "wishlist": [],
+    "notifs": []
+  }
+]

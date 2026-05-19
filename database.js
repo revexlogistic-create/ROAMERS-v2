@@ -137,13 +137,21 @@ if (process.env.MONGODB_URI) {
 
   const _serverless = process.env.VERCEL==='1' || __dirname.startsWith('/var/task');
   let DATA_DIR = _serverless ? '/tmp/roamers-data' : path.resolve('./data');
+  const SEED_DIR = path.resolve(__dirname, 'data'); // committed seed files
   try { if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR,{recursive:true}); }
   catch(_){ DATA_DIR='/tmp/roamers-data'; if(!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR,{recursive:true}); }
 
   function createTable(name) {
-    const file = path.join(DATA_DIR, name+'.json');
-    function read(){ try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch(e){return [];} }
-    function write(rows){ fs.writeFileSync(file, JSON.stringify(rows,null,2)); }
+    const file     = path.join(DATA_DIR, name+'.json');
+    const seedFile = path.join(SEED_DIR, name+'.json');
+    function read(){
+      /* Primary: writable /tmp copy */
+      try{ if(fs.existsSync(file)) return JSON.parse(fs.readFileSync(file,'utf8')); }catch(e){}
+      /* Fallback: committed seed file (always present after deploy) */
+      try{ if(fs.existsSync(seedFile)) return JSON.parse(fs.readFileSync(seedFile,'utf8')); }catch(e){}
+      return [];
+    }
+    function write(rows){ try{ fs.writeFileSync(file, JSON.stringify(rows,null,2)); }catch(e){} }
     return {
       all:    function(fn)    { return fn?read().filter(fn):read(); },
       find:   function(fn)    { return read().find(fn)||null; },

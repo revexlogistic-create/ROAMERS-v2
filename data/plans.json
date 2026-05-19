@@ -1,0 +1,24 @@
+[
+  {
+    "id": "RC-PLAN-XHB6",
+    "segment": "weekend",
+    "types": [
+      "desert"
+    ],
+    "groupSize": "medium",
+    "duration": "wknd",
+    "budget": "mid",
+    "lang": "ar",
+    "dateFrom": "2026-05-31",
+    "dateTo": "",
+    "fname": "mansour",
+    "lname": "amine",
+    "email": "amine.mansour011@gmail.com",
+    "phone": "0703579254",
+    "nationality": "Marocain(e)",
+    "source": "Recommandation",
+    "message": "Nuit en bivouac Sahara, Cuisine marocaine, Yoga au lever du soleil",
+    "status": "new",
+    "created": "2026-05-06T23:25:51.041Z"
+  }
+]

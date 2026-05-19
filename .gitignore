@@ -4,8 +4,7 @@ node_modules/
 .DS_Store
 npm-debug.log*
 
-# Runtime data — not committed
-data/*.json
+# Runtime data — db files excluded, seed JSON files are committed
 data/*.db
 data/*.db-shm
 data/*.db-wal
