@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { createBooking } from '../services/api';
+import { createBooking, validatePromo } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { COLORS, RADIUS, SHADOW } from '../constants/theme';
 
@@ -82,10 +82,35 @@ export default function BookingScreen({ route, navigation }: any) {
   const [payMethod, setPayMethod] = useState<'virement' | 'carte'>('virement');
   const [loading,   setLoading]   = useState(false);
 
+  /* Promo code */
+  const [promoInput,    setPromoInput]    = useState('');
+  const [promoApplied,  setPromoApplied]  = useState<{ code: string; discountPct: number; label: string } | null>(null);
+  const [promoLoading,  setPromoLoading]  = useState(false);
+  const [promoError,    setPromoError]    = useState<string | null>(null);
+
   const adultPrice = Number(exp?.price) || 0;
   const childPrice = exp?.pChild != null ? Number(exp.pChild) : adultPrice;
-  const total      = adults * adultPrice + children * childPrice;
+  const baseTotal  = adults * adultPrice + children * childPrice;
+  const discount   = promoApplied ? Math.round(baseTotal * promoApplied.discountPct / 100) : 0;
+  const total      = baseTotal - discount;
   const acompte    = Math.round(total * 0.3); // 30% deposit
+
+  async function applyPromo() {
+    const code = promoInput.trim().toUpperCase();
+    if (!code) return;
+    setPromoLoading(true);
+    setPromoError(null);
+    try {
+      const promo = await validatePromo(code);
+      setPromoApplied(promo);
+      setPromoError(null);
+    } catch (e: any) {
+      setPromoApplied(null);
+      setPromoError(e?.message || 'Code invalide');
+    } finally {
+      setPromoLoading(false);
+    }
+  }
 
   /* ── Navigation guards ── */
   function nextStep() {
@@ -113,6 +138,7 @@ export default function BookingScreen({ route, navigation }: any) {
         phone:    phone.trim(),
         country,
         notes:    `[${payMethod === 'virement' ? 'Virement bancaire' : 'Carte bancaire'}] ${notes.trim()}`.trim(),
+        ...(promoApplied ? { promoCode: promoApplied.code } : {}),
       });
       navigation.replace('BookingSuccess', { ref: res.booking?.id || res.ref, exp });
     } catch (e: any) {
@@ -358,11 +384,55 @@ export default function BookingScreen({ route, navigation }: any) {
                   <Text style={{ color: COLORS.text, fontSize: 13, fontWeight: '700' }}>{(children * childPrice).toLocaleString('fr-MA')} MAD</Text>
                 </View>
               )}
+              {promoApplied && (
+                <View style={styles.priceRow}>
+                  <Text style={{ color: '#22c55e', fontSize: 13 }}>🎁 Remise {promoApplied.label}</Text>
+                  <Text style={{ color: '#22c55e', fontSize: 13, fontWeight: '700' }}>−{discount.toLocaleString('fr-MA')} MAD</Text>
+                </View>
+              )}
               <View style={[styles.priceRow, { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 12, marginTop: 8 }]}>
                 <Text style={{ color: COLORS.text, fontSize: 16, fontWeight: '800' }}>Total estimé</Text>
                 <Text style={{ color: COLORS.primary, fontSize: 24, fontWeight: '900' }}>{total.toLocaleString('fr-MA')} MAD</Text>
               </View>
             </LinearGradient>
+
+            {/* Promo code */}
+            <View style={styles.promoWrap}>
+              <Text style={styles.fieldLabel}>Code promo / partenaire</Text>
+              {promoApplied ? (
+                <View style={styles.promoApplied}>
+                  <Text style={styles.promoAppliedTxt}>🎁 {promoApplied.code} — {promoApplied.label} appliqué !</Text>
+                  <TouchableOpacity onPress={() => { setPromoApplied(null); setPromoInput(''); }} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                    <Text style={{ color: COLORS.sub, fontSize: 14, fontWeight: '700' }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.promoRow}>
+                    <TextInput
+                      style={styles.promoInput}
+                      value={promoInput}
+                      onChangeText={(t) => { setPromoInput(t.toUpperCase()); setPromoError(null); }}
+                      placeholder="Ex : PARTNER10"
+                      placeholderTextColor={COLORS.muted}
+                      autoCapitalize="characters"
+                    />
+                    <TouchableOpacity
+                      style={[styles.promoBtn, promoLoading && { opacity: 0.6 }]}
+                      onPress={applyPromo}
+                      disabled={promoLoading}
+                      activeOpacity={0.8}
+                    >
+                      {promoLoading
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <Text style={styles.promoBtnTxt}>Appliquer</Text>
+                      }
+                    </TouchableOpacity>
+                  </View>
+                  {promoError && <Text style={styles.promoError}>{promoError}</Text>}
+                </>
+              )}
+            </View>
           </View>
         )}
 
@@ -375,6 +445,12 @@ export default function BookingScreen({ route, navigation }: any) {
 
             {/* Total reminder */}
             <LinearGradient colors={['#1a000a', '#111']} style={[styles.totalCard, { marginBottom: 22 }]}>
+              {promoApplied && (
+                <View style={styles.priceRow}>
+                  <Text style={{ color: '#22c55e', fontSize: 12 }}>🎁 Remise {promoApplied.label}</Text>
+                  <Text style={{ color: '#22c55e', fontSize: 12, fontWeight: '700' }}>−{discount.toLocaleString('fr-MA')} MAD</Text>
+                </View>
+              )}
               <View style={styles.priceRow}>
                 <Text style={{ color: COLORS.sub, fontSize: 13 }}>Montant total</Text>
                 <Text style={{ color: COLORS.primary, fontSize: 22, fontWeight: '900' }}>{total.toLocaleString('fr-MA')} MAD</Text>
@@ -591,6 +667,16 @@ const styles = StyleSheet.create({
   disclaimer: { color: COLORS.muted, fontSize: 11, textAlign: 'center', lineHeight: 16, marginHorizontal: 16, marginBottom: 12 },
 
   body: { paddingBottom: 24 },
+
+  /* promo code */
+  promoWrap:       { marginTop: 4, marginBottom: 16 },
+  promoRow:        { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  promoInput:      { flex: 1, backgroundColor: '#1a1a1a', borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, color: COLORS.text, fontSize: 14, paddingHorizontal: 14, paddingVertical: 11, letterSpacing: 1 },
+  promoBtn:        { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingHorizontal: 16, paddingVertical: 11, alignItems: 'center', justifyContent: 'center' },
+  promoBtnTxt:     { color: '#fff', fontSize: 13, fontWeight: '800' },
+  promoError:      { color: '#ef4444', fontSize: 12, marginTop: 7 },
+  promoApplied:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#071a09', borderRadius: RADIUS.md, padding: 12, borderWidth: 1, borderColor: '#22c55e44' },
+  promoAppliedTxt: { color: '#22c55e', fontSize: 13, fontWeight: '700', flex: 1 },
 
   /* date picker */
   datesGrid:         { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 18 },

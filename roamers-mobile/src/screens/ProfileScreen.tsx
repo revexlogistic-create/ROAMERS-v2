@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Alert, Image, ActivityIndicator, Dimensions,
+  Alert, Image, ActivityIndicator, Dimensions, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,14 +9,18 @@ import { useAuth } from '../context/AuthContext';
 import {
   getMyBookings, getExperiences,
   changePassword, updateProfile, toggleWishlist,
-  cancelBooking, deleteAccount, getMyPlanRequests,
+  cancelBooking, deleteAccount, getMyPlanRequests, getAppVersion,
 } from '../services/api';
 import RInput from '../components/RInput';
 import RButton from '../components/RButton';
 import { COLORS, RADIUS, SHADOW } from '../constants/theme';
+import Icon from '../components/Icons';
 
 const { width, height } = Dimensions.get('window');
 const HALF = (width - 48) / 2;
+
+const APP_VERSION_CODE = 31;
+const APP_VERSION_NAME = '1.0.0';
 
 /* ── Member levels ──────────────────────────────────────────────────────── */
 const LEVELS = [
@@ -46,16 +50,16 @@ const BADGE_DEFS = [
 ];
 
 /* ── Tabs ───────────────────────────────────────────────────────────────── */
-const TABS = [
-  { key: 'overview',     icon: '◆',  label: 'Accueil' },
-  { key: 'reservations', icon: '🗺️', label: 'Voyages' },
-  { key: 'requests',     icon: '✂️', label: 'Sur Mesure' },
-  { key: 'wishlist',     icon: '❤️', label: 'Wishlist' },
-  { key: 'passport',     icon: '✈️', label: 'Passeport' },
-  { key: 'edit',         icon: '👤', label: 'Profil' },
-  { key: 'settings',     icon: '⚙️', label: 'Réglages' },
-];
 type TabKey = 'overview' | 'reservations' | 'requests' | 'wishlist' | 'passport' | 'edit' | 'settings';
+const TABS: { key: TabKey; icon: (c: string) => React.ReactNode; label: string }[] = [
+  { key: 'overview',     icon: (c) => <Icon.Grid     size={17} color={c} />, label: 'Accueil' },
+  { key: 'reservations', icon: (c) => <Icon.Tent     size={17} color={c} />, label: 'Voyages' },
+  { key: 'requests',     icon: (c) => <Icon.Route    size={17} color={c} />, label: 'Sur Mesure' },
+  { key: 'wishlist',     icon: (c) => <Icon.Bookmark size={17} color={c} />, label: 'Wishlist' },
+  { key: 'passport',     icon: (c) => <Icon.Globe    size={17} color={c} />, label: 'Passeport' },
+  { key: 'edit',         icon: (c) => <Icon.Person   size={17} color={c} />, label: 'Profil' },
+  { key: 'settings',     icon: (c) => <Icon.Sliders  size={17} color={c} />, label: 'Réglages' },
+];
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   pending:   { label: 'En attente',  color: '#f59e0b', bg: '#1a1200' },
@@ -139,14 +143,14 @@ export default function ProfileScreen({ navigation }: any) {
 
         <View style={{ gap: 13, marginBottom: 38 }}>
           {[
-            { icon: '🗺️', color: '#1d4ed8', title: 'Réservations en temps réel', sub: 'Suivez chaque étape de votre voyage' },
-            { icon: '🏆', color: '#d97706', title: 'Badges & récompenses',        sub: 'Débloquez des niveaux exclusifs' },
-            { icon: '❤️', color: '#ec4899', title: 'Wishlist personnelle',        sub: 'Sauvegardez vos coups de cœur' },
-            { icon: '✂️', color: '#8b5cf6', title: 'Voyages sur mesure',          sub: 'Créez votre itinéraire unique' },
+            { iconEl: <Icon.Tent     size={20} color='#1d4ed8' />, color: '#1d4ed8', title: 'Réservations en temps réel', sub: 'Suivez chaque étape de votre voyage' },
+            { iconEl: <Icon.Trophy   size={20} color='#d97706' />, color: '#d97706', title: 'Badges & récompenses',        sub: 'Débloquez des niveaux exclusifs' },
+            { iconEl: <Icon.Bookmark size={20} color='#ec4899' />, color: '#ec4899', title: 'Wishlist personnelle',        sub: 'Sauvegardez vos coups de cœur' },
+            { iconEl: <Icon.Route    size={20} color='#8b5cf6' />, color: '#8b5cf6', title: 'Voyages sur mesure',          sub: 'Créez votre itinéraire unique' },
           ].map((b) => (
-            <View key={b.icon} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <View key={b.title} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: b.color + '25', borderWidth: 1, borderColor: b.color + '40', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Text style={{ fontSize: 21 }}>{b.icon}</Text>
+                {b.iconEl}
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700', marginBottom: 2 }}>{b.title}</Text>
@@ -194,7 +198,7 @@ export default function ProfileScreen({ navigation }: any) {
               { text: 'Déconnecter', style: 'destructive', onPress: logout },
             ])}
           >
-            <Text style={{ fontSize: 16 }}>🚪</Text>
+            <Icon.Logout size={17} color={COLORS.muted} />
           </TouchableOpacity>
         </View>
 
@@ -246,13 +250,12 @@ export default function ProfileScreen({ navigation }: any) {
             return (
               <TouchableOpacity
                 key={t.key}
-                style={[styles.tabItem, active && styles.tabItemActive]}
+                style={[s.tabItem, active && s.tabItemActive]}
                 onPress={() => setTab(t.key as TabKey)}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.tabIcon, active && styles.tabIconActive]}>{t.icon}</Text>
-                <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{t.label}</Text>
-                {active && <View style={styles.tabIndicator} />}
+                {t.icon(active ? COLORS.primary : COLORS.muted)}
+                <Text style={[s.tabLabel, active && s.tabLabelActive]}>{t.label}</Text>
               </TouchableOpacity>
             );
           })}
@@ -343,18 +346,61 @@ function OverviewTab({ user, bookings, loading, confirmed, totalSpent, wishlist,
       {/* 4 KPI stats */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {[
-          { icon: '🗺️', label: 'Réservations', value: bookings.length,   color: COLORS.primary,  bg: '#1a0208' },
-          { icon: '✅', label: 'Confirmées',    value: confirmed.length,   color: '#22c55e',       bg: '#071a09' },
-          { icon: '❤️', label: 'Wishlist',      value: wishlist.length,    color: '#ec4899',       bg: '#1a0714' },
-          { icon: '💰', label: 'MAD (k)',        value: totalSpent > 0 ? (totalSpent / 1000).toFixed(1) : '0', color: '#f59e0b', bg: '#1a1000' },
+          { icon: (c: string) => <Icon.Tent     size={20} color={c} />, label: 'Réservations', value: bookings.length,   color: COLORS.primary,  bg: '#1a0208' },
+          { icon: (c: string) => <Icon.Shield   size={20} color={c} />, label: 'Confirmées',    value: confirmed.length,   color: '#22c55e',       bg: '#071a09' },
+          { icon: (c: string) => <Icon.Bookmark size={20} color={c} />, label: 'Wishlist',      value: wishlist.length,    color: '#ec4899',       bg: '#1a0714' },
+          { icon: (c: string) => <Icon.Trophy   size={20} color={c} />, label: 'MAD (k)',        value: totalSpent > 0 ? (totalSpent / 1000).toFixed(1) : '0', color: '#f59e0b', bg: '#1a1000' },
         ].map((st) => (
           <LinearGradient key={st.label} colors={[st.bg, '#0e0e0e']} style={[s.statCard, { borderColor: st.color + '30' }]}>
-            <Text style={s.statIcon}>{st.icon}</Text>
+            <View style={{ marginBottom: 6 }}>{st.icon(st.color)}</View>
             <Text style={[s.statValue, { color: st.color }]}>{st.value}</Text>
             <Text style={s.statLabel}>{st.label}</Text>
           </LinearGradient>
         ))}
       </View>
+
+      {/* Rewards Points card */}
+      {(() => {
+        const pts = Math.floor(totalSpent / 10);
+        const nextLvlPts = level.next ? Math.floor(level.next / 10) : null;
+        const currPts    = Math.floor(level.min / 10);
+        const progress   = nextLvlPts ? Math.min((pts - currPts) / (nextLvlPts - currPts), 1) : 1;
+        return (
+          <LinearGradient colors={['#110a00', '#0e0e0e']} style={[s.card, { borderColor: '#f59e0b44', padding: 16 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#f59e0b22', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon.Trophy size={18} color="#f59e0b" />
+                </View>
+                <View>
+                  <Text style={{ color: COLORS.muted, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Points Roamers</Text>
+                  <Text style={{ color: '#f59e0b', fontSize: 22, fontWeight: '900', lineHeight: 26 }}>
+                    {pts.toLocaleString('fr-MA')} <Text style={{ fontSize: 13, fontWeight: '600', color: '#f59e0b99' }}>pts</Text>
+                  </Text>
+                </View>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={{ color: COLORS.muted, fontSize: 10 }}>Niveau actuel</Text>
+                <Text style={{ color: level.color, fontSize: 12, fontWeight: '800' }}>{level.icon} {level.label}</Text>
+              </View>
+            </View>
+            {nextLvlPts && (
+              <>
+                <View style={{ height: 5, backgroundColor: '#1a1a1a', borderRadius: 3, overflow: 'hidden', marginBottom: 5 }}>
+                  <View style={{ width: `${progress * 100}%` as any, height: '100%', backgroundColor: '#f59e0b', borderRadius: 3 }} />
+                </View>
+                <Text style={{ color: COLORS.muted, fontSize: 11 }}>
+                  {pts.toLocaleString('fr-MA')} / {nextLvlPts.toLocaleString('fr-MA')} pts pour {LEVELS[LEVELS.indexOf(level) + 1]?.label}
+                </Text>
+              </>
+            )}
+            {!nextLvlPts && (
+              <Text style={{ color: '#f59e0b', fontSize: 12, fontWeight: '700' }}>🏆 Niveau maximum atteint !</Text>
+            )}
+            <Text style={{ color: COLORS.muted, fontSize: 10, marginTop: 8 }}>1 point = 10 MAD dépensé sur voyages confirmés</Text>
+          </LinearGradient>
+        );
+      })()}
 
       {/* Recent history */}
       {bookings.length > 0 && (
@@ -415,14 +461,14 @@ function OverviewTab({ user, bookings, loading, confirmed, totalSpent, wishlist,
       <Text style={{ color: COLORS.text, fontSize: 14, fontWeight: '800', letterSpacing: 0.3, marginBottom: 0 }}>Accès rapide</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {[
-          { icon: '🧭', label: 'Voyages',    sub: 'Groupes & week-ends',   screen: 'Explorer',   color: '#2563eb' },
-          { icon: '⚡', label: 'Activités',  sub: 'Express & culture',     screen: 'Activities', color: '#7c3aed' },
-          { icon: '✂️', label: 'Sur Mesure', sub: 'Mon itinéraire',        screen: 'Plan',       color: '#d97706' },
-          { icon: '🗺️', label: 'Carte',      sub: 'Toutes destinations',   screen: 'Map',        color: '#059669' },
+          { icon: (c: string) => <Icon.Mountain size={19} color={c} />, label: 'Voyages',    sub: 'Groupes & week-ends',   screen: 'Explorer',   color: '#2563eb' },
+          { icon: (c: string) => <Icon.Star     size={19} color={c} />, label: 'Activités',  sub: 'Express & culture',     screen: 'Activities', color: '#7c3aed' },
+          { icon: (c: string) => <Icon.Route    size={19} color={c} />, label: 'Sur Mesure', sub: 'Mon itinéraire',        screen: 'Plan',       color: '#d97706' },
+          { icon: (c: string) => <Icon.Pin      size={19} color={c} />, label: 'Carte',      sub: 'Toutes destinations',   screen: 'Map',        color: '#059669' },
         ].map((a) => (
           <TouchableOpacity key={a.label} style={[s.quickCard, { borderColor: a.color + '35' }]} onPress={() => navigation.navigate(a.screen)} activeOpacity={0.8}>
             <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: a.color + '22', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-              <Text style={{ fontSize: 19 }}>{a.icon}</Text>
+              {a.icon(a.color)}
             </View>
             <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800', marginBottom: 2 }}>{a.label}</Text>
             <Text style={{ color: 'rgba(255,255,255,0.28)', fontSize: 10, lineHeight: 14 }}>{a.sub}</Text>
@@ -468,7 +514,7 @@ function ReservationsTab({ bookings, loading, onCancel, navigation }: any) {
       </ScrollView>
 
       {filtered.length === 0 ? (
-        <EmptyState icon="🗺️" title="Aucune réservation ici" sub="Explorez nos voyages et commencez votre aventure" />
+        <EmptyState icon={<Icon.Tent size={52} color={COLORS.muted} />} title="Aucune réservation ici" sub="Explorez nos voyages et commencez votre aventure" />
       ) : (
         filtered.map((b: any) => {
           const st = STATUS_CONFIG[b.status] || STATUS_CONFIG.pending;
@@ -537,7 +583,7 @@ function WishlistTab({ wishlist, allExps, loading, onRemove, navigation }: any) 
       </View>
 
       {wlExps.length === 0 ? (
-        <EmptyState icon="❤️" title="Votre wishlist est vide" sub="Explorez nos voyages et cœurez vos favoris" />
+        <EmptyState icon={<Icon.Bookmark size={52} color={COLORS.muted} />} title="Votre wishlist est vide" sub="Explorez nos voyages et cœurez vos favoris" />
       ) : (
         <View style={{ gap: 12 }}>
           {wlExps.map((exp: any) => (
@@ -549,7 +595,7 @@ function WishlistTab({ wishlist, allExps, loading, onRemove, navigation }: any) 
             >
               {exp.img
                 ? <Image source={{ uri: exp.img }} style={s.wlImg} resizeMode="cover" />
-                : <View style={[s.wlImg, { backgroundColor: '#1e1e1e', alignItems: 'center', justifyContent: 'center' }]}><Text style={{ fontSize: 40 }}>🏔️</Text></View>
+                : <View style={[s.wlImg, { backgroundColor: '#1e1e1e', alignItems: 'center', justifyContent: 'center' }]}><Icon.Mountain size={40} color={COLORS.muted} /></View>
               }
               <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={s.wlGrad}>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
@@ -559,7 +605,7 @@ function WishlistTab({ wishlist, allExps, loading, onRemove, navigation }: any) 
                     <Text style={s.wlPrice}>{Number(exp.price).toLocaleString('fr-MA')} MAD</Text>
                   </View>
                   <TouchableOpacity style={s.wlRemove} onPress={() => onRemove(exp.id)}>
-                    <Text style={{ fontSize: 18 }}>❤️</Text>
+                    <Icon.Bookmark size={18} color='#ec4899' />
                   </TouchableOpacity>
                 </View>
               </LinearGradient>
@@ -751,6 +797,8 @@ function EditProfileTab({ user, onSaved }: any) {
 function SettingsTab({ onLogout }: any) {
   const [passForm, setPassForm] = useState({ current: '', newPass: '', confirm: '' });
   const [passLoading, setPassLoading] = useState(false);
+  const [updateState, setUpdateState] = useState<'idle' | 'checking' | 'upToDate' | 'available'>('idle');
+  const [remoteVersion, setRemoteVersion] = useState<{ versionCode: number; versionName: string; downloadUrl: string; releaseNotes: string } | null>(null);
   const set = (k: string) => (v: string) => setPassForm((f) => ({ ...f, [k]: v }));
 
   async function handleChangePassword() {
@@ -761,6 +809,18 @@ function SettingsTab({ onLogout }: any) {
     try { await changePassword(passForm.current, passForm.newPass); Alert.alert('Succès', 'Mot de passe mis à jour'); setPassForm({ current: '', newPass: '', confirm: '' }); }
     catch (e: any) { Alert.alert('Erreur', e.message); }
     finally { setPassLoading(false); }
+  }
+
+  async function checkForUpdate() {
+    setUpdateState('checking');
+    try {
+      const info = await getAppVersion();
+      setRemoteVersion(info);
+      setUpdateState(info.versionCode > APP_VERSION_CODE ? 'available' : 'upToDate');
+    } catch {
+      setUpdateState('idle');
+      Alert.alert('Erreur', 'Impossible de vérifier les mises à jour. Vérifiez votre connexion.');
+    }
   }
 
   function handleDelete() {
@@ -813,6 +873,67 @@ function SettingsTab({ onLogout }: any) {
         ))}
       </View>
 
+      {/* App version & update */}
+      <View style={s.card}>
+        <Text style={s.cardTitle}>📱 Version de l'application</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <View>
+            <Text style={{ color: COLORS.text, fontSize: 15, fontWeight: '800' }}>Roamers v{APP_VERSION_NAME}</Text>
+            <Text style={{ color: COLORS.muted, fontSize: 12, marginTop: 2 }}>Build {APP_VERSION_CODE}</Text>
+          </View>
+          {updateState === 'upToDate' && (
+            <View style={{ backgroundColor: '#22c55e18', borderRadius: RADIUS.pill, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: '#22c55e44' }}>
+              <Text style={{ color: '#22c55e', fontSize: 12, fontWeight: '700' }}>✓ À jour</Text>
+            </View>
+          )}
+          {updateState === 'available' && (
+            <View style={{ backgroundColor: COLORS.primary + '18', borderRadius: RADIUS.pill, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: COLORS.primary + '55' }}>
+              <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '700' }}>Mise à jour disponible</Text>
+            </View>
+          )}
+        </View>
+
+        {updateState === 'available' && remoteVersion && (
+          <View style={{ backgroundColor: '#1a0508', borderRadius: RADIUS.md, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: COLORS.primary + '33' }}>
+            <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '800', marginBottom: 4 }}>
+              Nouvelle version {remoteVersion.versionName} (build {remoteVersion.versionCode})
+            </Text>
+            {remoteVersion.releaseNotes ? (
+              <Text style={{ color: COLORS.sub, fontSize: 12, lineHeight: 18 }}>{remoteVersion.releaseNotes}</Text>
+            ) : null}
+          </View>
+        )}
+
+        {updateState === 'available' && remoteVersion ? (
+          <TouchableOpacity
+            style={{ backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingVertical: 13, alignItems: 'center', shadowColor: COLORS.primary, shadowOpacity: 0.4, shadowOffset: { width: 0, height: 6 }, shadowRadius: 12, elevation: 8 }}
+            onPress={() => {
+              const base = require('../constants/theme').API_BASE as string;
+              Linking.openURL(base + remoteVersion.downloadUrl);
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900' }}>⬇ Télécharger la mise à jour</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[{ borderRadius: RADIUS.pill, paddingVertical: 13, alignItems: 'center', borderWidth: 1.5 },
+              updateState === 'checking'
+                ? { borderColor: COLORS.border, backgroundColor: COLORS.card }
+                : { borderColor: COLORS.primary + '55', backgroundColor: COLORS.primary + '12' }
+            ]}
+            onPress={checkForUpdate}
+            disabled={updateState === 'checking'}
+            activeOpacity={0.8}
+          >
+            {updateState === 'checking'
+              ? <ActivityIndicator size="small" color={COLORS.primary} />
+              : <Text style={{ color: COLORS.primary, fontSize: 14, fontWeight: '700' }}>🔄 Vérifier les mises à jour</Text>
+            }
+          </TouchableOpacity>
+        )}
+      </View>
+
       {/* Danger */}
       <View style={[s.card, { borderColor: COLORS.error + '44' }]}>
         <Text style={[s.cardTitle, { color: COLORS.error }]}>⚠️ Zone de danger</Text>
@@ -831,10 +952,10 @@ function SettingsTab({ onLogout }: any) {
    Sur Mesure tab
    ══════════════════════════════════════════════════════════════════════════ */
 const REQ_STATUS: Record<string, { label: string; color: string }> = {
-  new:       { label: '🆕 Nouvelle',   color: '#f59e0b' },
-  reviewed:  { label: '👁 Examinée',   color: '#3b82f6' },
-  contacted: { label: '📞 Contacté',   color: '#22c55e' },
-  closed:    { label: '✅ Terminée',   color: '#6b7280' },
+  new:         { label: '🆕 Nouvelle',   color: '#f59e0b' },
+  in_progress: { label: '⏳ En cours',   color: '#3b82f6' },
+  done:        { label: '✅ Traitée',    color: '#22c55e' },
+  cancelled:   { label: '❌ Annulée',    color: '#6b7280' },
 };
 
 function DemandesTab({ planReqs, loading, navigation }: any) {
@@ -849,7 +970,7 @@ function DemandesTab({ planReqs, loading, navigation }: any) {
 
       {planReqs.length === 0 ? (
         <View>
-          <EmptyState icon="✂️" title="Aucune demande" sub="Créez votre voyage personnalisé" />
+          <EmptyState icon={<Icon.Route size={52} color={COLORS.muted} />} title="Aucune demande" sub="Créez votre voyage personnalisé" />
           <TouchableOpacity style={{ marginTop: -12, marginHorizontal: 32, backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingVertical: 13, alignItems: 'center' }}
             onPress={() => navigation.navigate('Plan')}>
             <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800' }}>✈️ Planifier mon voyage</Text>
@@ -866,12 +987,18 @@ function DemandesTab({ planReqs, loading, navigation }: any) {
                   <Text style={{ color: st.color, fontSize: 11, fontWeight: '700' }}>{st.label}</Text>
                 </View>
               </View>
-              {r.destination && <Text style={{ color: COLORS.text, fontSize: 16, fontWeight: '800', marginBottom: 10 }}>📍 {r.destination}</Text>}
+              {r.destination && <Text style={{ color: COLORS.text, fontSize: 16, fontWeight: '800', marginBottom: 6 }}>📍 {r.destination}</Text>}
+              {Array.isArray(r.itineraryStops) && r.itineraryStops.length > 0 && (
+                <Text style={{ color: COLORS.sub, fontSize: 12, marginBottom: 10, lineHeight: 18 }}>
+                  🛤 {r.itineraryStops.join(' → ')}
+                </Text>
+              )}
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 10 }}>
+                {r.segment   && <View style={s.reqTag}><Text style={s.reqTagTxt}>🏷 {r.segment}</Text></View>}
                 {r.groupSize && <View style={s.reqTag}><Text style={s.reqTagTxt}>👥 {r.groupSize}</Text></View>}
                 {r.duration  && <View style={s.reqTag}><Text style={s.reqTagTxt}>📅 {r.duration}</Text></View>}
                 {r.budget    && <View style={s.reqTag}><Text style={s.reqTagTxt}>💰 {r.budget}</Text></View>}
-                {r.segment   && <View style={s.reqTag}><Text style={s.reqTagTxt}>🏷 {r.segment}</Text></View>}
+                {r.dateFrom  && <View style={s.reqTag}><Text style={s.reqTagTxt}>🗓 {r.dateFrom}{r.dateTo ? ' → ' + r.dateTo : ''}{r.flexDate ? ' (flex)' : ''}</Text></View>}
               </View>
               {r.message && <Text style={{ color: COLORS.muted, fontSize: 12, fontStyle: 'italic', marginBottom: 8, lineHeight: 17 }} numberOfLines={2}>💬 {r.message}</Text>}
               <Text style={{ color: COLORS.muted, fontSize: 11 }}>{new Date(r.created).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</Text>
@@ -884,10 +1011,10 @@ function DemandesTab({ planReqs, loading, navigation }: any) {
 }
 
 /* ── Shared empty state ────────────────────────────────────────────────── */
-function EmptyState({ icon, title, sub }: { icon: string; title: string; sub: string }) {
+function EmptyState({ icon, title, sub }: { icon: React.ReactNode; title: string; sub: string }) {
   return (
     <View style={s.empty}>
-      <Text style={{ fontSize: 52, marginBottom: 12 }}>{icon}</Text>
+      <View style={{ marginBottom: 16, opacity: 0.35 }}>{icon}</View>
       <Text style={{ color: COLORS.text, fontSize: 17, fontWeight: '800', marginBottom: 6, textAlign: 'center' }}>{title}</Text>
       <Text style={{ color: COLORS.sub, fontSize: 13, textAlign: 'center', lineHeight: 19 }}>{sub}</Text>
     </View>
@@ -928,14 +1055,11 @@ const s = StyleSheet.create({
 
   /* ── Tab bar ── */
   tabBarWrap: { borderBottomWidth: 1, borderBottomColor: COLORS.border, backgroundColor: '#0b0b0b' },
-  tabBarInner: { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 2, gap: 2 },
-  tabItem: { alignItems: 'center', paddingHorizontal: 13, paddingVertical: 9, borderRadius: RADIUS.md, minWidth: 68, position: 'relative' },
-  tabItemActive: { backgroundColor: COLORS.primary + '14' },
-  tabIcon: { fontSize: 15, marginBottom: 2, opacity: 0.5 },
-  tabIconActive: { opacity: 1 },
-  tabLabel: { color: COLORS.muted, fontSize: 10, fontWeight: '600' },
+  tabBarInner: { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 6, gap: 2 },
+  tabItem: { alignItems: 'center', paddingHorizontal: 11, paddingVertical: 8, borderRadius: 14, minWidth: 62, gap: 4 },
+  tabItemActive: { backgroundColor: COLORS.primary + '18' },
+  tabLabel: { color: COLORS.muted, fontSize: 9, fontWeight: '600' },
   tabLabelActive: { color: COLORS.primary, fontWeight: '800' },
-  tabIndicator: { position: 'absolute', bottom: 0, left: '20%', right: '20%', height: 2, backgroundColor: COLORS.primary, borderRadius: 1 },
 
   /* ── Sections ── */
   section: { padding: 16, gap: 16 },

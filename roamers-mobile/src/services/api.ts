@@ -24,7 +24,7 @@ api.interceptors.response.use(
   }
 );
 
-/* ── Auth ───────────────────────────────────────── */
+/* Auth */
 export const login = (email: string, password: string) =>
   api.post('/api/auth/login', { email, password }).then((r) => r.data);
 
@@ -46,14 +46,14 @@ export const toggleWishlist = (expId: string) =>
 export const deleteAccount = () =>
   api.delete('/api/auth/account').then((r) => r.data);
 
-/* ── Experiences ─────────────────────────────────── */
+/* Experiences */
 export const getExperiences = (params?: { segment?: string; type?: string }) =>
   api.get('/api/experiences', { params }).then((r) => r.data.experiences as any[]);
 
 export const getExperience = (id: string) =>
   api.get(`/api/experiences/${id}`).then((r) => r.data.experience);
 
-/* ── Bookings ────────────────────────────────────── */
+/* Bookings */
 export const createBooking = (data: object) =>
   api.post('/api/bookings', data).then((r) => r.data);
 
@@ -63,7 +63,7 @@ export const getMyBookings = () =>
 export const cancelBooking = (id: string) =>
   api.patch(`/api/bookings/${id}/cancel`).then((r) => r.data);
 
-/* ── Forms ───────────────────────────────────────── */
+/* Forms */
 export const sendContact = (data: object) =>
   api.post('/api/forms/contact', data).then((r) => r.data);
 
@@ -79,19 +79,32 @@ export const saveItinerary = (data: object) =>
 export const getMyPlanRequests = () =>
   api.get('/api/forms/plan/mine').then((r) => r.data.requests as any[]);
 
-/* ── Site config ─────────────────────────────────── */
+/* Site config */
 export const getSiteConfig = () =>
   api.get('/api/site-config').then((r) => r.data);
 
-/* ── Payments ────────────────────────────────────── */
+/* App version */
+export const getAppVersion = () =>
+  api.get('/api/app-version').then((r) => r.data as { versionCode: number; versionName: string; downloadUrl: string; releaseNotes: string });
+
+/* Payments */
 export const createPaymentIntent = (bookingId: string) =>
   api.post('/api/payments/intent', { bookingId }).then((r) => r.data);
 
-/* ── Activities ──────────────────────────────────── */
+/* Activities */
 export const getActivities = () =>
   api.get('/api/activities').then((r) => r.data.activities as any[]);
 
-/* ── Reviews ─────────────────────────────────────── */
+export const getActivity = (id: string) =>
+  api.get(`/api/activities/${id}`).then((r) => r.data.activity);
+
+/* Promos */
+export const validatePromo = (code: string) =>
+  api.get('/api/promos/validate', { params: { code } }).then(
+    (r) => r.data.promo as { code: string; discountPct: number; label: string }
+  );
+
+/* Reviews */
 export const getReviews = (expId: string) =>
   api.get(`/api/reviews/${expId}`).then((r) => r.data as {
     reviews: any[];

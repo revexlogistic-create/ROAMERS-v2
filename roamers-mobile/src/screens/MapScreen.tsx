@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getExperiences, getActivities, saveItinerary } from '../services/api';
 import { COLORS, RADIUS, SHADOW } from '../constants/theme';
+import Icon from '../components/Icons';
 
 const { width } = Dimensions.get('window');
 
@@ -106,20 +107,15 @@ const PLAN_CITIES: Array<{ name: string; lat: number; lng: number }> = [
   { name: 'Sahara',      lat: 31.0802, lng: -4.0060 },
 ];
 
-/* ── Activity cat → emoji ─────────────────────────────────────────────────── */
-const CAT_EMOJI: Record<string, string> = {
-  adventure: '🏔️', culture: '🏛️', wellness: '🧘', corporate: '💼',
-};
-
 type FilterKey = 'all' | 'voyages' | 'activites' | 'adventure' | 'culture' | 'wellness';
 
-const FILTERS: { key: FilterKey; icon: string; label: string }[] = [
-  { key: 'all',       icon: '✦',  label: 'Tous'      },
-  { key: 'voyages',   icon: '🏕️', label: 'Voyages'   },
-  { key: 'activites', icon: '⚡',  label: 'Activités' },
-  { key: 'adventure', icon: '🏔️', label: 'Aventure'  },
-  { key: 'culture',   icon: '🏛️', label: 'Culture'   },
-  { key: 'wellness',  icon: '🧘',  label: 'Bien-être' },
+const FILTERS: { key: FilterKey; IconComp: React.ComponentType<any>; label: string }[] = [
+  { key: 'all',       IconComp: Icon.Grid,     label: 'Tous'      },
+  { key: 'voyages',   IconComp: Icon.Tent,     label: 'Voyages'   },
+  { key: 'activites', IconComp: Icon.Flash,    label: 'Activités' },
+  { key: 'adventure', IconComp: Icon.Mountain, label: 'Aventure'  },
+  { key: 'culture',   IconComp: Icon.Globe,    label: 'Culture'   },
+  { key: 'wellness',  IconComp: Icon.Leaf,     label: 'Bien-être' },
 ];
 
 /* ── Component ────────────────────────────────────────────────────────────── */
@@ -172,7 +168,7 @@ export default function MapScreen({ navigation, route }: any) {
         id: e.id, title: e.title, price: e.price, rating: e.rating,
         lat: coords[0] + Math.sin(i * 2.4) * 0.014,
         lng: coords[1] + Math.cos(i * 2.4) * 0.014,
-        type: 'exp', cat: e.segment, emoji: '🏕️',
+        type: 'exp', cat: e.segment,
         loc: e.loc, days: e.days, img: e.img || '',
         circuit: Array.isArray(e.circuit) ? e.circuit : [],
       };
@@ -187,7 +183,7 @@ export default function MapScreen({ navigation, route }: any) {
       return {
         id: a.id, title: a.title, price: a.price || 0,
         lat: coords[0], lng: coords[1],
-        cat, emoji: CAT_EMOJI[cat] || '⚡',
+        cat,
         loc: a.location || a.loc || '',
         img: a.img || '',
         type: 'activity',
@@ -399,13 +395,15 @@ export default function MapScreen({ navigation, route }: any) {
         </View>
         <View style={styles.statsRow}>
           {expCount > 0 && (
-            <View style={[styles.statChip, { borderColor: COLORS.primary + '55', backgroundColor: COLORS.primary + '18' }]}>
-              <Text style={[styles.statChipTxt, { color: COLORS.primary }]}>🏕️ {expCount}</Text>
+            <View style={[styles.statChip, { borderColor: COLORS.primary + '55', backgroundColor: COLORS.primary + '18', flexDirection: 'row', alignItems: 'center', gap: 5 }]}>
+              <Icon.Tent size={12} color={COLORS.primary} />
+              <Text style={[styles.statChipTxt, { color: COLORS.primary }]}>{expCount}</Text>
             </View>
           )}
           {actCount > 0 && (
-            <View style={[styles.statChip, { borderColor: '#a855f755', backgroundColor: '#a855f718' }]}>
-              <Text style={[styles.statChipTxt, { color: '#a855f7' }]}>⚡ {actCount}</Text>
+            <View style={[styles.statChip, { borderColor: '#a855f755', backgroundColor: '#a855f718', flexDirection: 'row', alignItems: 'center', gap: 5 }]}>
+              <Icon.Flash size={12} color="#a855f7" />
+              <Text style={[styles.statChipTxt, { color: '#a855f7' }]}>{actCount}</Text>
             </View>
           )}
         </View>
@@ -454,7 +452,7 @@ export default function MapScreen({ navigation, route }: any) {
                 onPress={() => changeFilter(f.key)}
                 activeOpacity={0.82}
               >
-                <Text style={styles.filterIcon}>{f.icon}</Text>
+                <f.IconComp size={12} color={active ? '#fff' : 'rgba(255,255,255,0.7)'} style={{ marginRight: 5 }} />
                 <Text style={[styles.filterTxt, active && styles.filterTxtActive]}>{f.label}</Text>
               </TouchableOpacity>
             );
@@ -688,11 +686,15 @@ export default function MapScreen({ navigation, route }: any) {
               {/* Type badge */}
               <View style={[styles.typeBadge, {
                 backgroundColor: selected.type === 'exp' ? COLORS.primary + '22' : '#a855f722',
+                flexDirection: 'row', alignItems: 'center', gap: 5,
               }]}>
+                {selected.type === 'exp'
+                  ? <Icon.Tent size={12} color={COLORS.primary} />
+                  : <Icon.Flash size={12} color="#a855f7" />}
                 <Text style={[styles.typeBadgeTxt, {
                   color: selected.type === 'exp' ? COLORS.primary : '#a855f7',
                 }]}>
-                  {selected.type === 'exp' ? '🏕️ Voyage' : '⚡ Activité'}
+                  {selected.type === 'exp' ? 'Voyage' : 'Activité'}
                 </Text>
               </View>
 
@@ -732,7 +734,7 @@ export default function MapScreen({ navigation, route }: any) {
                   onPress={() => {
                     setSelected(null);
                     if (selected.type === 'exp') navigation.navigate('ExperienceDetail', { id: selected.id });
-                    else navigation.navigate('Activities');
+                    else navigation.navigate('ActivityDetail', { id: selected.id });
                   }}
                   activeOpacity={0.85}
                 >
@@ -758,9 +760,7 @@ function buildMapHtml(markers: any[]): string {
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body,#map{width:100%;height:100%}
@@ -997,19 +997,28 @@ function drawCircuit(circuit){
 var allMarkers=${json};
 var leafletMks=[];
 
-var mainCluster=L.markerClusterGroup({
-  maxClusterRadius:65,
-  disableClusteringAtZoom:9,
-  showCoverageOnHover:false,
-  spiderfyOnMaxZoom:true,
-  iconCreateFunction:function(cluster){
-    var n=cluster.getChildCount();
-    return L.divIcon({
-      html:'<div style="position:relative;width:46px;height:56px;cursor:pointer;filter:drop-shadow(0 3px 10px rgba(184,23,46,0.55));"><div style="width:46px;height:46px;border-radius:14px;background:#B8172E;border:2.5px solid rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:900;">'+n+'</div><div style="width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-top:11px solid #B8172E;margin:0 auto;"></div></div>',
-      className:'',iconSize:[46,56],iconAnchor:[23,56]
-    });
+function getMarkerSvg(type,cat,s){
+  var c='rgba(255,255,255,0.95)';
+  var h=s,w=s;
+  if(type==='exp'){
+    /* tent */
+    return '<svg width="'+w+'" height="'+h+'" viewBox="0 0 24 24" fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20 L12 4 L21 20 Z"/><path d="M8.5 20 L12 13 L15.5 20"/></svg>';
   }
-});
+  if(cat==='adventure'){
+    /* mountain */
+    return '<svg width="'+w+'" height="'+h+'" viewBox="0 0 24 24" fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20 L9 8 L13 14 L16 10 L21 20 Z"/></svg>';
+  }
+  if(cat==='culture'){
+    /* globe */
+    return '<svg width="'+w+'" height="'+h+'" viewBox="0 0 24 24" fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3 C10 7 10 17 12 21"/><path d="M12 3 C14 7 14 17 12 21"/><path d="M3.5 9 L20.5 9"/><path d="M3.5 15 L20.5 15"/></svg>';
+  }
+  if(cat==='wellness'){
+    /* leaf */
+    return '<svg width="'+w+'" height="'+h+'" viewBox="0 0 24 24" fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20 C6 20 7 12 14 8 C19 5 21 4 21 4 C21 4 20 6 17 11 C13 17 6 20 6 20 Z"/><line x1="6" y1="20" x2="13" y2="13"/></svg>';
+  }
+  /* flash (default/corporate) */
+  return '<svg width="'+w+'" height="'+h+'" viewBox="0 0 24 24" fill="'+c+'" stroke="none"><polygon points="13,2 5,13 12,13 11,22 19,11 12,11"/></svg>';
+}
 
 allMarkers.forEach(function(m){
   var isExp=m.type==='exp';
@@ -1017,11 +1026,11 @@ allMarkers.forEach(function(m){
             m.cat==='adventure'?'#ea6c00':
             m.cat==='culture'?'#6d28d9':
             m.cat==='wellness'?'#059669':'#b45309';
-  var sz=isExp?46:40;
-  var tri=isExp?'border-left:9px solid transparent;border-right:9px solid transparent;border-top:11px solid '+color:'border-left:7px solid transparent;border-right:7px solid transparent;border-top:9px solid '+color;
+  var sz=isExp?34:28;
+  var tri=isExp?'border-left:7px solid transparent;border-right:7px solid transparent;border-top:9px solid '+color:'border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid '+color;
   var icon=L.divIcon({
-    html:'<div style="position:relative;width:'+sz+'px;height:'+(sz+11)+'px;cursor:pointer;filter:drop-shadow(0 3px 10px rgba(0,0,0,0.5));"><div class="mk-dot" style="width:'+sz+'px;height:'+sz+'px;border-radius:14px;background:'+color+';border:2.5px solid rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;font-size:'+(isExp?21:18)+'px;transition:transform 0.18s;">'+(m.emoji||'📍')+'</div><div style="width:0;height:0;'+tri+';margin:0 auto;"></div></div>',
-    className:'',iconSize:[sz,sz+11],iconAnchor:[sz/2,sz+11]
+    html:'<div style="position:relative;width:'+sz+'px;height:'+(sz+9)+'px;cursor:pointer;filter:drop-shadow(0 2px 7px rgba(0,0,0,0.55));"><div class="mk-dot" style="width:'+sz+'px;height:'+sz+'px;border-radius:10px;background:'+color+';border:2px solid rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;transition:transform 0.18s;">'+getMarkerSvg(m.type,m.cat,isExp?15:13)+'</div><div style="width:0;height:0;'+tri+';margin:0 auto;"></div></div>',
+    className:'',iconSize:[sz,sz+9],iconAnchor:[sz/2,sz+9]
   });
   var mk=L.marker([m.lat,m.lng],{icon:icon});
   mk.on('click',function(){
@@ -1036,13 +1045,8 @@ allMarkers.forEach(function(m){
     try{window.ReactNativeWebView.postMessage(JSON.stringify(m));}catch(e){}
   });
   leafletMks.push(mk);
-  mainCluster.addLayer(mk);
+  mk.addTo(map);
 });
-
-map.addLayer(mainCluster);
-if(allMarkers.length>0){
-  map.fitBounds(L.latLngBounds(allMarkers.map(function(m){return[m.lat,m.lng];})).pad(0.2));
-}
 
 /* ── City selection pins + tap-anywhere (Plan My Trip mode) ── */
 var CITY_DATA=[
@@ -1118,19 +1122,6 @@ function makeCityIcon(sel){
   });
 }
 
-var cityCluster=L.markerClusterGroup({
-  maxClusterRadius:55,
-  disableClusteringAtZoom:9,
-  showCoverageOnHover:false,
-  spiderfyOnMaxZoom:true,
-  iconCreateFunction:function(cluster){
-    var n=cluster.getChildCount();
-    return L.divIcon({
-      html:'<div style="width:36px;height:36px;border-radius:50%;background:rgba(184,23,46,0.88);border:2px solid rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:900;box-shadow:0 2px 10px rgba(0,0,0,0.55);">'+n+'</div>',
-      className:'',iconSize:[36,36],iconAnchor:[18,18]
-    });
-  }
-});
 
 CITY_DATA.forEach(function(c){
   var mk=L.marker([c.lat,c.lng],{icon:makeCityIcon(false),zIndexOffset:500});
@@ -1141,7 +1132,7 @@ CITY_DATA.forEach(function(c){
     try{window.ReactNativeWebView.postMessage(JSON.stringify({type:'ADD_WAYPOINT',name:c.name,lat:c.lat,lng:c.lng}));}catch(ex){}
   });
   cityPinMks.push(mk);
-  cityCluster.addLayer(mk);
+  /* not added to map yet — shown only in plan mode via showCityPins() */
 });
 
 /* Tap anywhere on map → reverse geocode → add waypoint */
@@ -1163,11 +1154,11 @@ map.on('click',function(e){
 });
 
 function showCityPins(){
-  map.addLayer(cityCluster);
+  cityPinMks.forEach(function(mk){try{mk.addTo(map);}catch(e){}});
   map.fitBounds(L.latLngBounds(CITY_DATA.map(function(c){return[c.lat,c.lng];})).pad(0.08),{animate:true,duration:0.6});
 }
 function hideCityPins(){
-  try{map.removeLayer(cityCluster);}catch(e){}
+  cityPinMks.forEach(function(mk){try{map.removeLayer(mk);}catch(e){}});
   selectedCityNames=[];
 }
 function syncCityPins(names){
@@ -1178,10 +1169,10 @@ function syncCityPins(names){
   });
 }
 function hideActivityMarkers(){
-  try{map.removeLayer(mainCluster);}catch(e){}
+  leafletMks.forEach(function(mk){try{map.removeLayer(mk);}catch(e){}});
 }
 function showActivityMarkers(){
-  try{map.addLayer(mainCluster);}catch(e){}
+  leafletMks.forEach(function(mk){try{mk.addTo(map);}catch(e){}});
 }
 function enableCitySelectMode(){citySelectMode=true;hideActivityMarkers();}
 function disableCitySelectMode(){citySelectMode=false;showActivityMarkers();}
