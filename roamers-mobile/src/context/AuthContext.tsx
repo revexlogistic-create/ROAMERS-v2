@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login as apiLogin, register as apiRegister, getMe } from '../services/api';
+import { linkTokenToEmail } from '../services/pushNotifications';
 
 interface User {
   id: string; fname: string; lname: string; email: string;
@@ -33,6 +34,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(t);
         const data = await getMe();
         setUser(data.user);
+        /* Link push token to user email after session restore */
+        if (data.user?.email) {
+          linkTokenToEmail(data.user.email).catch(() => {});
+        }
       }
     } catch (_) {
       await AsyncStorage.removeItem('token');
@@ -46,6 +51,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem('token', data.token);
     setToken(data.token);
     setUser(data.user);
+    /* Link push token to this user's email */
+    linkTokenToEmail(email).catch(() => {});
   }
 
   async function register(form: object) {
@@ -53,6 +60,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem('token', data.token);
     setToken(data.token);
     setUser(data.user);
+    /* Link push token to new user's email */
+    if (data.user?.email) {
+      linkTokenToEmail(data.user.email).catch(() => {});
+    }
   }
 
   async function logout() {

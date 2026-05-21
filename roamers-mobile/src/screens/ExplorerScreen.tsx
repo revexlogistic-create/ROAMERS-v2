@@ -8,21 +8,23 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { getExperiences } from '../services/api';
 import ExperienceCard from '../components/ExperienceCard';
 import { COLORS, RADIUS } from '../constants/theme';
+import Icon from '../components/Icons';
 
 const { width } = Dimensions.get('window');
 
-const SEGMENTS = [
-  { key: '',        label: 'Tous',     icon: '✦' },
-  { key: 'groupe',  label: 'Groupe',   icon: '🧳' },
-  { key: 'weekend', label: 'Weekend',  icon: '🌅' },
+type ChipDef = { key: string; label: string; IconComp: React.ComponentType<any> };
+
+const SEGMENTS: ChipDef[] = [
+  { key: '',        label: 'Tous',    IconComp: Icon.Grid  },
+  { key: 'groupe',  label: 'Groupe',  IconComp: Icon.Group },
+  { key: 'weekend', label: 'Weekend', IconComp: Icon.Sun   },
 ];
 
-const TYPES = [
-  { key: '',          label: 'Tout type', icon: '✨' },
-  { key: 'desert',    label: 'Désert',    icon: '🏜️' },
-  { key: 'mountain',  label: 'Montagne',  icon: '⛰️' },
-  { key: 'coastal',   label: 'Côte',      icon: '🌊' },
-  { key: 'cultural',  label: 'Culture',   icon: '🏛️' },
+const TYPES: ChipDef[] = [
+  { key: 'desert',   label: 'Désert',   IconComp: Icon.Sun      },
+  { key: 'mountain', label: 'Montagne', IconComp: Icon.Mountain },
+  { key: 'coastal',  label: 'Côte',     IconComp: Icon.Compass  },
+  { key: 'cultural', label: 'Culture',  IconComp: Icon.Globe    },
 ];
 
 export default function ExplorerScreen({ navigation }: any) {
@@ -83,7 +85,7 @@ export default function ExplorerScreen({ navigation }: any) {
 
       {/* ── Search ── */}
       <View style={styles.searchWrap}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Icon.Search size={16} color={COLORS.muted} style={{ marginRight: 8 }} />
         <TextInput
           value={search}
           onChangeText={setSearch}
@@ -93,7 +95,7 @@ export default function ExplorerScreen({ navigation }: any) {
         />
         {search.length > 0 && (
           <TouchableOpacity onPress={() => setSearch('')}>
-            <Text style={styles.clearBtn}>✕</Text>
+            <Icon.Close size={14} color={COLORS.muted} />
           </TouchableOpacity>
         )}
       </View>
@@ -102,17 +104,17 @@ export default function ExplorerScreen({ navigation }: any) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
         <View style={styles.filterRow}>
           {/* Segment chips */}
-          {SEGMENTS.map((item) => {
-            const active = segment === item.key;
+          {SEGMENTS.map(({ key, label, IconComp }) => {
+            const active = segment === key;
             return (
               <TouchableOpacity
-                key={'seg-' + item.key}
+                key={'seg-' + key}
                 style={[styles.chip, active && styles.chipActive]}
-                onPress={() => setSegment(item.key)}
+                onPress={() => setSegment(key)}
                 activeOpacity={0.75}
               >
-                <Text style={styles.chipIcon}>{item.icon}</Text>
-                <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>{item.label}</Text>
+                <IconComp size={13} color={active ? '#fff' : COLORS.sub} style={{ marginRight: 5 }} />
+                <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>{label}</Text>
               </TouchableOpacity>
             );
           })}
@@ -120,17 +122,17 @@ export default function ExplorerScreen({ navigation }: any) {
           <View style={styles.chipGroupDivider} />
 
           {/* Type chips */}
-          {TYPES.filter(t => t.key !== '').map((item) => {
-            const active = type === item.key;
+          {TYPES.map(({ key, label, IconComp }) => {
+            const active = type === key;
             return (
               <TouchableOpacity
-                key={'type-' + item.key}
+                key={'type-' + key}
                 style={[styles.chip, active && styles.chipActive]}
-                onPress={() => setType(active ? '' : item.key)}
+                onPress={() => setType(active ? '' : key)}
                 activeOpacity={0.75}
               >
-                <Text style={styles.chipIcon}>{item.icon}</Text>
-                <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>{item.label}</Text>
+                <IconComp size={13} color={active ? '#fff' : COLORS.sub} style={{ marginRight: 5 }} />
+                <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>{label}</Text>
               </TouchableOpacity>
             );
           })}
@@ -141,7 +143,8 @@ export default function ExplorerScreen({ navigation }: any) {
               onPress={() => { setSegment(''); setType(''); }}
               activeOpacity={0.75}
             >
-              <Text style={styles.clearChipTxt}>✕ Effacer</Text>
+              <Icon.Close size={10} color={COLORS.primary} style={{ marginRight: 5 }} />
+              <Text style={styles.clearChipTxt}>Effacer</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -164,7 +167,7 @@ export default function ExplorerScreen({ navigation }: any) {
         >
           {filtered.length === 0 ? (
             <View style={styles.emptyWrap}>
-              <Text style={styles.emptyIcon}>🔭</Text>
+              <Icon.Compass size={44} color={COLORS.muted} />
               <Text style={styles.emptyTitle}>Aucune expérience trouvée</Text>
               <Text style={styles.emptySub}>Essayez d'autres filtres</Text>
             </View>
@@ -205,16 +208,13 @@ const styles = StyleSheet.create({
 
   /* Search */
   searchWrap:  { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 6, backgroundColor: '#161616', borderRadius: RADIUS.md, paddingHorizontal: 14, borderWidth: 1, borderColor: '#272727' },
-  searchIcon:  { fontSize: 15, marginRight: 8 },
   searchInput: { flex: 1, color: COLORS.text, fontSize: 15, paddingVertical: 12 },
-  clearBtn:    { color: COLORS.muted, fontSize: 16, paddingLeft: 8 },
 
   /* Combined filter chips */
   filterScroll:     { flexGrow: 0 },
   filterRow:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 },
   chip:             { flexDirection: 'row', alignItems: 'center', height: 38, borderRadius: 19, paddingHorizontal: 14, marginRight: 8, borderWidth: 1, borderColor: COLORS.border, backgroundColor: '#161616' },
   chipActive:       { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  chipIcon:         { fontSize: 13, marginRight: 5 },
   chipLabel:        { color: COLORS.sub, fontSize: 12, fontWeight: '700', includeFontPadding: false },
   chipLabelActive:  { color: '#fff' },
   chipGroupDivider: { width: 1, height: 22, backgroundColor: '#2a2a2a', marginRight: 8 },
@@ -225,8 +225,7 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 16, paddingBottom: 48, paddingTop: 8, gap: 14 },
 
   /* Empty state */
-  emptyWrap:  { alignItems: 'center', marginTop: 60 },
-  emptyIcon:  { fontSize: 40, marginBottom: 14 },
-  emptyTitle: { color: COLORS.sub, fontSize: 16, fontWeight: '700', marginBottom: 6 },
+  emptyWrap:  { alignItems: 'center', marginTop: 60, gap: 14 },
+  emptyTitle: { color: COLORS.sub, fontSize: 16, fontWeight: '700' },
   emptySub:   { color: COLORS.muted, fontSize: 13 },
 });

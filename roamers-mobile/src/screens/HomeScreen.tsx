@@ -8,21 +8,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getExperiences, getSiteConfig } from '../services/api';
 import ExperienceCard from '../components/ExperienceCard';
 import { COLORS, RADIUS } from '../constants/theme';
+import Icon from '../components/Icons';
 
 const { width } = Dimensions.get('window');
 
 // Only the catalogue segments — express/mesure/team have their own dedicated screens
-const SEGMENTS = [
-  { key: 'all',     label: 'Tous',           icon: '✦' },
-  { key: 'groupe',  label: 'Voyage Groupe',  icon: '👥' },
-  { key: 'weekend', label: 'Weekend',        icon: '🌄' },
+const SEGMENTS: { key: string; label: string; icon: (a: boolean) => React.ReactNode }[] = [
+  { key: 'all',     label: 'Tous',           icon: (a) => <Icon.Grid    size={14} color={a ? '#fff' : COLORS.sub} /> },
+  { key: 'groupe',  label: 'Voyage Groupe',  icon: (a) => <Icon.Group   size={14} color={a ? '#fff' : COLORS.sub} /> },
+  { key: 'weekend', label: 'Weekend',        icon: (a) => <Icon.Sun     size={14} color={a ? '#fff' : COLORS.sub} /> },
 ];
 
-const WHY_CARDS = [
-  { icon: '🧭', title: 'Guides locaux experts', desc: 'Des Marocains qui connaissent chaque histoire derrière chaque pierre.' },
-  { icon: '✂️', title: '100% sur mesure',        desc: 'Pas d\'itinéraires génériques. Chaque expérience conçue pour vous.' },
-  { icon: '🌱', title: 'Impact social réel',     desc: 'Votre aventure finance l\'emploi local et les coopératives.' },
-  { icon: '🛡️', title: 'Sécurisé & sans souci',  desc: 'Logistique complète, assurances et support 24/7.' },
+const WHY_CARDS: { icon: () => React.ReactNode; title: string; desc: string }[] = [
+  { icon: () => <Icon.Compass size={28} color={COLORS.primary} />, title: 'Guides locaux experts', desc: 'Des Marocains qui connaissent chaque histoire derrière chaque pierre.' },
+  { icon: () => <Icon.Route   size={28} color={COLORS.primary} />, title: '100% sur mesure',        desc: 'Pas d\'itinéraires génériques. Chaque expérience conçue pour vous.' },
+  { icon: () => <Icon.Leaf    size={28} color={COLORS.primary} />, title: 'Impact social réel',     desc: 'Votre aventure finance l\'emploi local et les coopératives.' },
+  { icon: () => <Icon.Shield  size={28} color={COLORS.primary} />, title: 'Sécurisé & sans souci',  desc: 'Logistique complète, assurances et support 24/7.' },
 ];
 
 export default function HomeScreen({ navigation }: any) {
@@ -89,7 +90,7 @@ export default function HomeScreen({ navigation }: any) {
         {SEGMENTS.map((s) => (
           <TouchableOpacity key={s.key} style={[styles.segBtn, segment === s.key && styles.segBtnActive]}
             onPress={() => setSegment(s.key)} activeOpacity={0.8}>
-            <Text style={styles.segIcon}>{s.icon}</Text>
+            <View style={{ marginRight: 6 }}>{s.icon(segment === s.key)}</View>
             <Text style={[styles.segLabel, segment === s.key && styles.segLabelActive]}>{s.label}</Text>
           </TouchableOpacity>
         ))}
@@ -118,7 +119,7 @@ export default function HomeScreen({ navigation }: any) {
         <View style={styles.whyGrid}>
           {WHY_CARDS.map((c, i) => (
             <View key={i} style={styles.whyCard}>
-              <Text style={styles.whyIcon}>{c.icon}</Text>
+              <View style={{ marginBottom: 12 }}>{c.icon()}</View>
               <Text style={styles.whyCardTitle}>{c.title}</Text>
               <Text style={styles.whyCardDesc}>{c.desc}</Text>
             </View>
@@ -136,20 +137,20 @@ export default function HomeScreen({ navigation }: any) {
             <Text style={styles.tbCtaTxt}>Demander un devis →</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.tbEmoji}>🏢</Text>
+        <Icon.Group size={42} color={COLORS.primary} style={{ opacity: 0.5, marginLeft: 12 }} />
       </View>
 
       {/* ── QUICK ACTIONS ── */}
       <Text style={styles.sectionTitle2}>Services</Text>
       <View style={styles.quickGrid}>
         {[
-          { icon: '⚡', label: 'Activités Express', screen: 'Activities' },
-          { icon: '✂️', label: 'Voyage Sur Mesure', screen: 'Plan' },
-          { icon: '🤝', label: 'Team Building',     screen: 'Team' },
-          { icon: '📬', label: 'Nous contacter',    screen: 'Contact' },
+          { icon: <Icon.Mountain size={26} color={COLORS.primary} />, label: 'Activités Express', screen: 'Activities' },
+          { icon: <Icon.Route    size={26} color={COLORS.primary} />, label: 'Voyage Sur Mesure', screen: 'Plan' },
+          { icon: <Icon.Group    size={26} color={COLORS.primary} />, label: 'Team Building',     screen: 'Team' },
+          { icon: <Icon.Pin      size={26} color={COLORS.primary} />, label: 'Nous contacter',    screen: 'Contact' },
         ].map((q) => (
           <TouchableOpacity key={q.screen} style={styles.quickCard} onPress={() => navigation.navigate(q.screen)} activeOpacity={0.85}>
-            <Text style={styles.quickIcon}>{q.icon}</Text>
+            <View style={{ marginBottom: 10 }}>{q.icon}</View>
             <Text style={styles.quickLabel}>{q.label}</Text>
           </TouchableOpacity>
         ))}
