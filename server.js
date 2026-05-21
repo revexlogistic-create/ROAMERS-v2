@@ -220,10 +220,10 @@ app.get('/api/health', function(req, res) {
 /* ── APP VERSION (mobile update check) ──────────────────────── */
 app.get('/api/app-version', function(req, res) {
   res.json({
-    versionCode: 31,
-    versionName: '1.0.1',
+    versionCode: 32,
+    versionName: '1.0.2',
     downloadUrl: '/downloads/roamers.apk',
-    releaseNotes: 'Tags carte → détail activité, connexion requise pour réserver, codes promo partenaires, points Roamers dans le profil.'
+    releaseNotes: 'Confirmation WhatsApp après inscription, tags carte → détail activité, connexion requise pour réserver, codes promo partenaires, points Roamers dans le profil.'
   });
 });
 
