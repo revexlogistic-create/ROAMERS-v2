@@ -299,6 +299,19 @@ export default function ExperienceDetailScreen({ route, navigation }: any) {
           </View>
         </View>
 
+        {/* ── MEETING POINT ── */}
+        {!!exp.meetingPoint && (
+          <View style={s.meetCard}>
+            <View style={[s.meetIcon, { backgroundColor: segColor + '22' }]}>
+              <Text style={s.meetIconTxt}>📍</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.meetLabel}>POINT DE RENDEZ-VOUS</Text>
+              <Text style={s.meetValue}>{exp.meetingPoint}</Text>
+            </View>
+          </View>
+        )}
+
         {/* ── TAB BAR ── */}
         <View style={s.tabBar}>
           {(['overview', 'program', 'info'] as const).map((t) => (
@@ -455,6 +468,20 @@ export default function ExperienceDetailScreen({ route, navigation }: any) {
         {/* ── INCLUS ── */}
         {activeTab === 'info' && (
           <View style={s.tabContent}>
+
+            {/* Meeting point (repeated here for quick reference) */}
+            {!!exp.meetingPoint && (
+              <View style={[s.inclBox, { borderColor: segColor + '44', marginBottom: 16 }]}>
+                <SectionHeader label="Point de rendez-vous" color={segColor} />
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+                  <Text style={{ fontSize: 18 }}>📍</Text>
+                  <Text style={{ color: COLORS.text, fontSize: 14, lineHeight: 22, flex: 1, fontWeight: '600' }}>
+                    {exp.meetingPoint}
+                  </Text>
+                </View>
+              </View>
+            )}
+
             {exp.inc?.length > 0 && (
               <View style={[s.inclBox, { borderColor: '#22c55e33' }]}>
                 <SectionHeader label="Inclus dans le prix" color="#22c55e" />
@@ -683,6 +710,13 @@ const s = StyleSheet.create({
   datePill:      { backgroundColor: '#161616', borderRadius: RADIUS.sm, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: '#2a2a2a' },
   datePillTxt:   { color: COLORS.text, fontSize: 13 },
   datePillNext:  { fontSize: 10, fontWeight: '700', marginTop: 2 },
+
+  /* Meeting point card */
+  meetCard:    { flexDirection: 'row', alignItems: 'center', gap: 14, marginHorizontal: 16, marginTop: 12, backgroundColor: '#161616', borderRadius: RADIUS.lg, padding: 16, borderWidth: 1, borderColor: '#242424' },
+  meetIcon:    { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  meetIconTxt: { fontSize: 20 },
+  meetLabel:   { color: COLORS.muted, fontSize: 9, letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 4 },
+  meetValue:   { color: COLORS.text, fontSize: 14, fontWeight: '700', lineHeight: 20 },
 
   /* Why book */
   whyBook:    { marginHorizontal: 16, marginTop: 28, borderRadius: RADIUS.lg, padding: 22, borderWidth: 1, borderColor: '#242424' },
