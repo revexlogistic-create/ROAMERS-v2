@@ -68,6 +68,21 @@ async function sendMessage(phone, message) {
     return;
   }
 
+  /* ── Green API (free tier available) ── */
+  if (provider === 'greenapi') {
+    var gaInstance = process.env.GREENAPI_INSTANCE_ID;
+    var gaToken    = process.env.GREENAPI_TOKEN;
+    if (!gaInstance || !gaToken) throw new Error('GREENAPI_INSTANCE_ID and GREENAPI_TOKEN are required');
+    /* Green API expects phone in format 212XXXXXXXXX@c.us (country code, no +) */
+    var chatId = to + '@c.us';
+    var gr = await httpPost(
+      'https://api.green-api.com/waInstance' + gaInstance + '/sendMessage/' + gaToken,
+      { chatId: chatId, message: message }
+    );
+    if (gr.status >= 400) throw new Error('Green API error (' + gr.status + '): ' + gr.body);
+    return;
+  }
+
   /* ── WaAPI ── */
   if (provider === 'waapi') {
     var waInstanceId = process.env.WAAPI_INSTANCE_ID;
