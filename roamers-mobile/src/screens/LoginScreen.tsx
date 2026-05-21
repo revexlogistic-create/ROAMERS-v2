@@ -21,6 +21,14 @@ export default function LoginScreen({ navigation }: any) {
       await login(email.trim().toLowerCase(), password);
       navigation.goBack();
     } catch (e: any) {
+      /* Account exists but not yet verified — server auto-resent OTP */
+      if (e.apiData?.requireVerification) {
+        navigation.replace('Register', {
+          verifyEmail: e.apiData.email || email.trim().toLowerCase(),
+          verifyPhone: e.apiData.phone || '',
+        });
+        return;
+      }
       Alert.alert('Connexion échouée', e.message || 'Email ou mot de passe incorrect');
     } finally {
       setLoading(false);

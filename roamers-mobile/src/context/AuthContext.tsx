@@ -13,7 +13,10 @@ interface AuthCtx {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (data: object) => Promise<void>;
+  /** Returns the raw server response (may include requireVerification:true instead of token) */
+  register: (data: object) => Promise<any>;
+  /** Called after OTP verification — stores token and sets user state */
+  loginWithToken: (token: string, user: User) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -34,7 +37,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(t);
         const data = await getMe();
         setUser(data.user);
-        /* Link push token to user email after session restore */
         if (data.user?.email) {
           linkTokenToEmail(data.user.email).catch(() => {});
         }
@@ -48,22 +50,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function login(email: string, password: string) {
     const data = await apiLogin(email, password);
-    await AsyncStorage.setItem('token', data.token);
-    setToken(data.token);
-    setUser(data.user);
-    /* Link push token to this user's email */
+    await _storeSession(data.token, data.user);
     linkTokenToEmail(email).catch(() => {});
   }
 
-  async function register(form: object) {
+  async function register(form: object): Promise<any> {
     const data = await apiRegister(form);
-    await AsyncStorage.setItem('token', data.token);
-    setToken(data.token);
-    setUser(data.user);
-    /* Link push token to new user's email */
-    if (data.user?.email) {
-      linkTokenToEmail(data.user.email).catch(() => {});
+    /* If server returns a token directly (e.g. verification disabled), store it */
+    if (data.token) {
+      await _storeSession(data.token, data.user);
+      if (data.user?.email) linkTokenToEmail(data.user.email).catch(() => {});
     }
+    return data;
+  }
+
+  async function loginWithToken(tok: string, u: User) {
+    await _storeSession(tok, u);
+    if (u?.email) linkTokenToEmail(u.email).catch(() => {});
+  }
+
+  async function _storeSession(tok: string, u: User) {
+    await AsyncStorage.setItem('token', tok);
+    setToken(tok);
+    setUser(u);
   }
 
   async function logout() {
@@ -81,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, refresh }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, loginWithToken, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

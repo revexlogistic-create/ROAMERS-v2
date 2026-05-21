@@ -15,12 +15,15 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-/* Unwrap API errors */
+/* Unwrap API errors — attach status + full response data so callers can inspect extra fields */
 api.interceptors.response.use(
   (r) => r,
   (err) => {
-    const msg = err?.response?.data?.error || err?.message || 'Network error';
-    return Promise.reject(new Error(msg));
+    const msg  = err?.response?.data?.error || err?.message || 'Network error';
+    const e    = new Error(msg) as any;
+    e.status   = err?.response?.status;
+    e.apiData  = err?.response?.data || {};
+    return Promise.reject(e);
   }
 );
 
@@ -30,6 +33,12 @@ export const login = (email: string, password: string) =>
 
 export const register = (data: object) =>
   api.post('/api/auth/register', data).then((r) => r.data);
+
+export const verifyOtp = (email: string, code: string) =>
+  api.post('/api/auth/verify-otp', { email, code }).then((r) => r.data);
+
+export const resendOtp = (email: string) =>
+  api.post('/api/auth/resend-otp', { email }).then((r) => r.data);
 
 export const getMe = () =>
   api.get('/api/auth/me').then((r) => r.data);

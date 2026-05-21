@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, KeyboardAvoidingView, Platform, Linking,
+  Alert, KeyboardAvoidingView, Platform, TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,83 +9,221 @@ import { useAuth } from '../context/AuthContext';
 import RInput from '../components/RInput';
 import RButton from '../components/RButton';
 import { COLORS, RADIUS } from '../constants/theme';
-import { getSiteConfig } from '../services/api';
+import { verifyOtp, resendOtp } from '../services/api';
 
-export default function RegisterScreen({ navigation }: any) {
+const OTP_LENGTH   = 6;
+const RESEND_DELAY = 60; // seconds
+
+export default function RegisterScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
-  const { register } = useAuth();
+  const { register, loginWithToken } = useAuth();
+
+  /* ── Form state ─────────────────────────────────────────────── */
   const [form, setForm] = useState({ fname: '', lname: '', email: '', phone: '', password: '', confirm: '' });
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-  const [waNum, setWaNum] = useState('212600000000');
+  const [submitting, setSubmitting] = useState(false);
   const set = (k: string) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  useEffect(() => {
-    getSiteConfig()
-      .then((cfg: any) => { if (cfg?.whatsapp) setWaNum(cfg.whatsapp); })
-      .catch(() => {/* keep default */});
-  }, []);
+  /* ── OTP state ──────────────────────────────────────────────── */
+  /* Support pre-fill from LoginScreen when account exists but unverified */
+  const [step, setStep]               = useState<'form' | 'otp'>(route?.params?.verifyEmail ? 'otp' : 'form');
+  const [maskedPhone, setMaskedPhone] = useState(route?.params?.verifyPhone || '');
+  const [regEmail, setRegEmail]       = useState(route?.params?.verifyEmail || '');
 
-  async function submit() {
+  const [otp, setOtp]             = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [countdown, setCountdown] = useState(RESEND_DELAY);
+  const otpRef = useRef<TextInput>(null);
+  const timerRef = useRef<any>(null);
+
+  /* countdown ticker */
+  useEffect(() => {
+    if (step !== 'otp') return;
+    setCountdown(RESEND_DELAY);
+    timerRef.current = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) { clearInterval(timerRef.current); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [step]);
+
+  /* auto-verify when all digits entered */
+  useEffect(() => {
+    if (otp.length === OTP_LENGTH) handleVerify();
+  }, [otp]);
+
+  /* ── Step 1: Submit registration form ───────────────────────── */
+  async function handleRegister() {
     if (!form.fname.trim()) return Alert.alert('Erreur', 'Prénom requis');
     if (!form.lname.trim()) return Alert.alert('Erreur', 'Nom requis');
     if (!form.email.trim())  return Alert.alert('Erreur', 'Email requis');
     if (!form.phone.trim())  return Alert.alert('Erreur', 'Numéro de téléphone requis');
     if (form.password.length < 8) return Alert.alert('Erreur', 'Mot de passe min. 8 caractères');
     if (form.password !== form.confirm) return Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
-    setLoading(true);
+
+    setSubmitting(true);
     try {
-      await register({ fname: form.fname, lname: form.lname, email: form.email, phone: form.phone, password: form.password });
-      setDone(true);
+      const data = await register({
+        fname: form.fname, lname: form.lname,
+        email: form.email, phone: form.phone,
+        password: form.password,
+      });
+
+      if (data.requireVerification) {
+        setMaskedPhone(data.phone || form.phone);
+        setRegEmail(data.email || form.email.toLowerCase().trim());
+        if (!data.otpSent) {
+          Alert.alert(
+            'Attention',
+            "Le code n'a pas pu être envoyé par WhatsApp. Appuyez sur « Renvoyer » une fois sur l'écran de vérification.",
+            [{ text: 'OK' }]
+          );
+        }
+        setStep('otp');
+      } else if (data.token) {
+        /* Verification skipped server-side — logged in directly */
+        navigation.goBack();
+      }
     } catch (e: any) {
       Alert.alert('Erreur', e.message);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   }
 
-  function openWhatsApp() {
-    const msg = encodeURIComponent(
-      `Bonjour Roamers 👋, je viens de créer mon compte avec l'adresse : ${form.email}. Pouvez-vous confirmer mon inscription ?`
-    );
-    Linking.openURL(`https://wa.me/${waNum}?text=${msg}`).catch(() =>
-      Alert.alert('Erreur', "Impossible d'ouvrir WhatsApp.")
+  /* ── Step 2: Verify OTP ─────────────────────────────────────── */
+  async function handleVerify() {
+    if (otp.length !== OTP_LENGTH || verifying) return;
+    setVerifying(true);
+    try {
+      const data = await verifyOtp(regEmail, otp);
+      await loginWithToken(data.token, data.user);
+      navigation.goBack();
+    } catch (e: any) {
+      setOtp('');
+      Alert.alert('Code incorrect', e.message || 'Le code est invalide ou expiré.');
+      setTimeout(() => otpRef.current?.focus(), 300);
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  /* ── Resend code ────────────────────────────────────────────── */
+  async function handleResend() {
+    if (countdown > 0 || resending) return;
+    setResending(true);
+    try {
+      const data = await resendOtp(regEmail);
+      setMaskedPhone(data.phone || maskedPhone);
+      setOtp('');
+      setCountdown(RESEND_DELAY);
+      clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        setCountdown((c) => {
+          if (c <= 1) { clearInterval(timerRef.current); return 0; }
+          return c - 1;
+        });
+      }, 1000);
+      Alert.alert('Code renvoyé', 'Un nouveau code a été envoyé sur WhatsApp.');
+    } catch (e: any) {
+      Alert.alert('Erreur', e.message);
+    } finally {
+      setResending(false);
+    }
+  }
+
+  /* ── OTP digit display boxes ────────────────────────────────── */
+  function OtpBoxes() {
+    const digits = otp.split('');
+    return (
+      <TouchableOpacity activeOpacity={1} onPress={() => otpRef.current?.focus()} style={styles.otpRow}>
+        {Array.from({ length: OTP_LENGTH }).map((_, i) => {
+          const filled  = i < digits.length;
+          const focused = i === digits.length;
+          return (
+            <View key={i} style={[styles.otpBox, filled && styles.otpBoxFilled, focused && styles.otpBoxFocused]}>
+              <Text style={styles.otpDigit}>{digits[i] || ''}</Text>
+            </View>
+          );
+        })}
+      </TouchableOpacity>
     );
   }
 
-  /* ── Post-registration confirmation screen ─────────────────── */
-  if (done) {
+  /* ══════════════════════════════════════════════════════════════
+     RENDER: OTP verification step
+  ══════════════════════════════════════════════════════════════ */
+  if (step === 'otp') {
     return (
       <LinearGradient colors={['#1a0508', '#0e0e0e']} style={[styles.container, { paddingTop: insets.top }]}>
-        <ScrollView contentContainerStyle={[styles.scroll, styles.centerScroll]}>
-          <Text style={styles.logo}>ROAMERS</Text>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={[styles.scroll, { justifyContent: 'center' }]} keyboardShouldPersistTaps="handled">
 
-          <View style={styles.successCard}>
-            <Text style={styles.successIcon}>✅</Text>
-            <Text style={styles.successTitle}>Compte créé avec succès !</Text>
-            <Text style={styles.successSub}>
-              Bienvenue dans la communauté des explorateurs du Maroc.{'\n'}
-              Pour finaliser votre inscription, confirmez par WhatsApp.
+            <Text style={styles.logo}>ROAMERS</Text>
+            <Text style={styles.title}>Vérification</Text>
+            <Text style={styles.sub}>
+              Un code à 6 chiffres a été envoyé sur WhatsApp au numéro {'\n'}
+              <Text style={{ color: COLORS.text, fontWeight: '700' }}>{maskedPhone}</Text>
             </Text>
 
-            <TouchableOpacity style={styles.waBtn} onPress={openWhatsApp} activeOpacity={0.85}>
-              <Text style={styles.waBtnTxt}>📲  Confirmer sur WhatsApp</Text>
+            <View style={styles.otpCard}>
+              {/* Hidden input that actually captures keystrokes */}
+              <TextInput
+                ref={otpRef}
+                value={otp}
+                onChangeText={(t) => { if (!verifying) setOtp(t.replace(/[^0-9]/g, '').slice(0, OTP_LENGTH)); }}
+                keyboardType="number-pad"
+                maxLength={OTP_LENGTH}
+                style={styles.hiddenInput}
+                autoFocus
+                caretHidden
+              />
+
+              <Text style={styles.otpLabel}>Entrez le code reçu</Text>
+              <OtpBoxes />
+
+              <RButton
+                label={verifying ? 'Vérification…' : 'Confirmer'}
+                onPress={handleVerify}
+                loading={verifying}
+                style={{ marginTop: 20 }}
+              />
+
+              <TouchableOpacity
+                style={[styles.resendBtn, (countdown > 0 || resending) && styles.resendBtnDisabled]}
+                onPress={handleResend}
+                disabled={countdown > 0 || resending}
+              >
+                <Text style={[styles.resendTxt, (countdown > 0 || resending) && styles.resendTxtDisabled]}>
+                  {resending
+                    ? 'Envoi…'
+                    : countdown > 0
+                      ? `Renvoyer dans ${countdown}s`
+                      : 'Renvoyer le code'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.backBtn} onPress={() => setStep('form')}>
+              <Text style={styles.backTxt}>‹ Modifier mes informations</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.skipBtn} onPress={() => navigation.goBack()}>
-              <Text style={styles.skipTxt}>Continuer sans confirmer  →</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </LinearGradient>
     );
   }
 
-  /* ── Registration form ──────────────────────────────────────── */
+  /* ══════════════════════════════════════════════════════════════
+     RENDER: Registration form
+  ══════════════════════════════════════════════════════════════ */
   return (
     <LinearGradient colors={['#1a0508', '#0e0e0e']} style={[styles.container, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <Text style={styles.backTxt}>‹ Retour</Text>
           </TouchableOpacity>
@@ -106,12 +244,13 @@ export default function RegisterScreen({ navigation }: any) {
             <RInput label="Téléphone *" value={form.phone} onChangeText={set('phone')} placeholder="+212 6 XX XX XX XX" keyboardType="phone-pad" />
             <RInput label="Mot de passe" value={form.password} onChangeText={set('password')} placeholder="Min. 8 caractères" secureTextEntry />
             <RInput label="Confirmer le mot de passe" value={form.confirm} onChangeText={set('confirm')} placeholder="Répéter le mot de passe" secureTextEntry />
-            <RButton label="Créer mon compte" onPress={submit} loading={loading} style={{ marginTop: 8 }} />
+            <RButton label="Créer mon compte" onPress={handleRegister} loading={submitting} style={{ marginTop: 8 }} />
           </View>
 
           <TouchableOpacity style={styles.loginLink} onPress={() => navigation.replace('Login')}>
             <Text style={styles.loginTxt}>Déjà un compte ? <Text style={{ color: COLORS.primary, fontWeight: '700' }}>Se connecter →</Text></Text>
           </TouchableOpacity>
+
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
@@ -119,44 +258,79 @@ export default function RegisterScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container:   { flex: 1 },
-  scroll:      { flexGrow: 1, padding: 24 },
-  centerScroll:{ justifyContent: 'center', alignItems: 'center' },
-  backBtn:     { marginBottom: 20 },
-  backTxt:     { color: COLORS.sub, fontSize: 15 },
-  logo:        { color: COLORS.primary, fontSize: 16, fontWeight: '900', letterSpacing: 3, marginBottom: 12 },
-  title:       { color: COLORS.text, fontSize: 28, fontWeight: '900', marginBottom: 6 },
-  sub:         { color: COLORS.sub, fontSize: 14, lineHeight: 21, marginBottom: 24 },
-  form:        { backgroundColor: COLORS.card, borderRadius: RADIUS.xl, padding: 20, borderWidth: 1, borderColor: COLORS.border, marginBottom: 20 },
-  row:         { flexDirection: 'row', gap: 10 },
-  loginLink:   { alignItems: 'center', padding: 12 },
-  loginTxt:    { color: COLORS.sub, fontSize: 14 },
+  container: { flex: 1 },
+  scroll:    { flexGrow: 1, padding: 24 },
+  backBtn:   { marginBottom: 20 },
+  backTxt:   { color: COLORS.sub, fontSize: 15 },
+  logo:      { color: COLORS.primary, fontSize: 16, fontWeight: '900', letterSpacing: 3, marginBottom: 12 },
+  title:     { color: COLORS.text, fontSize: 28, fontWeight: '900', marginBottom: 6 },
+  sub:       { color: COLORS.sub, fontSize: 14, lineHeight: 21, marginBottom: 24 },
+  form:      { backgroundColor: COLORS.card, borderRadius: RADIUS.xl, padding: 20, borderWidth: 1, borderColor: COLORS.border, marginBottom: 20 },
+  row:       { flexDirection: 'row', gap: 10 },
+  loginLink: { alignItems: 'center', padding: 12 },
+  loginTxt:  { color: COLORS.sub, fontSize: 14 },
 
-  /* Success screen */
-  successCard:  {
-    width: '100%',
+  /* OTP screen */
+  otpCard: {
     backgroundColor: COLORS.card,
     borderRadius: RADIUS.xl,
-    padding: 28,
+    padding: 24,
     borderWidth: 1,
     borderColor: COLORS.border,
+    marginBottom: 20,
     alignItems: 'center',
-    marginTop: 20,
   },
-  successIcon:  { fontSize: 52, marginBottom: 14 },
-  successTitle: { color: COLORS.text, fontSize: 22, fontWeight: '900', textAlign: 'center', marginBottom: 10 },
-  successSub:   { color: COLORS.sub, fontSize: 14, lineHeight: 22, textAlign: 'center', marginBottom: 28 },
-
-  waBtn: {
-    width: '100%',
-    backgroundColor: '#25D366',
-    borderRadius: RADIUS.lg,
-    paddingVertical: 16,
+  otpLabel: {
+    color: COLORS.sub,
+    fontSize: 13,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  hiddenInput: {
+    position: 'absolute',
+    opacity: 0,
+    width: 1,
+    height: 1,
+  },
+  otpRow: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'center',
+  },
+  otpBox: {
+    width: 44,
+    height: 54,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bg,
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'center',
   },
-  waBtnTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
-
-  skipBtn:  { paddingVertical: 12, alignItems: 'center' },
-  skipTxt:  { color: COLORS.sub, fontSize: 14 },
+  otpBoxFilled: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#2a0a0f',
+  },
+  otpBoxFocused: {
+    borderColor: COLORS.primary,
+    borderWidth: 2,
+  },
+  otpDigit: {
+    color: COLORS.text,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  resendBtn: {
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  resendBtnDisabled: { opacity: 0.5 },
+  resendTxt: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  resendTxtDisabled: { color: COLORS.sub },
 });
