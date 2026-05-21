@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, KeyboardAvoidingView, Platform, TextInput,
@@ -12,47 +12,98 @@ import { COLORS, RADIUS } from '../constants/theme';
 import { verifyOtp, resendOtp } from '../services/api';
 
 const OTP_LENGTH   = 6;
-const RESEND_DELAY = 60; // seconds
+const RESEND_DELAY = 60;
 
 export default function RegisterScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const { register, loginWithToken } = useAuth();
 
   /* ── Form state ─────────────────────────────────────────────── */
-  const [form, setForm] = useState({ fname: '', lname: '', email: '', phone: '', password: '', confirm: '' });
+  const [form, setForm]     = useState({ fname: '', lname: '', email: '', phone: '', password: '', confirm: '' });
   const [submitting, setSubmitting] = useState(false);
   const set = (k: string) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   /* ── OTP state ──────────────────────────────────────────────── */
-  /* Support pre-fill from LoginScreen when account exists but unverified */
   const [step, setStep]               = useState<'form' | 'otp'>(route?.params?.verifyEmail ? 'otp' : 'form');
-  const [maskedPhone, setMaskedPhone] = useState(route?.params?.verifyPhone || '');
-  const [regEmail, setRegEmail]       = useState(route?.params?.verifyEmail || '');
+  const [maskedPhone, setMaskedPhone] = useState<string>(route?.params?.verifyPhone || '');
+  const [regEmail, setRegEmail]       = useState<string>(route?.params?.verifyEmail || '');
+  const [devCode, setDevCode]         = useState<string>('');   // code shown when WA provider not set
 
-  const [otp, setOtp]             = useState('');
-  const [verifying, setVerifying] = useState(false);
-  const [resending, setResending] = useState(false);
-  const [countdown, setCountdown] = useState(RESEND_DELAY);
-  const otpRef = useRef<TextInput>(null);
-  const timerRef = useRef<any>(null);
+  const [otp, setOtp]               = useState('');
+  const [verifying, setVerifying]   = useState(false);
+  const [resending, setResending]   = useState(false);
+  const [countdown, setCountdown]   = useState(RESEND_DELAY);
+  const otpRef   = useRef<TextInput>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  /* countdown ticker */
+  /* countdown ticker — restarts each time step becomes 'otp' */
   useEffect(() => {
     if (step !== 'otp') return;
     setCountdown(RESEND_DELAY);
     timerRef.current = setInterval(() => {
       setCountdown((c) => {
-        if (c <= 1) { clearInterval(timerRef.current); return 0; }
+        if (c <= 1) { if (timerRef.current) clearInterval(timerRef.current); return 0; }
         return c - 1;
       });
     }, 1000);
-    return () => clearInterval(timerRef.current);
+    /* Focus the input after render */
+    const t = setTimeout(() => otpRef.current?.focus(), 300);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      clearTimeout(t);
+    };
   }, [step]);
 
-  /* auto-verify when all digits entered */
-  useEffect(() => {
-    if (otp.length === OTP_LENGTH) handleVerify();
-  }, [otp]);
+  /* ── Verify OTP ─────────────────────────────────────────────── */
+  const handleVerify = useCallback(async (code: string, email: string) => {
+    if (code.length !== OTP_LENGTH) return;
+    setVerifying(true);
+    try {
+      const data = await verifyOtp(email, code);
+      await loginWithToken(data.token, data.user);
+      navigation.goBack();
+    } catch (e: any) {
+      setOtp('');
+      Alert.alert('Code incorrect', e.message || 'Le code est invalide ou expiré.');
+      setTimeout(() => otpRef.current?.focus(), 300);
+    } finally {
+      setVerifying(false);
+    }
+  }, [loginWithToken, navigation]);
+
+  function handleOtpChange(t: string) {
+    if (verifying) return;
+    const clean = t.replace(/[^0-9]/g, '').slice(0, OTP_LENGTH);
+    setOtp(clean);
+    if (clean.length === OTP_LENGTH) {
+      handleVerify(clean, regEmail);
+    }
+  }
+
+  /* ── Resend code ────────────────────────────────────────────── */
+  async function handleResend() {
+    if (countdown > 0 || resending) return;
+    setResending(true);
+    try {
+      const data = await resendOtp(regEmail);
+      setMaskedPhone(data.phone || maskedPhone);
+      if (data.devCode) setDevCode(data.devCode);
+      setOtp('');
+      setCountdown(RESEND_DELAY);
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        setCountdown((c) => {
+          if (c <= 1) { if (timerRef.current) clearInterval(timerRef.current); return 0; }
+          return c - 1;
+        });
+      }, 1000);
+      Alert.alert('Code renvoyé', 'Un nouveau code a été envoyé.');
+    } catch (e: any) {
+      Alert.alert('Erreur', e.message);
+    } finally {
+      setResending(false);
+    }
+  }
 
   /* ── Step 1: Submit registration form ───────────────────────── */
   async function handleRegister() {
@@ -70,20 +121,13 @@ export default function RegisterScreen({ navigation, route }: any) {
         email: form.email, phone: form.phone,
         password: form.password,
       });
-
       if (data.requireVerification) {
         setMaskedPhone(data.phone || form.phone);
-        setRegEmail(data.email || form.email.toLowerCase().trim());
-        if (!data.otpSent) {
-          Alert.alert(
-            'Attention',
-            "Le code n'a pas pu être envoyé par WhatsApp. Appuyez sur « Renvoyer » une fois sur l'écran de vérification.",
-            [{ text: 'OK' }]
-          );
-        }
+        setRegEmail(data.email  || form.email.toLowerCase().trim());
+        if (data.devCode) setDevCode(data.devCode);
+        setOtp('');
         setStep('otp');
       } else if (data.token) {
-        /* Verification skipped server-side — logged in directly */
         navigation.goBack();
       }
     } catch (e: any) {
@@ -93,115 +137,91 @@ export default function RegisterScreen({ navigation, route }: any) {
     }
   }
 
-  /* ── Step 2: Verify OTP ─────────────────────────────────────── */
-  async function handleVerify() {
-    if (otp.length !== OTP_LENGTH || verifying) return;
-    setVerifying(true);
-    try {
-      const data = await verifyOtp(regEmail, otp);
-      await loginWithToken(data.token, data.user);
-      navigation.goBack();
-    } catch (e: any) {
-      setOtp('');
-      Alert.alert('Code incorrect', e.message || 'Le code est invalide ou expiré.');
-      setTimeout(() => otpRef.current?.focus(), 300);
-    } finally {
-      setVerifying(false);
-    }
-  }
-
-  /* ── Resend code ────────────────────────────────────────────── */
-  async function handleResend() {
-    if (countdown > 0 || resending) return;
-    setResending(true);
-    try {
-      const data = await resendOtp(regEmail);
-      setMaskedPhone(data.phone || maskedPhone);
-      setOtp('');
-      setCountdown(RESEND_DELAY);
-      clearInterval(timerRef.current);
-      timerRef.current = setInterval(() => {
-        setCountdown((c) => {
-          if (c <= 1) { clearInterval(timerRef.current); return 0; }
-          return c - 1;
-        });
-      }, 1000);
-      Alert.alert('Code renvoyé', 'Un nouveau code a été envoyé sur WhatsApp.');
-    } catch (e: any) {
-      Alert.alert('Erreur', e.message);
-    } finally {
-      setResending(false);
-    }
-  }
-
-  /* ── OTP digit display boxes ────────────────────────────────── */
-  function OtpBoxes() {
-    const digits = otp.split('');
-    return (
-      <TouchableOpacity activeOpacity={1} onPress={() => otpRef.current?.focus()} style={styles.otpRow}>
-        {Array.from({ length: OTP_LENGTH }).map((_, i) => {
-          const filled  = i < digits.length;
-          const focused = i === digits.length;
-          return (
-            <View key={i} style={[styles.otpBox, filled && styles.otpBoxFilled, focused && styles.otpBoxFocused]}>
-              <Text style={styles.otpDigit}>{digits[i] || ''}</Text>
-            </View>
-          );
-        })}
-      </TouchableOpacity>
-    );
-  }
-
   /* ══════════════════════════════════════════════════════════════
-     RENDER: OTP verification step
+     OTP STEP
   ══════════════════════════════════════════════════════════════ */
   if (step === 'otp') {
+    const digits = otp.split('');
+
     return (
       <LinearGradient colors={['#1a0508', '#0e0e0e']} style={[styles.container, { paddingTop: insets.top }]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={[styles.scroll, { justifyContent: 'center' }]} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={[styles.scroll, styles.scrollCenter]} keyboardShouldPersistTaps="handled">
 
             <Text style={styles.logo}>ROAMERS</Text>
             <Text style={styles.title}>Vérification</Text>
             <Text style={styles.sub}>
-              Un code à 6 chiffres a été envoyé sur WhatsApp au numéro {'\n'}
+              Code à 6 chiffres envoyé sur WhatsApp au{'\n'}
               <Text style={{ color: COLORS.text, fontWeight: '700' }}>{maskedPhone}</Text>
             </Text>
 
-            <View style={styles.otpCard}>
-              {/* Hidden input that actually captures keystrokes */}
-              <TextInput
-                ref={otpRef}
-                value={otp}
-                onChangeText={(t) => { if (!verifying) setOtp(t.replace(/[^0-9]/g, '').slice(0, OTP_LENGTH)); }}
-                keyboardType="number-pad"
-                maxLength={OTP_LENGTH}
-                style={styles.hiddenInput}
-                autoFocus
-                caretHidden
-              />
+            {/* DEV MODE banner — only shown when WhatsApp provider not configured */}
+            {!!devCode && (
+              <View style={styles.devBanner}>
+                <Text style={styles.devLabel}>⚙️  Mode test — code généré :</Text>
+                <Text style={styles.devCode}>{devCode}</Text>
+              </View>
+            )}
 
+            <View style={styles.otpCard}>
               <Text style={styles.otpLabel}>Entrez le code reçu</Text>
-              <OtpBoxes />
+
+              {/*
+                Tap-target wrapper: touching anywhere here focuses the hidden input.
+                The TextInput sits behind the boxes (absoluteFill, opacity 0.01).
+              */}
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => otpRef.current?.focus()}
+                style={styles.otpTapArea}
+              >
+                {/* Transparent input — full-size so Android can focus it reliably */}
+                <TextInput
+                  ref={otpRef}
+                  value={otp}
+                  onChangeText={handleOtpChange}
+                  keyboardType="number-pad"
+                  maxLength={OTP_LENGTH}
+                  caretHidden
+                  textContentType="oneTimeCode"
+                  style={styles.otpHiddenInput}
+                />
+
+                {/* Visual digit boxes — pointer events none so taps reach the input */}
+                <View style={styles.otpRow} pointerEvents="none">
+                  {Array.from({ length: OTP_LENGTH }).map((_, i) => {
+                    const filled  = i < digits.length;
+                    const focused = i === digits.length && !verifying;
+                    return (
+                      <View
+                        key={i}
+                        style={[
+                          styles.otpBox,
+                          filled  && styles.otpBoxFilled,
+                          focused && styles.otpBoxFocused,
+                        ]}
+                      >
+                        <Text style={styles.otpDigit}>{digits[i] || ''}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </TouchableOpacity>
 
               <RButton
                 label={verifying ? 'Vérification…' : 'Confirmer'}
-                onPress={handleVerify}
+                onPress={() => handleVerify(otp, regEmail)}
                 loading={verifying}
                 style={{ marginTop: 20 }}
               />
 
               <TouchableOpacity
-                style={[styles.resendBtn, (countdown > 0 || resending) && styles.resendBtnDisabled]}
+                style={[styles.resendBtn, (countdown > 0 || resending) && styles.resendBtnOff]}
                 onPress={handleResend}
                 disabled={countdown > 0 || resending}
               >
-                <Text style={[styles.resendTxt, (countdown > 0 || resending) && styles.resendTxtDisabled]}>
-                  {resending
-                    ? 'Envoi…'
-                    : countdown > 0
-                      ? `Renvoyer dans ${countdown}s`
-                      : 'Renvoyer le code'}
+                <Text style={[styles.resendTxt, (countdown > 0 || resending) && styles.resendTxtOff]}>
+                  {resending ? 'Envoi…' : countdown > 0 ? `Renvoyer dans ${countdown}s` : 'Renvoyer le code'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -217,7 +237,7 @@ export default function RegisterScreen({ navigation, route }: any) {
   }
 
   /* ══════════════════════════════════════════════════════════════
-     RENDER: Registration form
+     REGISTRATION FORM
   ══════════════════════════════════════════════════════════════ */
   return (
     <LinearGradient colors={['#1a0508', '#0e0e0e']} style={[styles.container, { paddingTop: insets.top }]}>
@@ -258,19 +278,33 @@ export default function RegisterScreen({ navigation, route }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scroll:    { flexGrow: 1, padding: 24 },
-  backBtn:   { marginBottom: 20 },
-  backTxt:   { color: COLORS.sub, fontSize: 15 },
-  logo:      { color: COLORS.primary, fontSize: 16, fontWeight: '900', letterSpacing: 3, marginBottom: 12 },
-  title:     { color: COLORS.text, fontSize: 28, fontWeight: '900', marginBottom: 6 },
-  sub:       { color: COLORS.sub, fontSize: 14, lineHeight: 21, marginBottom: 24 },
-  form:      { backgroundColor: COLORS.card, borderRadius: RADIUS.xl, padding: 20, borderWidth: 1, borderColor: COLORS.border, marginBottom: 20 },
-  row:       { flexDirection: 'row', gap: 10 },
-  loginLink: { alignItems: 'center', padding: 12 },
-  loginTxt:  { color: COLORS.sub, fontSize: 14 },
+  container:   { flex: 1 },
+  scroll:      { flexGrow: 1, padding: 24 },
+  scrollCenter:{ justifyContent: 'center' },
+  backBtn:     { marginBottom: 20 },
+  backTxt:     { color: COLORS.sub, fontSize: 15 },
+  logo:        { color: COLORS.primary, fontSize: 16, fontWeight: '900', letterSpacing: 3, marginBottom: 12 },
+  title:       { color: COLORS.text, fontSize: 28, fontWeight: '900', marginBottom: 6 },
+  sub:         { color: COLORS.sub, fontSize: 14, lineHeight: 21, marginBottom: 24 },
+  form:        { backgroundColor: COLORS.card, borderRadius: RADIUS.xl, padding: 20, borderWidth: 1, borderColor: COLORS.border, marginBottom: 20 },
+  row:         { flexDirection: 'row', gap: 10 },
+  loginLink:   { alignItems: 'center', padding: 12 },
+  loginTxt:    { color: COLORS.sub, fontSize: 14 },
 
-  /* OTP screen */
+  /* DEV banner */
+  devBanner: {
+    backgroundColor: '#1c2a1c',
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: '#3a5a3a',
+    padding: 14,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  devLabel: { color: '#7ec87e', fontSize: 12, marginBottom: 6 },
+  devCode:  { color: '#b5ffb5', fontSize: 28, fontWeight: '900', letterSpacing: 8 },
+
+  /* OTP card */
   otpCard: {
     backgroundColor: COLORS.card,
     borderRadius: RADIUS.xl,
@@ -280,17 +314,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignItems: 'center',
   },
-  otpLabel: {
-    color: COLORS.sub,
-    fontSize: 13,
-    marginBottom: 16,
-    textAlign: 'center',
+  otpLabel: { color: COLORS.sub, fontSize: 13, marginBottom: 16, textAlign: 'center' },
+
+  /* Tap area wraps both the hidden input and visual boxes */
+  otpTapArea: {
+    height: 54,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  hiddenInput: {
-    position: 'absolute',
-    opacity: 0,
-    width: 1,
-    height: 1,
+  /* Full-size transparent input sitting behind the boxes */
+  otpHiddenInput: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.01,
+    color: 'transparent',
+    fontSize: 1,
   },
   otpRow: {
     flexDirection: 'row',
@@ -307,30 +345,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  otpBoxFilled: {
-    borderColor: COLORS.primary,
-    backgroundColor: '#2a0a0f',
-  },
-  otpBoxFocused: {
-    borderColor: COLORS.primary,
-    borderWidth: 2,
-  },
-  otpDigit: {
-    color: COLORS.text,
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  resendBtn: {
-    marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  resendBtnDisabled: { opacity: 0.5 },
-  resendTxt: {
-    color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  resendTxtDisabled: { color: COLORS.sub },
+  otpBoxFilled:  { borderColor: COLORS.primary, backgroundColor: '#2a0a0f' },
+  otpBoxFocused: { borderColor: COLORS.primary, borderWidth: 2.5 },
+  otpDigit:      { color: COLORS.text, fontSize: 22, fontWeight: '800' },
+
+  resendBtn:    { marginTop: 16, paddingVertical: 10, paddingHorizontal: 20 },
+  resendBtnOff: { opacity: 0.45 },
+  resendTxt:    { color: COLORS.primary, fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  resendTxtOff: { color: COLORS.sub },
 });
