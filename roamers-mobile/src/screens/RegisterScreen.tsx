@@ -19,6 +19,7 @@ export default function RegisterScreen({ navigation }: any) {
     if (!form.lname.trim()) return Alert.alert('Erreur', 'Nom requis');
     if (!form.email.trim())  return Alert.alert('Erreur', 'Email requis');
     if (form.password.length < 8) return Alert.alert('Erreur', 'Mot de passe min. 8 caractères');
+    if (!form.phone.trim()) return Alert.alert('Erreur', 'Numéro de téléphone requis');
     if (form.password !== form.confirm) return Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
     setLoading(true);
     try {
@@ -52,7 +53,7 @@ export default function RegisterScreen({ navigation }: any) {
               </View>
             </View>
             <RInput label="Email" value={form.email} onChangeText={set('email')} placeholder="email@exemple.com" keyboardType="email-address" autoCapitalize="none" />
-            <RInput label="Téléphone (optionnel)" value={form.phone} onChangeText={set('phone')} placeholder="+212 6 XX XX XX XX" keyboardType="phone-pad" />
+            <RInput label="Téléphone *" value={form.phone} onChangeText={set('phone')} placeholder="+212 6 XX XX XX XX" keyboardType="phone-pad" />
             <RInput label="Mot de passe" value={form.password} onChangeText={set('password')} placeholder="Min. 8 caractères" secureTextEntry />
             <RInput label="Confirmer le mot de passe" value={form.confirm} onChangeText={set('confirm')} placeholder="Répéter le mot de passe" secureTextEntry />
             <RButton label="Créer mon compte" onPress={submit} loading={loading} style={{ marginTop: 8 }} />
