@@ -19,8 +19,8 @@ import Icon from '../components/Icons';
 const { width, height } = Dimensions.get('window');
 const HALF = (width - 48) / 2;
 
-const APP_VERSION_CODE = 31;
-const APP_VERSION_NAME = '1.0.0';
+const APP_VERSION_CODE = 32;
+const APP_VERSION_NAME = '1.0.2';
 
 /* ── Member levels ──────────────────────────────────────────────────────── */
 const LEVELS = [

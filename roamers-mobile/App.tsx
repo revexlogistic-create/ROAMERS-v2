@@ -17,7 +17,7 @@ import { getAppVersion } from './src/services/api';
 import * as Notifications from 'expo-notifications';
 import { API_BASE, COLORS } from './src/constants/theme';
 
-const APP_VERSION_CODE = 31;
+const APP_VERSION_CODE = 32;
 const DISMISSED_KEY = 'update_dismissed_vc';
 
 export default function App() {
