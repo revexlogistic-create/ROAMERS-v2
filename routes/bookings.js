@@ -48,6 +48,20 @@ router.post('/', optionalAuth, audit.audit('booking:create'), async function(req
   /* Validate addons against experience (ignore unknown addons) */
   var serverTotal = adults * adultPrc + children * childPrc;
 
+  /* Apply promo code discount (server-side validation) */
+  var promoCode = null;
+  var discountPct = 0;
+  if (f.promoCode) {
+    var code = String(f.promoCode).toUpperCase().trim();
+    var promo = db.promos ? db.promos.find(function(p){ return p.code === code && p.active; }) : null;
+    if (promo && (!promo.maxUses || promo.usedCount < promo.maxUses)) {
+      discountPct = Number(promo.discountPct) || 0;
+      promoCode   = code;
+      serverTotal = Math.round(serverTotal * (1 - discountPct / 100));
+      if (db.promos) db.promos.update(function(p){ return p.code === code; }, { usedCount: (promo.usedCount || 0) + 1 });
+    }
+  }
+
   /* Generate a cryptographically random booking reference */
   var uid  = uuidv4().replace(/-/g, '').toUpperCase().slice(0, 8);
   var id   = 'RC-' + uid;
@@ -74,6 +88,8 @@ router.post('/', optionalAuth, audit.audit('booking:create'), async function(req
     country:  f.country ? String(f.country).trim() : 'Morocco',
     /* Server-calculated total — client value ignored */
     total:    serverTotal,
+    promoCode:   promoCode,
+    discountPct: discountPct,
     status:   'pending',
     payment:  'unpaid',
     created:  new Date().toISOString()

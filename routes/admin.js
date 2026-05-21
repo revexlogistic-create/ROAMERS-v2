@@ -462,6 +462,56 @@ router.delete('/partners/:id', auditMod.audit('admin:partner:delete'), async fun
   res.json({ message: 'Partner deleted', id: req.params.id });
 });
 
+/* ── PROMO CODES ─────────────────────────────────────────────── */
+router.get('/promos', function(req, res) {
+  res.json({ promos: db.promos.all().sort(function(a, b){ return new Date(b.created) - new Date(a.created); }) });
+});
+
+router.post('/promos', auditMod.audit('admin:promo:create'), async function(req, res) {
+  var f = req.body || {};
+  if (!f.code || !String(f.code).trim()) return res.status(400).json({ error: 'Code requis' });
+  var code = String(f.code).toUpperCase().replace(/\s/g, '');
+  if (db.promos.find(function(p){ return p.code === code; })) {
+    return res.status(409).json({ error: 'Ce code existe déjà' });
+  }
+  var doc = db.promos.insert({
+    id:          require('crypto').randomUUID(),
+    code:        code,
+    label:       f.label ? String(f.label).trim() : ('−' + (f.discountPct || 0) + '%'),
+    discountPct: Math.max(1, Math.min(100, parseInt(f.discountPct) || 10)),
+    maxUses:     f.maxUses ? parseInt(f.maxUses) || null : null,
+    usedCount:   0,
+    active:      true,
+    partner:     f.partner ? String(f.partner).trim() : '',
+    created:     new Date().toISOString()
+  });
+  await db.promos.flush();
+  res.status(201).json({ promo: doc });
+});
+
+router.put('/promos/:id', auditMod.audit('admin:promo:update'), async function(req, res) {
+  var existing = db.promos.find(function(p){ return p.id === req.params.id; });
+  if (!existing) return res.status(404).json({ error: 'Promo not found' });
+  var f = req.body || {};
+  var changes = {};
+  if (f.label       !== undefined) changes.label       = String(f.label).trim();
+  if (f.discountPct !== undefined) changes.discountPct = Math.max(1, Math.min(100, parseInt(f.discountPct) || existing.discountPct));
+  if (f.maxUses     !== undefined) changes.maxUses     = f.maxUses ? parseInt(f.maxUses) : null;
+  if (f.active      !== undefined) changes.active      = !!f.active;
+  if (f.partner     !== undefined) changes.partner     = String(f.partner).trim();
+  db.promos.update(function(p){ return p.id === req.params.id; }, changes);
+  await db.promos.flush();
+  res.json({ promo: db.promos.find(function(p){ return p.id === req.params.id; }) });
+});
+
+router.delete('/promos/:id', auditMod.audit('admin:promo:delete'), async function(req, res) {
+  var p = db.promos.find(function(x){ return x.id === req.params.id; });
+  if (!p) return res.status(404).json({ error: 'Promo not found' });
+  db.promos.remove(function(x){ return x.id === req.params.id; });
+  await db.promos.flush();
+  res.json({ message: 'Promo deleted', id: req.params.id });
+});
+
 /* ── SETTINGS ────────────────────────────────────────────────── */
 
 /* Whitelist of top-level settings keys that are allowed (issue #3) */

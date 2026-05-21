@@ -49,7 +49,7 @@ if (process.env.MONGODB_URI) {
     return _mdb;
   }
 
-  const TABLES = ['users','bookings','plans','teams','contacts','experiences','activities','partners','settings','itineraries','reviews','pushTokens','notifications'];
+  const TABLES = ['users','bookings','plans','teams','contacts','experiences','activities','partners','settings','itineraries','reviews','pushTokens','notifications','promos'];
   const _caches = {};
   TABLES.forEach(function(t){ _caches[t] = []; });
 
@@ -100,7 +100,8 @@ if (process.env.MONGODB_URI) {
     itineraries:   makeTable('itineraries'),
     reviews:       makeTable('reviews'),
     pushTokens:    makeTable('pushTokens'),
-    notifications: makeTable('notifications')
+    notifications: makeTable('notifications'),
+    promos:        makeTable('promos')
   };
 
   /* Called once by server.js before accepting requests */
@@ -177,7 +178,8 @@ if (process.env.MONGODB_URI) {
     itineraries:   createTable('itineraries'),
     reviews:       createTable('reviews'),
     pushTokens:    createTable('pushTokens'),
-    notifications: createTable('notifications')
+    notifications: createTable('notifications'),
+    promos:        createTable('promos')
   };
 
   db._init = async function(){ /* no-op for file mode */ };

@@ -398,6 +398,7 @@ label.fl{display:block;font-size:11px;font-weight:600;letter-spacing:.05em;text-
   <div class="sb-item" onclick="goPage('itineraries')" id="nav-itineraries"><div class="si">🛤️</div><span>Itinéraires App</span><span class="badge green" id="itinBadge" style="display:none">0</span></div>
   <div class="sb-item" onclick="goPage('notifications')" id="nav-notifications"><div class="si">🔔</div><span>Notifications</span><span class="badge green" id="notifTokenBadge" style="display:none">0</span></div>
   <div class="sb-item" onclick="goPage('partners')" id="nav-partners"><div class="si">🤝</div><span>Partnerships</span></div>
+  <div class="sb-item" onclick="goPage('promos')" id="nav-promos"><div class="si">🎁</div><span>Promo Codes</span></div>
   <div class="sb-item" onclick="goPage('analytics')" id="nav-analytics"><div class="si">📈</div><span>Analytics</span></div>
 
   <div class="sb-section-label">System</div>
@@ -603,6 +604,9 @@ function loadAll(cb) {
   api('GET','/admin/partners').then(function(d){
     if(d.partners) DB.partners = d.partners;
   }).catch(function(){}).then(done);
+  api('GET','/admin/promos').then(function(d){
+    if(d.promos) DB.promos = d.promos;
+  }).catch(function(){}).then(done);
   api('GET','/admin/settings').then(function(d){
     if(d.settings) {
       DB.settings = d.settings;
@@ -640,6 +644,7 @@ var DB = {
   teams: [],
   activities: [],
   partners: [],
+  promos: [],
   messages: [],
   itineraries: [],
   adminUsers: [],
@@ -712,11 +717,11 @@ function goPage(page) {
   document.querySelectorAll('.sb-item').forEach(function(el){ el.classList.remove('active'); });
   var navEl = document.getElementById('nav-'+page);
   if (navEl) navEl.classList.add('active');
-  var titles = {overview:'Overview',bookings:'Bookings',trips:'Trips (Voyages)',activities:'Activities & Experiences',customers:'Customers',media:'Media Library',cms:'Website Content (CMS)',partners:'Partnerships & Programs',analytics:'Analytics',users:'Users & Roles',settings:'Settings',plans:'Plan Requests',teams:'Team Building Requests',messages:'Messages',itineraries:'Itinéraires App',notifications:'Notifications Push'};
+  var titles = {overview:'Overview',bookings:'Bookings',trips:'Trips (Voyages)',activities:'Activities & Experiences',customers:'Customers',media:'Media Library',cms:'Website Content (CMS)',partners:'Partnerships & Programs',promos:'Promo Codes & Remises',analytics:'Analytics',users:'Users & Roles',settings:'Settings',plans:'Plan Requests',teams:'Team Building Requests',messages:'Messages',itineraries:'Itinéraires App',notifications:'Notifications Push'};
   document.getElementById('pageTitle').textContent = titles[page] || page;
   Object.values(APP.chartInstances).forEach(function(c){ if(c) c.destroy(); });
   APP.chartInstances = {};
-  var renders = {overview:renderOverview,bookings:renderBookings,trips:renderTrips,activities:renderActivities,customers:renderCustomers,media:renderMedia,cms:renderCMS,partners:renderPartners,analytics:renderAnalytics,users:renderUsers,settings:renderSettings,plans:renderPlanRequests,teams:renderTeamRequests,messages:renderMessages,itineraries:renderItineraries,notifications:renderNotifications};
+  var renders = {overview:renderOverview,bookings:renderBookings,trips:renderTrips,activities:renderActivities,customers:renderCustomers,media:renderMedia,cms:renderCMS,partners:renderPartners,promos:renderPromos,analytics:renderAnalytics,users:renderUsers,settings:renderSettings,plans:renderPlanRequests,teams:renderTeamRequests,messages:renderMessages,itineraries:renderItineraries,notifications:renderNotifications};
   document.getElementById('content').innerHTML = (renders[page] || renderOverview)();
   if (page === 'overview') initOverviewCharts();
   if (page === 'analytics') initAnalyticsCharts();
@@ -1350,6 +1355,101 @@ function renderPartners() {
       +'</div>';
     }).join('')
   +'</div>';
+}
+
+/* ══════════════════════════════════════════════════
+   PAGE: PROMO CODES
+══════════════════════════════════════════════════ */
+function renderPromos() {
+  var html = '<div class="page-header"><div><h1>🎁 Codes Promo &amp; Remises Partenaires</h1>'
+    +'<p>Créez et gérez les codes de réduction pour partenaires et campagnes marketing.</p></div>'
+    +'<div class="ph-actions"><button class="btn btn-primary" onclick="openPromoModal()">+ Nouveau code</button></div></div>';
+
+  html += '<div class="table-wrap"><div class="tbl-toolbar">'
+    +'<div class="tbl-search"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6" cy="6" r="4" stroke="#94A3B8" stroke-width="1.3"/><path d="M9.5 9.5l2 2" stroke="#94A3B8" stroke-width="1.3" stroke-linecap="round"/></svg>'
+    +'<input type="text" placeholder="Rechercher un code…" oninput="filterTable(this.value,\'promoTable\')"></div>'
+    +'<span class="tbl-count">'+DB.promos.length+' codes</span></div>'
+    +'<table class="tbl" id="promoTable"><thead><tr>'
+    +'<th>Code</th><th>Label</th><th>Remise</th><th>Utilisations</th><th>Max</th><th>Partenaire</th><th>Statut</th><th>Créé</th><th>Actions</th>'
+    +'</tr></thead><tbody>';
+
+  if (DB.promos.length === 0) {
+    html += '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:28px">Aucun code promo</td></tr>';
+  } else {
+    DB.promos.forEach(function(p) {
+      var statusColor = p.active ? 'var(--green)' : 'var(--red)';
+      var statusLabel = p.active ? 'Actif' : 'Inactif';
+      var maxLabel    = p.maxUses ? p.maxUses : '∞';
+      html += '<tr>'
+        +'<td><code style="background:var(--surface2);padding:2px 7px;border-radius:4px;font-size:13px;font-weight:700;color:var(--primary)">'+p.code+'</code></td>'
+        +'<td>'+escH(p.label||'')+'</td>'
+        +'<td><strong style="color:var(--green)">−'+p.discountPct+'%</strong></td>'
+        +'<td>'+p.usedCount+'</td>'
+        +'<td>'+maxLabel+'</td>'
+        +'<td>'+escH(p.partner||'—')+'</td>'
+        +'<td><span style="color:'+statusColor+';font-weight:700">'+statusLabel+'</span></td>'
+        +'<td style="font-size:11px;color:var(--text3)">'+new Date(p.created).toLocaleDateString('fr-FR')+'</td>'
+        +'<td style="display:flex;gap:6px">'
+        +'<button class="btn btn-secondary btn-sm btn-icon" onclick="editPromo('+JSON.stringify(p).replace(/"/g,\'&quot;\')+\')" title="Modifier">✏️</button>'
+        +'<button class="btn btn-danger btn-sm btn-icon" onclick="deletePromo(\''+p.id+'\')" title="Supprimer">🗑</button>'
+        +'</td></tr>';
+    });
+  }
+  html += '</tbody></table></div>';
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+function openPromoModal(existing) {
+  var isEdit = !!existing;
+  var title  = isEdit ? 'Modifier le code' : 'Nouveau code promo';
+  var html = '<div class="modal-header"><h3>'+title+'</h3><button class="modal-close" onclick="closeModal()">✕</button></div>'
+    +'<div class="modal-body">'
+    +'<label>Code *</label>'
+    +'<input id="pm-code" class="inp" style="text-transform:uppercase;letter-spacing:1px" placeholder="Ex: PARTNER20" value="'+(isEdit?escH(existing.code||''):'')+'" '+(isEdit?'readonly':'')+' />'
+    +'<label>Label affiché</label>'
+    +'<input id="pm-label" class="inp" placeholder="Ex: −20% Partenaire Atlas" value="'+(isEdit?escH(existing.label||''):'')+'" />'
+    +'<label>Remise (%)</label>'
+    +'<input id="pm-discount" class="inp" type="number" min="1" max="100" placeholder="10" value="'+(isEdit?existing.discountPct:10)+'" />'
+    +'<label>Max utilisations (vide = illimité)</label>'
+    +'<input id="pm-maxuses" class="inp" type="number" min="1" placeholder="Illimité" value="'+(isEdit&&existing.maxUses?existing.maxUses:'')+'" />'
+    +'<label>Partenaire (optionnel)</label>'
+    +'<input id="pm-partner" class="inp" placeholder="Nom du partenaire" value="'+(isEdit?escH(existing.partner||''):'')+'" />'
+    +(isEdit?'<label>Statut</label><select id="pm-active" class="inp"><option value="1"'+(existing.active?' selected':'')+'>Actif</option><option value="0"'+(!existing.active?' selected':'')+'>Inactif</option></select>':'')
+    +'</div>'
+    +'<div class="modal-footer">'
+    +'<button class="btn btn-secondary" onclick="closeModal()">Annuler</button>'
+    +'<button class="btn btn-primary" onclick="savePromo('+(isEdit?'\''+existing.id+'\'':null)+')">'+( isEdit?'Enregistrer':'Créer')+'</button>'
+    +'</div>';
+  openModal(html);
+}
+function editPromo(p){ openPromoModal(p); }
+function deletePromo(id){
+  if(!confirm('Supprimer ce code promo ?')) return;
+  api('DELETE','/admin/promos/'+id).then(function(){
+    DB.promos = DB.promos.filter(function(p){return p.id!==id;});
+    goPage('promos'); showToast('Code supprimé','success');
+  }).catch(function(e){showToast(e.message,'error');});
+}
+function savePromo(id){
+  var code    = document.getElementById('pm-code').value.toUpperCase().trim();
+  var label   = document.getElementById('pm-label').value.trim();
+  var disc    = parseInt(document.getElementById('pm-discount').value)||10;
+  var maxU    = parseInt(document.getElementById('pm-maxuses').value)||null;
+  var partner = document.getElementById('pm-partner').value.trim();
+  var activeEl= document.getElementById('pm-active');
+  var body = {code:code,label:label,discountPct:disc,maxUses:maxU,partner:partner};
+  if(activeEl) body.active = activeEl.value==='1';
+  if(id){
+    api('PUT','/admin/promos/'+id,body).then(function(d){
+      DB.promos = DB.promos.map(function(p){return p.id===id?d.promo:p;});
+      closeModal(); goPage('promos'); showToast('Code mis à jour','success');
+    }).catch(function(e){showToast(e.message,'error');});
+  } else {
+    api('POST','/admin/promos',body).then(function(d){
+      DB.promos.unshift(d.promo);
+      closeModal(); goPage('promos'); showToast('Code créé','success');
+    }).catch(function(e){showToast(e.message,'error');});
+  }
 }
 
 /* ══════════════════════════════════════════════════

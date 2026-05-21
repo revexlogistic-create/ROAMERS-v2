@@ -220,10 +220,10 @@ app.get('/api/health', function(req, res) {
 /* ── APP VERSION (mobile update check) ──────────────────────── */
 app.get('/api/app-version', function(req, res) {
   res.json({
-    versionCode: 30,
-    versionName: '1.0.0',
+    versionCode: 31,
+    versionName: '1.0.1',
     downloadUrl: '/downloads/roamers.apk',
-    releaseNotes: 'Icônes minimalistes sur la carte, amélioration des demandes Plan My Trip, corrections de bugs.'
+    releaseNotes: 'Tags carte → détail activité, connexion requise pour réserver, codes promo partenaires, points Roamers dans le profil.'
   });
 });
 
@@ -364,6 +364,24 @@ app.get('/api/activities', function(req, res) {
     .filter(function(a){ return a.status === 'active'; })
     .sort(function(a, b){ return new Date(a.created) - new Date(b.created); });
   res.json({ activities: acts });
+});
+
+app.get('/api/activities/:id', function(req, res) {
+  var act = db.activities.find(function(a){ return a.id === req.params.id; });
+  if (!act || act.status !== 'active') return res.status(404).json({ error: 'Activity not found' });
+  res.json({ activity: act });
+});
+
+/* ── PROMO CODES (public validate) ──────────────────────────── */
+app.get('/api/promos/validate', function(req, res) {
+  var code = (req.query.code || '').toUpperCase().trim();
+  if (!code) return res.status(400).json({ error: 'Code requis' });
+  var promo = db.promos.find(function(p){ return p.code === code && p.active; });
+  if (!promo) return res.status(404).json({ error: 'Code invalide ou expiré' });
+  if (promo.maxUses && promo.usedCount >= promo.maxUses) {
+    return res.status(400).json({ error: 'Code épuisé' });
+  }
+  res.json({ promo: { code: promo.code, discountPct: promo.discountPct, label: promo.label || ('−' + promo.discountPct + '%') } });
 });
 
 /* ── STATIC FILES ────────────────────────────────────────────── */
