@@ -80,6 +80,7 @@ router.post('/register', async function(req, res) {
   if (!f.fname || !String(f.fname).trim()) return res.status(400).json({ error: 'First name required' });
   if (!f.lname || !String(f.lname).trim()) return res.status(400).json({ error: 'Last name required' });
   if (!validate.isEmail(f.email))          return res.status(400).json({ error: 'Valid email address required' });
+  if (!f.phone || !String(f.phone).trim()) return res.status(400).json({ error: 'Phone number required' });
 
   var pwErr = validate.passwordError(f.password);
   if (pwErr) return res.status(400).json({ error: pwErr });
