@@ -148,11 +148,15 @@ router.post('/register', async function(req, res) {
     console.error('[OTP send error]', err.message);
   }
 
+  var noProvider = !process.env.WHATSAPP_PROVIDER;
+
   res.status(201).json({
     requireVerification: true,
-    phone:  maskPhone(phone),
-    email:  user.email,
+    phone:   maskPhone(phone),
+    email:   user.email,
     otpSent: otpSent,
+    /* DEV: expose code in response when no WhatsApp provider is configured */
+    ...(noProvider ? { devCode: otp } : {}),
   });
 });
 
@@ -222,10 +226,15 @@ router.post('/resend-otp', async function(req, res) {
   db.users.update(function(u){ return u.id === user.id; }, { otp: otp, otpExpiry: expiry, otpAttempts: 0 });
   await db.users.flush();
 
+  var noProvider = !process.env.WHATSAPP_PROVIDER;
   try {
     await wa.sendOtp(user.phone, otp);
     auditMod.log('user:otp:resent', user.id, ip);
-    res.json({ sent: true, phone: maskPhone(user.phone) });
+    res.json({
+      sent:  true,
+      phone: maskPhone(user.phone),
+      ...(noProvider ? { devCode: otp } : {}),
+    });
   } catch (err) {
     console.error('[OTP resend error]', err.message);
     res.status(500).json({ error: 'Failed to send code. Please try again.' });
