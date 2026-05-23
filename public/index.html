@@ -1771,7 +1771,7 @@ function go(pg,param){
   window.scrollTo({top:0,behavior:'smooth'});
   syncNav();
   syncAppShell(pg);
-  setTimeout(function(){initReveal();initDetailSlider();if(pg==='home')initHeroCanvas();if(pg==='exp-detail'&&ST.param)loadExpReviews(ST.param);},80);
+  setTimeout(function(){initReveal();initDetailSlider();if(pg==='home')initHeroCanvas();if(pg==='exp-detail'&&ST.param){loadExpReviews(ST.param);loadExpGallery(ST.param);}},80);
   /* Close mobile drawer if open */
   var mob2=document.getElementById('mob');
   if(mob2 && mob2.classList.contains('open')){mob2.classList.remove('open');document.body.style.overflow='';}
@@ -1925,23 +1925,78 @@ function toggleMob(){
 function getUsers(){ return JSON.parse(localStorage.getItem('rc_users')||'[]'); }
 function saveUsers(u){ localStorage.setItem('rc_users',JSON.stringify(u)); }
 
+/* ── OTP verification state ─────────────────────────────────── */
+var _otpEmail = '';
+
+function showOtpPanel(maskedPhone, devCode) {
+  switchTab2('otp');
+  var ph = document.getElementById('otpPhone');
+  if (ph) ph.textContent = maskedPhone || 'votre WhatsApp';
+  var devNote = document.getElementById('otpDevNote');
+  if (devNote) devNote.style.display = devCode ? 'block' : 'none';
+  var codeEl = document.getElementById('otpDevCodeText');
+  if (codeEl && devCode) codeEl.textContent = devCode;
+  var inp = document.getElementById('otpCode');
+  if (inp) { inp.value = ''; setTimeout(function(){ inp.focus(); }, 80); }
+}
+
+function doVerifyOtp() {
+  var code = v('otpCode').replace(/\s/g,'');
+  if (!code || code.length < 4) { showErr('otpErr','Entrez le code reçu sur WhatsApp.'); return; }
+  var btn = document.getElementById('otpVerifyBtn');
+  if (btn) { btn.disabled=true; btn.textContent='⏳ Vérification…'; }
+  apiPost('/auth/verify-otp',{ email:_otpEmail, code:code })
+    .then(function(d){
+      localStorage.setItem('rc_token', d.token);
+      localStorage.setItem('rc_user', JSON.stringify(d.user));
+      ST.user = d.user; syncNav();
+      if (d.user.role==='admin') { sessionStorage.setItem('rc_admin_auth','true'); window.location.href='admin.html'; return; }
+      go('dashboard','overview');
+      toast('✓ Compte vérifié ! Bienvenue, '+d.user.fname+' 🎉');
+    })
+    .catch(function(err){
+      showErr('otpErr', err.message||'Code incorrect.');
+      if (btn) { btn.disabled=false; btn.textContent='Vérifier et continuer →'; }
+    });
+}
+
+function doResendOtp() {
+  var btn = document.getElementById('otpResendBtn');
+  if (btn) { btn.disabled=true; btn.textContent='Envoi…'; }
+  apiPost('/auth/resend-otp',{ email:_otpEmail })
+    .then(function(d){
+      toast('✓ Nouveau code envoyé sur '+(d.phone||'votre WhatsApp'));
+      var devNote = document.getElementById('otpDevNote');
+      var codeEl  = document.getElementById('otpDevCodeText');
+      if (d.devCode) { if(devNote) devNote.style.display='block'; if(codeEl) codeEl.textContent=d.devCode; }
+      if (btn) { btn.textContent='✓ Envoyé !'; setTimeout(function(){ btn.disabled=false; btn.textContent='Renvoyer le code'; },30000); }
+    })
+    .catch(function(err){
+      toast(err.message||'Erreur lors du renvoi.','warn');
+      if (btn) { btn.disabled=false; btn.textContent='Renvoyer le code'; }
+    });
+}
+
 function doRegister(){
   var fn=v('rFn'),ln=v('rLn'),em=v('rEm'),ph=v('rPh'),pw=v('rPw'),pw2=v('rPw2');
   var tc=document.getElementById('rTc');
   var co=document.getElementById('rCo');
   if(!fn||!ln){showErr('regErr','Veuillez entrer votre nom complet.');return;}
   if(!em||!em.includes('@')){showErr('regErr','Email invalide.');return;}
-  if(pw.length<6){showErr('regErr','Le mot de passe doit comporter au moins 6 caractères.');return;}
+  if(!ph||ph.trim().length<8){showErr('regErr','Numéro de téléphone requis (WhatsApp) pour la vérification.');return;}
+  if(pw.length<8){showErr('regErr','Le mot de passe doit comporter au moins 8 caractères.');return;}
   if(pw!==pw2){showErr('regErr','Les mots de passe ne correspondent pas.');return;}
   if(tc&&!tc.checked){showErr('regErr','Veuillez accepter les conditions d\'utilisation.');return;}
   apiPost('/auth/register',{fname:fn,lname:ln,email:em,password:pw,phone:ph||'',country:co?co.value:'Morocco'})
     .then(function(d){
-      localStorage.setItem('rc_token', d.token);
-      localStorage.setItem('rc_user', JSON.stringify(d.user));
-      ST.user=d.user;
-      syncNav();
-      go('dashboard','overview');
-      toast('Bienvenue sur Roamers Community, '+fn+' !');
+      if(d.requireVerification){
+        _otpEmail = d.email || em;
+        showOtpPanel(d.phone, d.devCode);
+        if(!d.otpSent) toast('WhatsApp non configuré — utilisez le code affiché ci-dessous.','warn');
+        return;
+      }
+      /* Fallback (shouldn't happen) */
+      if(d.token){ localStorage.setItem('rc_token',d.token); localStorage.setItem('rc_user',JSON.stringify(d.user)); ST.user=d.user; syncNav(); go('dashboard','overview'); toast('Bienvenue, '+fn+' !'); }
     }).catch(function(err){showErr('regErr', err.message||'Erreur lors de l\'inscription.');});
 }
 
@@ -1964,6 +2019,13 @@ function doLogin(){
       go('dashboard','overview');
       toast('Bon retour, '+d.user.fname+' !');
     }).catch(function(err){
+      if(err.data && err.data.requireVerification){
+        _otpEmail = err.data.email || em;
+        showOtpPanel(err.data.phone||'', null);
+        showErr('otpErr','Votre compte n\'est pas encore vérifié. Un nouveau code a été envoyé sur votre WhatsApp.');
+        if(btn){btn.textContent='Se connecter';btn.disabled=false;}
+        return;
+      }
       showErr('loginErr',err.message||'Email ou mot de passe incorrect.');
       if(btn){btn.textContent='Se connecter';btn.disabled=false;}
     });
@@ -2266,10 +2328,11 @@ function confirmBk(){
       syncNav();
       toast('Réservation enregistrée ! Effectuez votre virement avec la réf : '+b.ref);
     } else {
-      ST.bk.step=5;
+      /* No online payment configured — show WhatsApp contact step */
+      ST.bk.payMethod='contact';
+      ST.bk.step=4;
       renderBk();
       syncNav();
-      toast('Réservation confirmée ! Réf : '+b.ref);
     }
   }).catch(function(){
     b.ref='RC-'+Math.random().toString(36).substr(2,4).toUpperCase()+Date.now().toString().slice(-4);
@@ -2397,6 +2460,36 @@ function renderBk(){
         +'<p style="font-size:11px;color:var(--mut);text-align:center;line-height:1.6">Indiquez la référence <strong>'+b.ref+'</strong> dans le libellé du virement. Votre réservation sera validée dès réception.</p>'
         +'</div>'
         +'<div class="mf"><button class="btn btn-s" onclick="ST.bk.step=3;renderBk()">Retour</button><button class="btn btn-r btn-lg" onclick="ST.bk.step=5;renderBk();syncNav();toast(\'✓ Réservation confirmée ! Réf : '+b.ref+'\')">✓ J\'ai effectué le virement</button></div>';
+    } else if(b.payMethod==='contact'){
+      /* ── WhatsApp / contact-based payment (no online payment configured) ── */
+      var waPayMsg=encodeURIComponent(
+        '💳 PAIEMENT RÉSERVATION — ROAMERS COMMUNITY\n'
+        +'Référence : '+b.ref+'\n'
+        +'Voyage : '+b.exp.title+'\n'
+        +'Date : '+b.date+'\n'
+        +'Participants : '+b.adults+' adulte'+(b.adults>1?'s':'')+(b.children?' + '+b.children+' enfant'+(b.children>1?'s':''):'')+'\n'
+        +'Montant total : '+p.total.toLocaleString()+' MAD\n\n'
+        +'Bonjour, je souhaite finaliser le paiement de ma réservation.'
+      );
+      body='<div class="mm">'
+        +'<div style="text-align:center;margin-bottom:20px">'
+          +'<div style="width:60px;height:60px;background:rgba(37,211,102,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px">💬</div>'
+          +'<h3 style="font-size:17px;font-weight:700;margin-bottom:6px">Finalisez votre paiement</h3>'
+          +'<p style="font-size:13px;color:var(--mut);line-height:1.6">Votre réservation est enregistrée. Contactez-nous sur WhatsApp pour confirmer le paiement — notre équipe vous répondra dans les <strong style="color:var(--sand)">30 minutes</strong>.</p>'
+        +'</div>'
+        +'<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;margin-bottom:16px">'
+          +'<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:12px;color:var(--mut)">Référence</span><span style="font-size:13px;font-weight:800;color:var(--red);cursor:pointer" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+b.ref+'\').then(function(){toast(\'Référence copiée !\')})">'+b.ref+' 📋</span></div>'
+          +'<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:12px;color:var(--mut)">Voyage</span><span style="font-size:13px;font-weight:600;color:var(--text)">'+b.exp.title+'</span></div>'
+          +'<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:12px;color:var(--mut)">Date</span><span style="font-size:13px;font-weight:600;color:var(--text)">'+b.date+'</span></div>'
+          +'<div style="display:flex;justify-content:space-between;padding:8px 0"><span style="font-size:12px;color:var(--mut)">Montant total</span><span style="font-size:16px;font-weight:800;color:var(--sand)">'+p.total.toLocaleString()+' MAD</span></div>'
+        +'</div>'
+        +'<a href="https://wa.me/'+SETTINGS.whatsapp+'?text='+waPayMsg+'" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;background:#25D366;color:#fff;border-radius:14px;padding:15px;font-size:15px;font-weight:700;text-decoration:none;margin-bottom:10px">'
+          +'<svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.12.553 4.107 1.522 5.836L.057 23.716a.75.75 0 00.92.921l5.963-1.461A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.722 9.722 0 01-4.96-1.361l-.355-.21-3.678.901.923-3.58-.23-.368A9.75 9.75 0 1112 21.75z"/></svg>'
+          +'Payer via WhatsApp'
+        +'</a>'
+        +'<p style="font-size:11px;color:var(--mut);text-align:center;line-height:1.6">Un conseiller vous enverra les instructions de paiement (virement, carte ou espèces) selon votre préférence.</p>'
+      +'</div>'
+      +'<div class="mf"><button class="btn btn-s" onclick="ST.bk.step=3;renderBk()">Retour</button><button class="btn btn-r btn-lg" onclick="ST.bk.step=5;renderBk();syncNav();toast(\'✓ Réservation confirmée ! Réf : '+b.ref+'\')">✓ J\'ai contacté l\'équipe</button></div>';
     } else {
       /* ── Stripe card payment ── */
       body='<div class="mm"><div style="margin-bottom:6px;text-align:center"><p style="font-size:13px;color:var(--mut);margin-bottom:4px">Montant à régler</p><p style="font-size:22px;font-weight:700;color:var(--red)">'+p.total.toLocaleString()+' MAD</p></div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;margin-bottom:4px"><div id="stripe-payment-element" style="min-height:64px"></div></div><p style="font-size:11px;color:var(--mut);text-align:center;margin-top:6px">🔒 Paiement sécurisé par Stripe — vos données bancaires ne nous sont jamais transmises</p></div><div class="mf"><button class="btn btn-s" onclick="ST.bk.step=3;renderBk()">Retour</button><button id="stripe-pay-btn" class="btn btn-r btn-lg" onclick="submitStripePayment()">💳 Payer '+p.total.toLocaleString()+' MAD</button></div>';
@@ -3646,7 +3739,9 @@ function openActBk(id){
   // Reuse the main booking modal with a synthetic exp-like object
   var synth={id:id,title:a.title,loc:a.location,dur:a.duration,days:1,nights:0,price:a.price,pChild:a.pChild,minP:a.minP||1,maxP:a.maxP,img:a.img};
   var u=ST.user;
-  ST.bk={exp:synth,step:1,date:'',adults:1,children:0,addons:{},name:u?u.fname:'',last:u?u.lname:'',email:u?u.email:'',phone:u?u.phone||'':'',country:u?u.country||'Morocco':'Morocco',notes:'',ref:''};
+  ST.bk={exp:synth,step:1,date:'',adults:1,children:0,addons:{},
+    payMethod: ST.stripeKey ? 'stripe' : (SETTINGS.bankRib||SETTINGS.bankIban||SETTINGS.bankBenef ? 'virement' : 'stripe'),
+    name:u?u.fname:'',last:u?u.lname:'',email:u?u.email:'',phone:u?u.phone||'':'',country:u?u.country||'Morocco':'Morocco',notes:'',ref:''};
   document.getElementById('bkModal').style.display='flex';
   renderBk();
   document.body.style.overflow='hidden';
@@ -5437,6 +5532,27 @@ function pgLogin(){
   +'<button class="btn btn-r btn-full btn-lg" style="border-radius:12px" onclick="var em=v(\'fEm\');if(!em||!em.includes(\'@\')){toast(\'Enter a valid email\',\'warn\');return;}showOk(\'fgOk\',\'Reset link sent to \'+em+\'! Check your inbox.\')">Send Reset Link</button>'
   +'</div>'
 
+  /* OTP VERIFICATION */
+  +'<div id="otpForm" style="display:none">'
+  +'<button onclick="switchTab2(\'register\')" style="background:none;border:none;font-size:13px;color:var(--mut);cursor:pointer;margin-bottom:22px;font-family:inherit;display:flex;align-items:center;gap:5px">&larr; Retour</button>'
+  +'<div style="text-align:center;margin-bottom:22px">'
+    +'<div style="width:64px;height:64px;background:rgba(37,211,102,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 14px">💬</div>'
+    +'<h3 style="font-size:20px;font-weight:700;margin-bottom:7px">Vérifiez votre WhatsApp</h3>'
+    +'<p style="font-size:13px;color:var(--mut);line-height:1.6">Nous avons envoyé un code à 6 chiffres au<br><strong id="otpPhone" style="color:var(--txt)"></strong></p>'
+  +'</div>'
+  +'<div id="otpDevNote" style="display:none;background:rgba(217,184,122,.1);border:1px solid rgba(217,184,122,.3);border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:14px;text-align:center">'
+    +'⚠️ Mode dev — WhatsApp non configuré. Code : <strong id="otpDevCodeText" style="font-family:monospace;font-size:16px;letter-spacing:.15em;color:var(--red)"></strong>'
+  +'</div>'
+  +'<div class="a-err" id="otpErr"></div>'
+  +'<div class="fg">'
+    +'<label class="fl">Code de vérification</label>'
+    +'<input type="text" class="fi" id="otpCode" placeholder="1 2 3 4 5 6" maxlength="7" inputmode="numeric" autocomplete="one-time-code" style="text-align:center;font-size:24px;letter-spacing:.35em;font-weight:700;padding:14px" onkeydown="if(event.key===\'Enter\')doVerifyOtp()">'
+  +'</div>'
+  +'<button id="otpVerifyBtn" class="btn btn-r btn-full btn-lg" style="border-radius:12px;font-size:15px;padding:16px;margin-bottom:16px" onclick="doVerifyOtp()">Vérifier et continuer →</button>'
+  +'<p style="text-align:center;font-size:13px;color:var(--mut)">Vous n\'avez pas reçu le code ? &nbsp;<button id="otpResendBtn" onclick="doResendOtp()" style="background:none;border:none;color:var(--red);font-weight:700;cursor:pointer;font-size:13px;font-family:inherit">Renvoyer le code</button></p>'
+  +'<p style="text-align:center;font-size:11px;color:var(--mut);margin-top:8px;line-height:1.5">Le code expire dans 15 minutes. Assurez-vous que votre numéro WhatsApp est correct.</p>'
+  +'</div>'
+
   +'</div>'
   +'<div class="auth-right-foot">By signing in you agree to our <a href="#" style="color:var(--red)">Terms</a> and <a href="#" style="color:var(--red)">Privacy Policy</a></div>'
   +'</div>'
@@ -5474,16 +5590,19 @@ function setSlide(i){
 }
 
 function switchTab2(tab){
-  var lf=document.getElementById('lForm'),rf=document.getElementById('rForm'),ff=document.getElementById('fForm');
+  var lf=document.getElementById('lForm'),rf=document.getElementById('rForm'),ff=document.getElementById('fForm'),of=document.getElementById('otpForm');
   var lt=document.getElementById('lTab'),rt=document.getElementById('rTab');
   var hl=document.getElementById('authHeadline'),sl=document.getElementById('authSubline');
   if(lf)lf.style.display=tab==='login'?'block':'none';
   if(rf)rf.style.display=tab==='register'?'block':'none';
   if(ff)ff.style.display=tab==='forgot'?'block':'none';
+  if(of)of.style.display=tab==='otp'?'block':'none';
   if(lt)lt.classList.toggle('sel',tab==='login');
   if(rt)rt.classList.toggle('sel',tab==='register');
-  if(hl)hl.textContent=tab==='register'?'Join the community':'Welcome back';
-  if(sl)sl.textContent=tab==='register'?'Create your free account and start exploring Morocco adventures.':'Sign in to manage your adventures, wishlist, and bookings.';
+  var headlines={login:'Welcome back',register:'Join the community',forgot:'Reset password',otp:'Vérification WhatsApp'};
+  var sublines={login:'Sign in to manage your adventures, wishlist, and bookings.',register:'Create your free account and start exploring Morocco adventures.',forgot:'Enter your email and we will send you a reset link.',otp:'Entrez le code envoyé sur votre WhatsApp pour activer votre compte.'};
+  if(hl)hl.textContent=headlines[tab]||'Roamers Community';
+  if(sl)sl.textContent=sublines[tab]||'';
 }
 
 function switchToForgot(){
@@ -6172,14 +6291,14 @@ function apiPost(path, body) {
   var headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = 'Bearer ' + token;
   return fetch(API_BASE + path, { method: 'POST', headers: headers, body: JSON.stringify(body) })
-    .then(function(r){ return r.json().then(function(d){ if(!r.ok) throw new Error(d.error||'Error'); return d; }); });
+    .then(function(r){ return r.json().then(function(d){ if(!r.ok){ var e=new Error(d.error||'Error'); e.data=d; throw e; } return d; }); });
 }
 function apiGet(path) {
   var token = localStorage.getItem('rc_token');
   var headers = {};
   if (token) headers['Authorization'] = 'Bearer ' + token;
   return fetch(API_BASE + path, { headers: headers })
-    .then(function(r){ return r.json().then(function(d){ if(!r.ok) throw new Error(d.error||'Error'); return d; }); });
+    .then(function(r){ return r.json().then(function(d){ if(!r.ok){ var e=new Error(d.error||'Error'); e.data=d; throw e; } return d; }); });
 }
 function apiPatch(path, body) {
   var token = localStorage.getItem('rc_token');
@@ -6194,6 +6313,52 @@ function setRevStar(expId, val) {
   document.getElementById('rev-rating-' + expId).value = val;
   var stars = document.querySelectorAll('#star-pick-' + expId + ' span');
   stars.forEach(function(s, i) { s.style.color = i < val ? '#F5A623' : '#CBD5E1'; });
+}
+
+/* Load full gallery imgs for detail page (imgs stripped from list endpoint to keep payload small) */
+var _expGalleryCache = {};
+function loadExpGallery(expId) {
+  if (_expGalleryCache[expId]) { _applyExpGallery(expId, _expGalleryCache[expId]); return; }
+  apiGet('/experiences/' + expId).then(function(d) {
+    if (!d || !d.experience) return;
+    var imgs = d.experience.imgs;
+    if (!imgs || !imgs.length) return;
+    _expGalleryCache[expId] = imgs;
+    /* Only update if we're still on this detail page */
+    if (ST.pg === 'exp-detail' && ST.param === expId) _applyExpGallery(expId, imgs);
+  }).catch(function(){});
+}
+function _applyExpGallery(expId, imgs) {
+  var track = document.getElementById('dSlTrack');
+  if (!track || imgs.length <= 1) return;
+  /* Rebuild slides to match pgExpDetail slide structure */
+  var expObj = EXP.find(function(x){ return x.id === expId; });
+  var alt = expObj ? expObj.title : '';
+  track.innerHTML = imgs.map(function(src) {
+    return '<div class="d-sl-slide"><img src="' + src + '" alt="' + alt + '" loading="lazy"></div>';
+  }).join('');
+  track.dataset.cur = '0';
+  track.style.transform = 'translateX(0)';
+  /* Show / update dots */
+  var dotsEl = document.getElementById('dSlDots');
+  if (dotsEl) {
+    dotsEl.innerHTML = imgs.map(function(_, i) {
+      return '<span class="d-sl-dot' + (i === 0 ? ' act' : '') + '" onclick="dSlideTo(' + i + ')"></span>';
+    }).join('');
+    dotsEl.style.display = '';
+  } else {
+    /* Create dots container if it doesn't exist (single-image detail had none) */
+    var hero = track.closest('.d-hero');
+    if (hero) {
+      var nd = document.createElement('div');
+      nd.className = 'd-sl-dots'; nd.id = 'dSlDots';
+      nd.innerHTML = imgs.map(function(_, i) {
+        return '<span class="d-sl-dot' + (i === 0 ? ' act' : '') + '" onclick="dSlideTo(' + i + ')"></span>';
+      }).join('');
+      hero.appendChild(nd);
+    }
+  }
+  initDetailSlider();
 }
 
 async function loadExpReviews(expId) {
@@ -6354,7 +6519,15 @@ function loadActivitiesFromApi(){
   apiGet('/activities').then(function(d){
     if(!d || !Array.isArray(d.activities)) return;
     ACTS.length = 0;
-    d.activities.forEach(function(a){ ACTS.push(a); });
+    d.activities.forEach(function(a){
+      ACTS.push(Object.assign({}, a, {
+        cat:      a.category || 'adventure',
+        rating:   a.rating   != null ? a.rating : 4.8,
+        rev:      a.rev      != null ? a.rev    : 0,
+        sub:      a.sub      || '',
+        location: a.location || ''
+      }));
+    });
     if(ST.pg==='activities' || ST.pg==='act-detail'){
       var app=document.getElementById('app');
       if(app){ app.innerHTML = render(); setTimeout(initReveal,80); }

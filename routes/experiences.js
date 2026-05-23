@@ -53,6 +53,40 @@ function validateBody(b, partial) {
   return errors;
 }
 
+/* ── Per-date booking counts ─────────────────── */
+
+/**
+ * Returns a map of { dateRaw → participantCount } for active bookings
+ * (status != 'cancelled') on a given experience.
+ */
+function dateBookingMap(expId) {
+  var map = {};
+  db.bookings.all(function(b) {
+    return b.expId === expId && b.status !== 'cancelled';
+  }).forEach(function(b) {
+    var d = String(b.date || '').trim();
+    if (!d) return;
+    map[d] = (map[d] || 0) + (parseInt(b.adults) || 1) + (parseInt(b.children) || 0);
+  });
+  return map;
+}
+
+/**
+ * Enriches each date in an experience with { booked, full } fields.
+ * full = booked >= maxP
+ */
+function enrichExp(exp) {
+  var maxP = exp.maxP || 20;
+  var byDate = dateBookingMap(exp.id);
+  var dates = (exp.dates || []).map(function(d) {
+    var raw   = typeof d === 'object' ? (d.raw   || '') : String(d);
+    var label = typeof d === 'object' ? (d.label || raw) : raw;
+    var booked = byDate[raw] || 0;
+    return { raw: raw, label: label, booked: booked, full: booked >= maxP };
+  });
+  return Object.assign({}, exp, { dates: dates });
+}
+
 /* ── PUBLIC ─────────────────────────────────── */
 
 router.get('/', require('../middleware/auth').optionalAuth, function(req, res) {
@@ -78,13 +112,23 @@ router.get('/', require('../middleware/auth').optionalAuth, function(req, res) {
     if (so !== 0) return so;
     return (a.created||'') < (b.created||'') ? -1 : 1;
   });
-  res.json({ experiences: items });
+
+  /* Strip the gallery `imgs` array from the list response to keep the payload small.
+     The full gallery is returned by GET /:id (detail endpoint) only.
+     This prevents a ~4.5 MB response when some experiences store base64 images. */
+  var includeFull = req.query.full === '1' &&
+                    req.user && req.user.role === 'admin';
+  res.json({ experiences: items.map(function(e) {
+    var enriched = enrichExp(e);
+    if (!includeFull) { delete enriched.imgs; }
+    return enriched;
+  }) });
 });
 
 router.get('/:id', function(req, res) {
   const r = db.experiences.find(function(e){ return e.id === req.params.id; });
   if (!r) return res.status(404).json({ error: 'Experience not found' });
-  res.json({ experience: r });
+  res.json({ experience: enrichExp(r) });
 });
 
 /* ── ADMIN ──────────────────────────────────── */
@@ -123,6 +167,8 @@ router.post('/', adminOnly, async function(req, res) {
     exc:    asArray(b.exc),
     it:      Array.isArray(b.it) ? b.it : [],
     circuit: Array.isArray(b.circuit) ? b.circuit : (b.circuit ? String(b.circuit).split(',').map(function(s){return s.trim();}).filter(Boolean) : []),
+    circuitCoords: Array.isArray(b.circuitCoords) ? b.circuitCoords.filter(function(s){ return s && s.name; }).map(function(s){ return {name:String(s.name).trim(), lat:s.lat!=null?Number(s.lat):null, lng:s.lng!=null?Number(s.lng):null}; }) : [],
+    meetingPoint: b.meetingPoint ? String(b.meetingPoint).trim() : '',
     dif:     ALLOWED_DIFF.includes(b.dif) ? b.dif : 'Facile',
     dates:  Array.isArray(b.dates) ? b.dates : [],
     status: ALLOWED_STATUS.includes(b.status) ? b.status : 'open',
@@ -166,8 +212,10 @@ router.put('/:id', adminOnly, async function(req, res) {
   if (b.inc     !== undefined) changes.inc     = asArray(b.inc);
   if (b.exc     !== undefined) changes.exc     = asArray(b.exc);
   if (b.it      !== undefined) changes.it      = Array.isArray(b.it) ? b.it : [];
-  if (b.circuit !== undefined) changes.circuit = Array.isArray(b.circuit) ? b.circuit : (b.circuit ? String(b.circuit).split(',').map(function(s){return s.trim();}).filter(Boolean) : []);
-  if (b.dif     !== undefined) changes.dif     = ALLOWED_DIFF.includes(b.dif) ? b.dif : 'Facile';
+  if (b.circuit      !== undefined) changes.circuit      = Array.isArray(b.circuit) ? b.circuit : (b.circuit ? String(b.circuit).split(',').map(function(s){return s.trim();}).filter(Boolean) : []);
+  if (b.circuitCoords !== undefined) changes.circuitCoords = Array.isArray(b.circuitCoords) ? b.circuitCoords.filter(function(s){ return s && s.name; }).map(function(s){ return {name:String(s.name).trim(), lat:s.lat!=null?Number(s.lat):null, lng:s.lng!=null?Number(s.lng):null}; }) : [];
+  if (b.meetingPoint !== undefined) changes.meetingPoint = b.meetingPoint ? String(b.meetingPoint).trim() : '';
+  if (b.dif          !== undefined) changes.dif          = ALLOWED_DIFF.includes(b.dif) ? b.dif : 'Facile';
   if (b.dates   !== undefined) changes.dates   = Array.isArray(b.dates) ? b.dates : [];
   if (b.status  !== undefined) changes.status  = ALLOWED_STATUS.includes(b.status) ? b.status : 'open';
   if (b.booked  !== undefined) changes.booked  = parseInt(b.booked) || 0;
