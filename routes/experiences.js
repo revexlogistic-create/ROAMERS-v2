@@ -113,14 +113,29 @@ router.get('/', require('../middleware/auth').optionalAuth, function(req, res) {
     return (a.created||'') < (b.created||'') ? -1 : 1;
   });
 
-  /* Strip the gallery `imgs` array from the public list response to keep the payload small.
+  /* Strip heavy fields from the public list response to keep the payload small.
      Authenticated admins always receive the full object (needed by the admin edit UI).
-     The full gallery is also always returned by GET /:id (detail endpoint).
-     This prevents a ~4.5 MB response when some experiences store large base64 images. */
+     The full object (imgs + it step photos) is always returned by GET /:id.
+     Without stripping: ~4.5 MB (base64 gallery + itinerary photos).
+     With stripping:    ~90 KB (text metadata + hero URLs only). */
   var isAdmin = req.user && req.user.role === 'admin';
   res.json({ experiences: items.map(function(e) {
     var enriched = enrichExp(e);
-    if (!isAdmin) { delete enriched.imgs; }
+    if (!isAdmin) {
+      /* Remove gallery array (large base64 or many URLs not needed in card list) */
+      delete enriched.imgs;
+      /* Strip base64 images embedded in itinerary steps — each can be 50-150 KB.
+         Two experiences alone add ~1 MB to the list. The detail endpoint returns
+         the full itinerary with photos; the public site lazy-loads it on detail open. */
+      if (enriched.it && enriched.it.length) {
+        enriched.it = enriched.it.map(function(step) {
+          if (!step || typeof step.img !== 'string') return step;
+          return step.img.indexOf('data:') === 0
+            ? Object.assign({}, step, { img: '' })
+            : step;
+        });
+      }
+    }
     return enriched;
   }) });
 });

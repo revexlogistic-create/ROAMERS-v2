@@ -522,6 +522,8 @@ function mapExp(e) {
     tags: e.tags || [], dif: e.dif || '',
     services: e.inc || [], hi: e.hi || [], exc: e.exc || [],
     it: e.it || [], circuit: e.circuit || [],
+    circuitCoords: e.circuitCoords || [],
+    meetingPoint: e.meetingPoint || '',
     rating: e.rating || 4.8, rev: e.rev || 0,
     created: (e.created||'').split('T')[0]
   };
@@ -538,7 +540,7 @@ function mapBk(b) {
   });
 }
 function loadAll(cb) {
-  var left = 12;
+  var left = 13;
   function done(){ if(--left===0) cb(); }
   api('GET','/experiences?includeDrafts=1').then(function(d){
     if(d.experiences) DB.trips = d.experiences.map(mapExp);
@@ -1390,7 +1392,7 @@ function renderPromos() {
         +'<td><span style="color:'+statusColor+';font-weight:700">'+statusLabel+'</span></td>'
         +'<td style="font-size:11px;color:var(--text3)">'+new Date(p.created).toLocaleDateString('fr-FR')+'</td>'
         +'<td style="display:flex;gap:6px">'
-        +'<button class="btn btn-secondary btn-sm btn-icon" onclick="editPromo('+JSON.stringify(p).replace(/"/g,\'&quot;\')+\')" title="Modifier">✏️</button>'
+        +'<button class="btn btn-secondary btn-sm btn-icon" onclick="editPromo('+JSON.stringify(p).replace(/"/g,'&quot;')+')" title="Modifier">✏️</button>'
         +'<button class="btn btn-danger btn-sm btn-icon" onclick="deletePromo(\''+p.id+'\')" title="Supprimer">🗑</button>'
         +'</td></tr>';
     });
@@ -2250,9 +2252,15 @@ function openTripModal(id) {
       +'<div class="fg"><label class="fl">Description</label>'
         +'<textarea class="fi fi-area" id="mTripDesc" style="min-height:80px" placeholder="Décrivez l\'expérience en 2–3 phrases...">'+v('desc')+'</textarea>'
       +'</div>'
-      +'<div class="fg"><label class="fl">🗺️ Circuit cartographique</label>'
-        +'<textarea class="fi fi-area" id="mTripCircuit" style="min-height:46px" placeholder="Marrakech, Ouarzazate, Merzouga">'+(t&&t.circuit?t.circuit.join(', '):'')+'</textarea>'
-        +'<div style="font-size:11px;color:var(--text3);margin-top:3px">Étapes du circuit séparées par des virgules — tracé automatique sur la carte de l\'app</div>'
+      +'<div class="fg"><label class="fl">🗺️ Itinéraire sur la carte</label>'
+        +'<div id="mTripCircuitDisplay" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:28px">'
+          +((t&&t.circuitCoords&&t.circuitCoords.length)
+            ? t.circuitCoords.map(function(s,i){return '<div style="display:flex;align-items:center;gap:5px;background:var(--surface3);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600"><span style="background:var(--primary);color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">'+(i+1)+'</span>'+_esc(s.name)+'</div>';}).join('')
+            : (t&&t.circuit&&t.circuit.length ? t.circuit.map(function(s,i){return '<div style="display:flex;align-items:center;gap:5px;background:var(--surface3);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--text2)"><span style="background:#555;color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">'+(i+1)+'</span>'+_esc(s)+'</div>';}).join('') : '<span style="font-size:12px;color:var(--text3);font-style:italic">Aucune étape définie — cliquez sur le bouton pour configurer</span>'))
+        +'</div>'
+        +'<button type="button" class="btn btn-secondary" style="width:100%;justify-content:center;gap:6px" onclick="openCircuitPicker()">🗺️ &nbsp;Configurer l\'itinéraire sur la carte</button>'
+        +'<input type="hidden" id="mTripCircuit" value="'+_esc((t&&t.circuit?t.circuit.join(', '):''))+'">'
+        +'<input type="hidden" id="mTripCircuitCoords" value="'+_esc(t&&t.circuitCoords&&t.circuitCoords.length?JSON.stringify(t.circuitCoords):'')+'">'
       +'</div>'
       +'<div class="fg" style="margin-bottom:0"><label class="fl">📍 Point de rendez-vous</label>'
         +'<input class="fi" id="mTripMeet" placeholder="ex : Parking Jemaa el-Fna, Marrakech — 07h30" value="'+(t&&t.meetingPoint?_esc(t.meetingPoint):'')+'">'
@@ -2437,6 +2445,7 @@ function saveTrip(id) {
     imgs:        imgs,
     it:          _aIt.map(function(d){return {d:d.d,t:d.t,desc:d.desc,img:d.imgData||d.img};}).filter(function(d){return d.t;}),
     circuit:      ((document.getElementById('mTripCircuit')||{value:''}).value).split(',').map(function(s){return s.trim();}).filter(Boolean),
+    circuitCoords:(function(){try{return JSON.parse((document.getElementById('mTripCircuitCoords')||{value:'[]'}).value||'[]');}catch(e){return[];}}()),
     meetingPoint: ((document.getElementById('mTripMeet')||{value:''}).value).trim(),
     created:      existing ? existing.created : new Date().toISOString().split('T')[0]
   };
@@ -2452,6 +2461,7 @@ function saveTrip(id) {
     inc:trip.services, hi:trip.hi, exc:trip.exc,
     img:trip.img, imgs:trip.imgs, it:trip.it,
     circuit:trip.circuit,
+    circuitCoords:trip.circuitCoords||[],
     meetingPoint:trip.meetingPoint
   };
 
@@ -2872,6 +2882,198 @@ function confirmMapPicker() {
   if (latEl) latEl.value = window._mpLat.toFixed(6);
   if (lngEl) lngEl.value = window._mpLng.toFixed(6);
   closeMapPicker();
+}
+
+/* ── Circuit itinerary map picker ── */
+function openCircuitPicker() {
+  /* Read existing stops (from circuitCoords if available, else parse circuit text) */
+  var existingCoords = [];
+  try { existingCoords = JSON.parse((document.getElementById('mTripCircuitCoords')||{value:'[]'}).value || '[]'); } catch(e){}
+  if (!existingCoords.length) {
+    var names = ((document.getElementById('mTripCircuit')||{value:''}).value).split(',').map(function(s){return s.trim();}).filter(Boolean);
+    existingCoords = names.map(function(n){ return {name:n,lat:null,lng:null}; });
+  }
+  window._cpStops  = existingCoords.map(function(s){ return {name:s.name,lat:s.lat,lng:s.lng,marker:null}; });
+  window._cpMap    = null;
+  window._cpPendingLat = null;
+  window._cpPendingLng = null;
+
+  var ov = document.createElement('div');
+  ov.id  = 'cpOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:600;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  ov.innerHTML =
+    '<div style="background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);width:94vw;max-width:1100px;height:88vh;display:flex;flex-direction:column;overflow:hidden">'
+    +'<div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">'
+      +'<div><div style="font-weight:700;font-size:15px">🗺️ Configurer l\'itinéraire sur la carte</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-top:2px">Cliquez sur la carte pour ajouter une étape — les marqueurs sont numérotés dans l\'ordre</div></div>'
+      +'<button onclick="closeCircuitPicker()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--text3);line-height:1;padding:4px">✕</button>'
+    +'</div>'
+    +'<div style="display:flex;flex:1;min-height:0">'
+      /* ── Map ── */
+      +'<div style="flex:1;position:relative;min-height:0"><div id="cpMapDiv" style="width:100%;height:100%"></div>'
+      +'<div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:7px 16px;border-radius:20px;font-size:12px;font-weight:600;pointer-events:none;white-space:nowrap">📍 Cliquez pour ajouter une étape</div>'
+      +'</div>'
+      /* ── Stops panel ── */
+      +'<div id="cpSidePanel" style="width:280px;border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0">'
+        +'<div style="padding:12px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text2)">ÉTAPES DU CIRCUIT</div>'
+        +'<div id="cpStopsList" style="flex:1;overflow-y:auto;padding:10px 12px"></div>'
+        +'<div style="padding:10px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);font-style:italic">Les étapes sans coordonnées seront ignorées sur la carte.</div>'
+      +'</div>'
+    +'</div>'
+    /* ── Name input popup (hidden initially) ── */
+    +'<div id="cpNamePopup" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px 22px;box-shadow:var(--shadow-lg);z-index:10;min-width:280px">'
+      +'<div style="font-weight:700;font-size:14px;margin-bottom:10px">📍 Nom de cette étape</div>'
+      +'<input id="cpNameInput" class="fi" placeholder="ex : Marrakech, Cap Spartel…" style="margin-bottom:12px" onkeydown="if(event.key===\'Enter\')confirmCpStop()">'
+      +'<div style="display:flex;gap:8px;justify-content:flex-end">'
+        +'<button class="btn btn-secondary" onclick="cancelCpStop()">Annuler</button>'
+        +'<button class="btn btn-primary" onclick="confirmCpStop()">Ajouter</button>'
+      +'</div>'
+    +'</div>'
+    +'<div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--surface3)">'
+      +'<span style="font-size:12px;color:var(--text3)" id="cpCount">0 étape(s)</span>'
+      +'<div style="display:flex;gap:8px"><button class="btn btn-secondary" onclick="closeCircuitPicker()">Annuler</button>'
+      +'<button class="btn btn-primary" onclick="confirmCircuitPicker()">✅ &nbsp;Confirmer l\'itinéraire</button></div>'
+    +'</div>'
+    +'</div>';
+  ov.style.position = 'fixed';
+  document.body.appendChild(ov);
+
+  function _initCpMap() {
+    var L = window.L;
+    if (!document.getElementById('cpMapDiv')) return;
+    var map = L.map('cpMapDiv').setView([31.0, -6.5], 5);
+    /* Satellite layer */
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(map);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,opacity:0.85}).addTo(map);
+
+    window._cpMap = map;
+
+    /* Render existing stops */
+    window._cpStops.forEach(function(s, i) {
+      if (s.lat != null && s.lng != null) {
+        s.marker = _cpMakeMarker(L, map, s.lat, s.lng, i+1);
+      }
+    });
+    _cpFitBounds();
+    _cpRenderList();
+
+    map.on('click', function(e) {
+      window._cpPendingLat = e.latlng.lat;
+      window._cpPendingLng = e.latlng.lng;
+      var popup = document.getElementById('cpNamePopup');
+      var input = document.getElementById('cpNameInput');
+      if (popup) popup.style.display = 'block';
+      if (input) { input.value = ''; setTimeout(function(){ input.focus(); }, 50); }
+    });
+
+    setTimeout(function(){ map.invalidateSize(true); }, 120);
+  }
+
+  setTimeout(function(){
+    if (window.L) { _initCpMap(); }
+    else {
+      var lcs = document.createElement('link'); lcs.rel='stylesheet'; lcs.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(lcs);
+      var lsc = document.createElement('script'); lsc.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; lsc.onload=_initCpMap; document.head.appendChild(lsc);
+    }
+  }, 80);
+}
+
+function _cpMakeMarker(L, map, lat, lng, num) {
+  var icon = L.divIcon({
+    html: '<div style="width:30px;height:30px;border-radius:50%;background:#B8172E;border:2.5px solid #fff;color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.6);cursor:grab">'+num+'</div>',
+    className:'', iconSize:[30,30], iconAnchor:[15,15]
+  });
+  return L.marker([lat, lng], {icon:icon, draggable:true})
+    .on('dragend', function(e) {
+      var s = window._cpStops[num-1];
+      if (s) { s.lat = e.target.getLatLng().lat; s.lng = e.target.getLatLng().lng; }
+      _cpRenderList();
+    })
+    .addTo(map);
+}
+
+function _cpFitBounds() {
+  var L = window.L, map = window._cpMap;
+  if (!L || !map) return;
+  var pts = window._cpStops.filter(function(s){ return s.lat!=null; });
+  if (pts.length >= 2) map.fitBounds(L.latLngBounds(pts.map(function(s){return[s.lat,s.lng];})).pad(0.2),{animate:false});
+  else if (pts.length === 1) map.setView([pts[0].lat, pts[0].lng], 9, {animate:false});
+}
+
+function _cpRenderList() {
+  var el = document.getElementById('cpStopsList');
+  var cnt = document.getElementById('cpCount');
+  if (!el) return;
+  var stops = window._cpStops;
+  if (cnt) cnt.textContent = stops.length + ' étape(s)';
+  if (!stops.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text3);font-style:italic;padding:8px 0">Cliquez sur la carte pour ajouter des étapes</div>'; return; }
+  el.innerHTML = stops.map(function(s, i) {
+    var coordTxt = s.lat!=null ? '<span style="font-size:10px;color:var(--text3)">'+s.lat.toFixed(4)+', '+s.lng.toFixed(4)+'</span>' : '<span style="font-size:10px;color:#f59e0b">⚠ sans coords</span>';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="width:24px;height:24px;border-radius:50%;background:#B8172E;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+(i+1)+'</div>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+s.name+'</div>'+coordTxt+'</div>'
+      +'<button onclick="_cpRemoveStop('+i+')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:2px;flex-shrink:0" title="Supprimer">✕</button>'
+      +'</div>';
+  }).join('');
+}
+
+function _cpRemoveStop(idx) {
+  var L = window.L, map = window._cpMap;
+  var s = window._cpStops[idx];
+  if (s && s.marker && map) { try { map.removeLayer(s.marker); } catch(e){} }
+  window._cpStops.splice(idx, 1);
+  /* Rebuild all markers with correct numbers */
+  if (L && map) {
+    window._cpStops.forEach(function(st, i) {
+      if (st.marker) { try { map.removeLayer(st.marker); } catch(e){} st.marker = null; }
+      if (st.lat != null) st.marker = _cpMakeMarker(L, map, st.lat, st.lng, i+1);
+    });
+  }
+  _cpRenderList();
+}
+
+function cancelCpStop() {
+  window._cpPendingLat = null; window._cpPendingLng = null;
+  var popup = document.getElementById('cpNamePopup');
+  if (popup) popup.style.display = 'none';
+}
+
+function confirmCpStop() {
+  var input = document.getElementById('cpNameInput');
+  var name  = (input ? input.value.trim() : '') || ('Étape ' + (window._cpStops.length + 1));
+  var lat   = window._cpPendingLat, lng = window._cpPendingLng;
+  var L = window.L, map = window._cpMap;
+  var idx = window._cpStops.length;
+  var marker = (L && map && lat!=null) ? _cpMakeMarker(L, map, lat, lng, idx+1) : null;
+  window._cpStops.push({name:name, lat:lat, lng:lng, marker:marker});
+  cancelCpStop();
+  _cpRenderList();
+}
+
+function closeCircuitPicker() {
+  if (window._cpMap) { window._cpMap.remove(); window._cpMap = null; }
+  var ov = document.getElementById('cpOverlay'); if (ov) ov.remove();
+}
+
+function confirmCircuitPicker() {
+  var stops = window._cpStops;
+  /* Update hidden inputs */
+  var names  = stops.map(function(s){ return s.name; }).join(', ');
+  var coords = JSON.stringify(stops.map(function(s){ return {name:s.name,lat:s.lat,lng:s.lng}; }));
+  var cEl = document.getElementById('mTripCircuit');
+  var ccEl= document.getElementById('mTripCircuitCoords');
+  if (cEl)  cEl.value  = names;
+  if (ccEl) ccEl.value = coords;
+  /* Update visual display */
+  var disp = document.getElementById('mTripCircuitDisplay');
+  if (disp) {
+    disp.innerHTML = stops.length ? stops.map(function(s,i){
+      return '<div style="display:flex;align-items:center;gap:5px;background:var(--surface3);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600">'
+        +'<span style="background:var(--primary);color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">'+(i+1)+'</span>'
+        +s.name+'</div>';
+    }).join('') : '<span style="font-size:12px;color:var(--text3);font-style:italic">Aucune étape définie</span>';
+  }
+  closeCircuitPicker();
 }
 
 function editActivity(id) { openActivityModal(id); }
@@ -4209,7 +4411,17 @@ function sendAdminNotification() {
     });
 }
 
-/* Init */
+/* Init — show a spinner while the 13 API calls complete */
+(function(){
+  var style = document.createElement('style');
+  style.textContent = '@keyframes rc-spin{to{transform:rotate(360deg)}}.rc-spinner{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:rc-spin .75s linear infinite}';
+  document.head.appendChild(style);
+  document.getElementById('content').innerHTML =
+    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 56px);gap:14px;color:var(--text3)">'
+    + '<div class="rc-spinner"></div>'
+    + '<p style="font-size:13px;font-weight:500;margin:0">Chargement du tableau de bord…</p>'
+    + '</div>';
+})();
 renderNotifList();
 loadAll(function(){
   updatePendingBadge();

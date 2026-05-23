@@ -6315,17 +6315,25 @@ function setRevStar(expId, val) {
   stars.forEach(function(s, i) { s.style.color = i < val ? '#F5A623' : '#CBD5E1'; });
 }
 
-/* Load full gallery imgs for detail page (imgs stripped from list endpoint to keep payload small) */
+/* Load full experience detail for the detail page.
+   The list endpoint strips: imgs[] gallery + base64 images embedded in itinerary steps.
+   We fetch GET /experiences/:id to restore both after the initial page render. */
 var _expGalleryCache = {};
 function loadExpGallery(expId) {
   if (_expGalleryCache[expId]) { _applyExpGallery(expId, _expGalleryCache[expId]); return; }
   apiGet('/experiences/' + expId).then(function(d) {
     if (!d || !d.experience) return;
-    var imgs = d.experience.imgs;
-    if (!imgs || !imgs.length) return;
-    _expGalleryCache[expId] = imgs;
-    /* Only update if we're still on this detail page */
-    if (ST.pg === 'exp-detail' && ST.param === expId) _applyExpGallery(expId, imgs);
+    var exp = d.experience;
+    /* Update the hero/gallery slider with the full imgs array */
+    if (exp.imgs && exp.imgs.length) {
+      _expGalleryCache[expId] = exp.imgs;
+      if (ST.pg === 'exp-detail' && ST.param === expId) _applyExpGallery(expId, exp.imgs);
+    }
+    /* Restore itinerary step photos stripped from the list endpoint for performance.
+       _IT drives the itinerary popup — update it before the user taps "Voir l'itinéraire". */
+    if (exp.it && exp.it.length && ST.pg === 'exp-detail' && ST.param === expId) {
+      _IT = exp.it;
+    }
   }).catch(function(){});
 }
 function _applyExpGallery(expId, imgs) {
