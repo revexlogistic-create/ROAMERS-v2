@@ -113,14 +113,14 @@ router.get('/', require('../middleware/auth').optionalAuth, function(req, res) {
     return (a.created||'') < (b.created||'') ? -1 : 1;
   });
 
-  /* Strip the gallery `imgs` array from the list response to keep the payload small.
-     The full gallery is returned by GET /:id (detail endpoint) only.
-     This prevents a ~4.5 MB response when some experiences store base64 images. */
-  var includeFull = req.query.full === '1' &&
-                    req.user && req.user.role === 'admin';
+  /* Strip the gallery `imgs` array from the public list response to keep the payload small.
+     Authenticated admins always receive the full object (needed by the admin edit UI).
+     The full gallery is also always returned by GET /:id (detail endpoint).
+     This prevents a ~4.5 MB response when some experiences store large base64 images. */
+  var isAdmin = req.user && req.user.role === 'admin';
   res.json({ experiences: items.map(function(e) {
     var enriched = enrichExp(e);
-    if (!includeFull) { delete enriched.imgs; }
+    if (!isAdmin) { delete enriched.imgs; }
     return enriched;
   }) });
 });
