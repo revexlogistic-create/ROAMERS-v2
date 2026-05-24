@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Alert, Image, ActivityIndicator, Dimensions, Linking,
+  Alert, Image, ActivityIndicator, Dimensions, Linking, Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
@@ -794,11 +796,98 @@ function EditProfileTab({ user, onSaved }: any) {
 /* ══════════════════════════════════════════════════════════════════════════
    Settings tab
    ══════════════════════════════════════════════════════════════════════════ */
+
+const NOTIF_PREFS_KEY = 'roamers_notif_prefs';
+
+type NotifPrefs = {
+  reservationConfirm: boolean;
+  departureReminder:  boolean;
+  newExperiences:     boolean;
+  specialOffers:      boolean;
+};
+
+const DEFAULT_NOTIF_PREFS: NotifPrefs = {
+  reservationConfirm: true,
+  departureReminder:  true,
+  newExperiences:     false,
+  specialOffers:      false,
+};
+
+const NOTIF_ITEMS: {
+  key: keyof NotifPrefs;
+  icon: string;
+  label: string;
+  sub: string;
+  push: boolean;
+}[] = [
+  { key: 'reservationConfirm', icon: '✉️', label: 'Confirmation de réservation', sub: 'Email à chaque réservation confirmée',      push: false },
+  { key: 'departureReminder',  icon: '⏰', label: 'Rappels de départ',            sub: 'Notification 7j avant votre départ',        push: true  },
+  { key: 'newExperiences',     icon: '🆕', label: 'Nouvelles expériences',        sub: 'Alertes quand de nouveaux voyages arrivent', push: true  },
+  { key: 'specialOffers',      icon: '🎁', label: 'Offres spéciales',             sub: 'Promotions et réductions exclusives',       push: true  },
+];
+
 function SettingsTab({ onLogout }: any) {
   const [passForm, setPassForm] = useState({ current: '', newPass: '', confirm: '' });
   const [passLoading, setPassLoading] = useState(false);
   const [updateState, setUpdateState] = useState<'idle' | 'checking' | 'upToDate' | 'available'>('idle');
   const [remoteVersion, setRemoteVersion] = useState<{ versionCode: number; versionName: string; downloadUrl: string; releaseNotes: string } | null>(null);
+
+  /* ── Notification state ──────────────────────────────────────────────── */
+  const [permStatus, setPermStatus] = useState<string>('undetermined');
+  const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(DEFAULT_NOTIF_PREFS);
+
+  useEffect(() => {
+    (async () => {
+      /* Check OS permission status */
+      try {
+        const { status } = await Notifications.getPermissionsAsync();
+        setPermStatus(status);
+      } catch {}
+      /* Load persisted prefs */
+      try {
+        const saved = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+        if (saved) setNotifPrefs({ ...DEFAULT_NOTIF_PREFS, ...JSON.parse(saved) });
+      } catch {}
+    })();
+  }, []);
+
+  async function requestPushPermission(): Promise<boolean> {
+    try {
+      const { status: existing } = await Notifications.getPermissionsAsync();
+      if (existing === 'granted') { setPermStatus('granted'); return true; }
+      const { status } = await Notifications.requestPermissionsAsync();
+      setPermStatus(status);
+      if (status === 'granted') {
+        if (Platform.OS === 'android') {
+          await Notifications.setNotificationChannelAsync('default', {
+            name: 'Roamers', importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250], lightColor: '#B8172E', sound: 'default', showBadge: true,
+          });
+        }
+        return true;
+      }
+      Alert.alert(
+        'Notifications désactivées',
+        'Pour recevoir des rappels et confirmations, activez les notifications Roamers dans vos Réglages système.',
+        [{ text: 'Plus tard', style: 'cancel' }, { text: 'Réglages', onPress: () => Linking.openSettings() }]
+      );
+      return false;
+    } catch { return false; }
+  }
+
+  async function toggleNotif(key: keyof NotifPrefs) {
+    const newVal = !notifPrefs[key];
+    /* Push-based toggle: request OS permission when turning on */
+    const item = NOTIF_ITEMS.find((n) => n.key === key);
+    if (newVal && item?.push && permStatus !== 'granted') {
+      const granted = await requestPushPermission();
+      if (!granted) return;
+    }
+    const next = { ...notifPrefs, [key]: newVal };
+    setNotifPrefs(next);
+    try { await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(next)); } catch {}
+  }
+
   const set = (k: string) => (v: string) => setPassForm((f) => ({ ...f, [k]: v }));
 
   async function handleChangePassword() {
@@ -840,7 +929,7 @@ function SettingsTab({ onLogout }: any) {
         <Text style={s.sectionSub}>Sécurité et préférences</Text>
       </View>
 
-      {/* Password */}
+      {/* ── Password ── */}
       <View style={s.card}>
         <Text style={s.cardTitle}>🔒 Changer le mot de passe</Text>
         <RInput label="Mot de passe actuel" value={passForm.current} onChangeText={set('current')} secureTextEntry />
@@ -849,31 +938,88 @@ function SettingsTab({ onLogout }: any) {
         <RButton label="Mettre à jour" onPress={handleChangePassword} loading={passLoading} />
       </View>
 
-      {/* Notifications */}
+      {/* ── Notifications ── */}
       <View style={s.card}>
-        <Text style={s.cardTitle}>🔔 Notifications</Text>
-        {[
-          { icon: '✉️', label: 'Confirmation de réservation', sub: 'Email à chaque réservation', on: true },
-          { icon: '⏰', label: 'Rappels de départ',            sub: 'Rappel 7 jours avant',       on: true },
-          { icon: '🆕', label: 'Nouvelles expériences',        sub: 'Alertes nouveaux voyages',   on: false },
-          { icon: '🎁', label: 'Offres spéciales',             sub: 'Promotions exclusives',      on: false },
-        ].map((n, i, arr) => (
-          <View key={n.label} style={[s.notifRow, i < arr.length - 1 && { borderBottomWidth: 1, borderBottomColor: COLORS.border + '50' }]}>
-            <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.border, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Text style={{ fontSize: 17 }}>{n.icon}</Text>
+        {/* Header row */}
+        <View style={[s.cardHead, { marginBottom: 2 }]}>
+          <Text style={[s.cardTitle, { marginBottom: 0 }]}>🔔 Notifications</Text>
+          {permStatus === 'granted'
+            ? <View style={s.permBadgeOn}><Text style={s.permBadgeOnTxt}>✓ Activées</Text></View>
+            : <TouchableOpacity style={s.permBadgeOff} onPress={() => Linking.openSettings()} activeOpacity={0.75}>
+                <Text style={s.permBadgeOffTxt}>⚠️ Désactivées</Text>
+              </TouchableOpacity>
+          }
+        </View>
+
+        {/* Banner — only when push permission is not granted */}
+        {permStatus !== 'granted' && (
+          <TouchableOpacity style={s.permBanner} onPress={requestPushPermission} activeOpacity={0.8}>
+            <View style={s.permBannerIconWrap}>
+              <Text style={{ fontSize: 20 }}>🔔</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: COLORS.text, fontSize: 13, fontWeight: '600', marginBottom: 2 }}>{n.label}</Text>
-              <Text style={{ color: COLORS.muted, fontSize: 11 }}>{n.sub}</Text>
+              <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700', marginBottom: 2 }}>
+                Activer les notifications push
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, lineHeight: 15 }}>
+                Confirmations, rappels de départ et offres exclusives.
+              </Text>
             </View>
-            <View style={[s.toggle, n.on && s.toggleOn]}>
-              <Text style={[s.toggleTxt, n.on && { color: COLORS.primary }]}>{n.on ? 'ON' : 'OFF'}</Text>
-            </View>
-          </View>
-        ))}
+            <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '800', flexShrink: 0 }}>Activer →</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Toggle rows */}
+        <View style={{ marginTop: 14 }}>
+          {NOTIF_ITEMS.map((n, i) => {
+            const on = notifPrefs[n.key];
+            /* Push-type notif is visually muted when OS permission not granted */
+            const pushBlocked = n.push && permStatus !== 'granted';
+            const effectiveOn = on && !pushBlocked;
+            return (
+              <TouchableOpacity
+                key={n.key}
+                style={[
+                  s.notifRow,
+                  i < NOTIF_ITEMS.length - 1 && { borderBottomWidth: 1, borderBottomColor: COLORS.border + '50' },
+                ]}
+                onPress={() => toggleNotif(n.key)}
+                activeOpacity={0.7}
+              >
+                {/* Icon */}
+                <View style={[s.notifIcon, effectiveOn && s.notifIconOn]}>
+                  <Text style={{ fontSize: 17 }}>{n.icon}</Text>
+                </View>
+
+                {/* Label + sub */}
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                    <Text style={[s.notifLabel, pushBlocked && { color: COLORS.muted }]}>{n.label}</Text>
+                    {n.push && (
+                      <View style={[s.notifPushTag, effectiveOn && s.notifPushTagOn]}>
+                        <Text style={[s.notifPushTagTxt, effectiveOn && { color: COLORS.primary }]}>PUSH</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={s.notifSub}>{n.sub}</Text>
+                </View>
+
+                {/* Toggle switch */}
+                <View style={[s.switchTrack, effectiveOn ? s.switchTrackOn : s.switchTrackOff]}>
+                  <View style={[s.switchThumb, effectiveOn ? s.switchThumbOn : s.switchThumbOff]} />
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Footer note */}
+        <Text style={{ color: COLORS.muted, fontSize: 11, marginTop: 14, lineHeight: 15 }}>
+          Les notifications email (confirmation) sont toujours actives indépendamment des réglages push.
+        </Text>
       </View>
 
-      {/* App version & update */}
+      {/* ── App version & update ── */}
       <View style={s.card}>
         <Text style={s.cardTitle}>📱 Version de l'application</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -934,13 +1080,16 @@ function SettingsTab({ onLogout }: any) {
         )}
       </View>
 
-      {/* Danger */}
+      {/* ── Danger zone ── */}
       <View style={[s.card, { borderColor: COLORS.error + '44' }]}>
         <Text style={[s.cardTitle, { color: COLORS.error }]}>⚠️ Zone de danger</Text>
         <Text style={{ color: COLORS.muted, fontSize: 13, lineHeight: 19, marginBottom: 14 }}>
           Supprimer définitivement votre compte et toutes vos données. Cette action est irréversible.
         </Text>
-        <TouchableOpacity style={{ backgroundColor: COLORS.error + '15', borderRadius: RADIUS.pill, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: COLORS.error + '44' }} onPress={handleDelete}>
+        <TouchableOpacity
+          style={{ backgroundColor: COLORS.error + '15', borderRadius: RADIUS.pill, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: COLORS.error + '44' }}
+          onPress={handleDelete}
+        >
           <Text style={{ color: COLORS.error, fontSize: 14, fontWeight: '700' }}>🗑️ Supprimer mon compte</Text>
         </TouchableOpacity>
       </View>
@@ -1135,11 +1284,31 @@ const s = StyleSheet.create({
   fieldLabel: { color: COLORS.sub, fontSize: 13, fontWeight: '600', marginBottom: 6, marginTop: 4 },
   countryChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.card, marginRight: 8 },
 
-  /* ── Settings ── */
-  notifRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 12 },
-  toggle: { backgroundColor: COLORS.border + '80', borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 5 },
-  toggleOn: { backgroundColor: COLORS.primary + '25', borderWidth: 1, borderColor: COLORS.primary + '44' },
-  toggleTxt: { color: COLORS.muted, fontSize: 10, fontWeight: '800' },
+  /* ── Settings — notifications ── */
+  notifRow:       { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, gap: 12 },
+  notifIcon:      { width: 38, height: 38, borderRadius: 11, backgroundColor: '#1e1e1e', alignItems: 'center', justifyContent: 'center', flexShrink: 0, borderWidth: 1, borderColor: 'transparent' },
+  notifIconOn:    { backgroundColor: COLORS.primary + '20', borderColor: COLORS.primary + '40' },
+  notifLabel:     { color: COLORS.text, fontSize: 13, fontWeight: '600', flexShrink: 1 },
+  notifSub:       { color: COLORS.muted, fontSize: 11, lineHeight: 15 },
+  notifPushTag:   { backgroundColor: '#1e1e1e', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1, borderWidth: 1, borderColor: '#333' },
+  notifPushTagOn: { backgroundColor: COLORS.primary + '15', borderColor: COLORS.primary + '40' },
+  notifPushTagTxt:{ color: COLORS.muted, fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
+
+  /* Toggle switch */
+  switchTrack:    { width: 46, height: 26, borderRadius: 13, padding: 2, justifyContent: 'center', flexShrink: 0 },
+  switchTrackOn:  { backgroundColor: COLORS.primary },
+  switchTrackOff: { backgroundColor: '#2a2a2a' },
+  switchThumb:    { width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 1 }, shadowRadius: 2, elevation: 2 },
+  switchThumbOn:  { alignSelf: 'flex-end' as const },
+  switchThumbOff: { alignSelf: 'flex-start' as const },
+
+  /* Permission banner */
+  permBadgeOn:      { backgroundColor: '#22c55e18', borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: '#22c55e44' },
+  permBadgeOnTxt:   { color: '#22c55e', fontSize: 11, fontWeight: '700' },
+  permBadgeOff:     { backgroundColor: '#f59e0b15', borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: '#f59e0b44' },
+  permBadgeOffTxt:  { color: '#f59e0b', fontSize: 11, fontWeight: '700' },
+  permBanner:       { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, backgroundColor: COLORS.primary + '10', borderRadius: RADIUS.md, padding: 14, borderWidth: 1, borderColor: COLORS.primary + '30' },
+  permBannerIconWrap:{ width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.primary + '20', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 
   /* ── Sur Mesure ── */
   reqTag: { backgroundColor: COLORS.bg, borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: COLORS.border },
