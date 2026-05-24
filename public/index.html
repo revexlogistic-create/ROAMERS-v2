@@ -704,6 +704,7 @@ main#app{padding-top:72px}
 }
 .app-topbar,.app-tabs{display:none}
 .d-floating-book{display:none}
+.d-floating-heart{display:none}
 
 /* Prevent horizontal scroll & images overflowing */
 html,body{max-width:100vw;overflow-x:hidden}
@@ -952,10 +953,23 @@ img,video{max-width:100%;height:auto}
     border-radius:16px !important;border:1px solid var(--bdr) !important;
     box-shadow:none !important;background:#fff
   }
+  /* Floating heart wishlist FAB on detail (mobile) */
+  .d-floating-heart{
+    display:flex;align-items:center;justify-content:center;
+    position:fixed;right:14px;
+    bottom:calc(var(--tab-h) + var(--safe-bottom) + 8px);
+    width:52px;height:52px;
+    background:rgba(18,18,18,.92);backdrop-filter:blur(10px);
+    border:1.5px solid rgba(255,255,255,.1);border-radius:16px;
+    font-size:22px;cursor:pointer;z-index:546;
+    box-shadow:0 4px 16px rgba(0,0,0,.3);
+    transition:transform .15s;
+  }
+  .d-floating-heart:active{transform:scale(.9)}
   /* Floating Reserve CTA on detail */
   .d-floating-book{
     display:flex;
-    position:fixed;left:14px;right:14px;
+    position:fixed;left:14px;right:76px;/* make room for heart button */
     bottom:calc(var(--tab-h) + var(--safe-bottom) + 8px);
     height:52px;
     background:linear-gradient(180deg, #C81E3A 0%, var(--red-d) 100%);
@@ -2076,19 +2090,68 @@ function changePass(){
 }
 
 function toggleWL(id){
-  if(!ST.user){go('login');toast('Sign in to save to your wishlist','warn');return;}
-  var users=getUsers();
-  var idx=users.findIndex(function(u){return u.id===ST.user.id;});
-  if(idx===-1)return;
-  var wl=users[idx].wishlist||[];
-  var wi=wl.indexOf(id);
-  if(wi===-1){wl.push(id);toast('Added to wishlist');}
-  else{wl.splice(wi,1);toast('Removed from wishlist');}
-  users[idx].wishlist=wl;
-  saveUsers(users);
-  ST.user=users[idx];
-  localStorage.setItem('rc_user',JSON.stringify(ST.user));
-  if(ST.pg==='dashboard') go('dashboard',ST.dTab);
+  if(!ST.user){go('login');toast('Connectez-vous pour sauvegarder','warn');return;}
+
+  /* ── Optimistic update ── */
+  var wl = (ST.user.wishlist||[]).slice();
+  var wi = wl.indexOf(id);
+  var added = wi === -1;
+  if(added) wl.push(id); else wl.splice(wi,1);
+  ST.user.wishlist = wl;
+  localStorage.setItem('rc_user', JSON.stringify(ST.user));
+
+  /* ── Instant DOM refresh — update every heart button for this exp ── */
+  _refreshWLButtons(id, added);
+
+  /* ── If on dashboard/wishlist tab re-render that pane ── */
+  if(ST.pg === 'dashboard') go('dashboard', ST.dTab);
+
+  toast(added ? '❤️ Ajouté à la wishlist' : 'Retiré de la wishlist');
+
+  /* ── Sync to server in background ── */
+  apiPost('/auth/wishlist/'+id, {}).then(function(d){
+    if(d && Array.isArray(d.wishlist)){
+      ST.user.wishlist = d.wishlist;
+      localStorage.setItem('rc_user', JSON.stringify(ST.user));
+      /* Re-check in case server result differs (e.g. was already added) */
+      var serverHas = d.wishlist.indexOf(id) !== -1;
+      if(serverHas !== added) _refreshWLButtons(id, serverHas);
+      if(ST.pg === 'dashboard') go('dashboard', ST.dTab);
+    }
+  }).catch(function(){
+    /* Revert optimistic update on network failure */
+    var wlRev = (ST.user.wishlist||[]).slice();
+    if(added){ var ri=wlRev.indexOf(id); if(ri!==-1) wlRev.splice(ri,1); }
+    else wlRev.push(id);
+    ST.user.wishlist = wlRev;
+    localStorage.setItem('rc_user', JSON.stringify(ST.user));
+    _refreshWLButtons(id, !added);
+    toast('Erreur — réessayez','warn');
+  });
+}
+
+/* Updates every heart button rendered for expId without page re-render */
+function _refreshWLButtons(id, isInWL){
+  /* ec-fav and pgExp circles use data-wl-id */
+  document.querySelectorAll('[data-wl-id="'+id+'"]').forEach(function(el){
+    /* detect which style of button it is */
+    var isCircle = el.style.borderRadius === '50%' || getComputedStyle(el).borderRadius === '50%';
+    if(isCircle){
+      el.style.background = isInWL ? 'var(--red)' : 'rgba(255,255,255,.15)';
+      el.innerHTML = isInWL ? '❤️' : '🤍';
+      el.title = isInWL ? 'Retirer de la wishlist' : 'Sauvegarder';
+    } else if(el.classList.contains('ec-fav')){
+      el.innerHTML = isInWL ? '<span style="color:var(--red)">&#9829;</span>' : '&#9825;';
+      el.title = isInWL ? 'Remove from wishlist' : 'Save to wishlist';
+    } else {
+      /* sidebar button or FAB */
+      el.innerHTML = isInWL ? '❤️' : '🤍';
+      el.title = isInWL ? 'Retirer de la wishlist' : 'Sauvegarder dans la wishlist';
+      el.style.background = isInWL ? 'rgba(184,23,46,.18)' : 'rgba(255,255,255,.06)';
+      el.style.borderColor = isInWL ? 'rgba(184,23,46,.4)' : 'rgba(255,255,255,.1)';
+      el.style.color = isInWL ? 'var(--red)' : 'rgba(255,255,255,.5)';
+    }
+  });
 }
 
 function isWL(id){ return !!(ST.user&&(ST.user.wishlist||[]).indexOf(id)!==-1); }
@@ -2550,7 +2613,7 @@ function renderBk(){
 /* SHARED COMPONENTS */
 function ecCard(e){
   var wl=isWL(e.id);
-  return '<div class="ec reveal" onclick="go(\'exp-detail\',\''+e.id+'\')"><div class="ec-img"><img src="'+e.img+'" alt="'+e.title+'" loading="lazy">'+(e.badge?'<span class="ec-badge '+e.bc+'">'+e.badge+'</span>':'')+'<div class="ec-fav" onclick="event.stopPropagation();toggleWL(\''+e.id+'\')" title="'+(wl?'Remove from wishlist':'Save to wishlist')+'">'+(wl?'<span style="color:var(--red)">&#9829;</span>':'&#9825;')+'</div></div><div class="ec-body"><div class="ec-tags">'+e.tags.map(function(t){return '<span class="ec-tag">'+t+'</span>';}).join('')+'</div><div class="ec-title">'+e.title+'</div><div class="ec-loc">'+e.loc+'</div><div class="ec-meta"><div><div class="ec-dur">'+e.dur+'</div><div class="ec-rat" style="margin-top:3px"><span class="st">&#9733;</span> '+e.rating+' <span style="color:var(--mut);font-weight:400">('+e.rev+')</span></div></div><div class="ec-price"><strong>'+e.price.toLocaleString()+' MAD</strong><span>per person</span></div></div></div><div class="ec-foot"><button class="btn btn-r btn-full" onclick="event.stopPropagation();openBk(\''+e.id+'\')">Book Now</button></div></div>';
+  return '<div class="ec reveal" onclick="go(\'exp-detail\',\''+e.id+'\')"><div class="ec-img"><img src="'+e.img+'" alt="'+e.title+'" loading="lazy">'+(e.badge?'<span class="ec-badge '+e.bc+'">'+e.badge+'</span>':'')+'<div class="ec-fav" data-wl-id="'+e.id+'" onclick="event.stopPropagation();toggleWL(\''+e.id+'\')" title="'+(wl?'Remove from wishlist':'Save to wishlist')+'">'+(wl?'<span style="color:var(--red)">&#9829;</span>':'&#9825;')+'</div></div><div class="ec-body"><div class="ec-tags">'+e.tags.map(function(t){return '<span class="ec-tag">'+t+'</span>';}).join('')+'</div><div class="ec-title">'+e.title+'</div><div class="ec-loc">'+e.loc+'</div><div class="ec-meta"><div><div class="ec-dur">'+e.dur+'</div><div class="ec-rat" style="margin-top:3px"><span class="st">&#9733;</span> '+e.rating+' <span style="color:var(--mut);font-weight:400">('+e.rev+')</span></div></div><div class="ec-price"><strong>'+e.price.toLocaleString()+' MAD</strong><span>per person</span></div></div></div><div class="ec-foot"><button class="btn btn-r btn-full" onclick="event.stopPropagation();openBk(\''+e.id+'\')">Book Now</button></div></div>';
 }
 
 function foot(){
@@ -3282,7 +3345,7 @@ function renderExpCards(list){
         +'<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.45) 0%,transparent 55%)">'
           +'<div style="position:absolute;top:11px;left:11px;padding:4px 10px;border-radius:100px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;background:'+sc+';color:#fff">'+(segLabels[e.segment]||e.segment)+'</div>'
           +'<div style="position:absolute;top:11px;right:42px;width:28px;height:28px;background:rgba(255,255,255,.15);backdrop-filter:blur(6px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px">'+(typeIcons[e.type]||'🗺️')+'</div>'
-          +'<div style="position:absolute;top:11px;right:10px;width:28px;height:28px;background:'+(wl?'var(--red)':'rgba(255,255,255,.15)')+';backdrop-filter:blur(6px);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:all .2s" onclick="event.stopPropagation();toggleWL(\''+e.id+'\')" title="'+(wl?'Retirer':'Sauvegarder')+'">'+(wl?'❤️':'🤍')+'</div>'
+          +'<div data-wl-id="'+e.id+'" style="position:absolute;top:11px;right:10px;width:28px;height:28px;background:'+(wl?'var(--red)':'rgba(255,255,255,.15)')+';backdrop-filter:blur(6px);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:all .2s" onclick="event.stopPropagation();toggleWL(\''+e.id+'\')" title="'+(wl?'Retirer':'Sauvegarder')+'">'+(wl?'❤️':'🤍')+'</div>'
           +'<div style="position:absolute;bottom:10px;left:11px;background:rgba(255,255,255,.15);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.2);border-radius:100px;padding:4px 10px;font-size:11px;color:#fff;font-weight:600">'+e.dur+'</div>'
           +'<div style="position:absolute;bottom:10px;right:11px;display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);border-radius:100px;padding:4px 10px;font-size:10px;color:#fff;font-weight:700"><span style="display:inline-flex;gap:2px;align-items:center">'+difDots(e.dif||'Facile')+'</span>'+(e.dif||'Facile')+'</div>'
         +'</div>'
@@ -3477,7 +3540,10 @@ function pgExpDetail(id){
     +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="color:#F5A623;font-size:14px">★ '+e.rating+'</span><span style="font-size:13px;color:var(--mut)">('+e.rev+' avis)</span></div>'
     +(function(){var hp=e.dates&&e.dates.length&&e.dates.some(function(d){return d.price!=null;});var dp=hp&&e.dates[0].price!=null?e.dates[0].price:e.price;return '<div style="font-size:11px;color:var(--mut);margin-bottom:2px">'+(hp?'À partir de':'')+'</div><div style="font-family:\'Bebas Neue\',cursive;font-size:38px;color:var(--red);line-height:1">'+dp.toLocaleString()+' MAD</div><div style="font-size:12px;color:var(--mut);margin-bottom:10px">par personne, tout inclus</div><div class="bk-deposit">🟢&nbsp; Réservez avec seulement <strong style="color:#16A34A;margin-left:4px">'+(Math.round(dp*0.3)).toLocaleString()+' MAD</strong>&nbsp;d\'acompte</div>';})()+'<div></div>'
     +'<div class="qi"><div class="qi-r"><span>Durée</span><span>'+e.dur+'</span></div><div class="qi-r"><span>Difficulté</span><span style="color:'+difColor(e.dif||'Facile')+'">'+(e.dif||'Facile')+'</span></div><div class="qi-r"><span>Lieu</span><span>'+e.loc.split(',')[0]+'</span></div><div class="qi-r"><span>Groupe</span><span>'+e.minP+'–'+e.maxP+' pers.</span></div>'+(e.dates&&e.dates[0]?'<div class="qi-r"><span>Prochain départ</span><span style="color:var(--red);font-weight:700">'+e.dates[0].label+'</span></div>':'')+(e.pChild?'<div class="qi-r"><span>Enfant</span><span>'+e.pChild.toLocaleString()+' MAD</span></div>':'')+'</div>'
-    +'<button class="btn btn-r btn-full btn-lg" style="font-size:14px;border-radius:12px;margin-top:4px" onclick="openDates(\''+e.id+'\')">📅 Voir les dates & réserver</button>'
+    +'<div style="display:flex;gap:8px;margin-top:4px">'
+      +'<button class="btn btn-r btn-full btn-lg" style="font-size:14px;border-radius:12px;flex:1" onclick="openDates(\''+e.id+'\')">📅 Réserver</button>'
+      +'<button data-wl-id="'+e.id+'" onclick="toggleWL(\''+e.id+'\')" title="'+(isWL(e.id)?'Retirer de la wishlist':'Sauvegarder dans la wishlist')+'" style="width:48px;height:48px;border-radius:12px;background:'+(isWL(e.id)?'rgba(184,23,46,.18)':'rgba(255,255,255,.06)')+';border:1.5px solid '+(isWL(e.id)?'rgba(184,23,46,.4)':'rgba(255,255,255,.1)')+';color:'+(isWL(e.id)?'var(--red)':'rgba(255,255,255,.5)')+';font-size:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+(isWL(e.id)?'❤️':'🤍')+'</button>'
+    +'</div>'
     +'<div style="text-align:center;margin-top:10px"><a href="'+waUrl('Bonjour, je suis intéressé par : '+e.title)+'" target="_blank" style="font-size:13px;color:#25D366;font-weight:600">💬 Renseignements sur WhatsApp</a></div>'
     +'<div class="bk-trust"><div class="bk-trust-i"><span class="ico">🔒</span>Paiement<br>sécurisé</div><div class="bk-trust-i"><span class="ico">✅</span>Confirmation<br>sous 24h</div><div class="bk-trust-i"><span class="ico">🔄</span>Annulation<br>gratuite</div><div class="bk-trust-i"><span class="ico">🌟</span>Guide<br>certifié</div></div>'
   +'</div></div>'
@@ -3485,6 +3551,8 @@ function pgExpDetail(id){
   +(related.length?'<div style="padding:0 5% 40px"><h3 class="h3" style="font-size:20px;margin-bottom:16px">Vous pourriez aussi aimer</h3><div class="g3">'+related.map(function(r){return '<div style="background:#fff;border-radius:14px;overflow:hidden;border:1px solid var(--bdr);cursor:pointer;transition:all .25s" onclick="go(\'exp-detail\',\''+r.id+'\')" onmouseover="this.style.boxShadow=\'var(--sh2)\'" onmouseout="this.style.boxShadow=\'\'"><div style="aspect-ratio:4/3;overflow:hidden"><img src="'+r.img+'" loading="lazy" style="width:100%;height:100%;object-fit:cover;transition:transform .3s" onmouseover="this.style.transform=\'scale(1.05)\'" onmouseout="this.style.transform=\'scale(1)\'"></div><div style="padding:12px 13px"><div style="font-size:13px;font-weight:700;margin-bottom:3px">'+r.title+'</div><div style="font-size:12px;color:var(--mut)">'+r.dur+' · '+r.price.toLocaleString()+' MAD</div></div></div>';}).join('')+'</div></div>':'')
   /* Floating Reserve CTA (visible on phones via CSS) */
   +'<button class="d-floating-book" onclick="openDates(\''+e.id+'\')"><span class="lbl">✦ Réserver</span><span class="price">'+e.price.toLocaleString()+' MAD</span></button>'
+  /* Heart FAB — visible on phones next to the floating CTA */
+  +'<button data-wl-id="'+e.id+'" class="d-floating-heart" onclick="toggleWL(\''+e.id+'\')" title="'+(isWL(e.id)?'Retirer':'Sauvegarder')+'">'+(isWL(e.id)?'❤️':'🤍')+'</button>'
   +foot();
 }
 
