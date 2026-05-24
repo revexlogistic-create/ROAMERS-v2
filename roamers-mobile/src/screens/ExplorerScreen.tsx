@@ -5,10 +5,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getExperiences } from '../services/api';
+import { getExperiences, toggleWishlist } from '../services/api';
 import ExperienceCard from '../components/ExperienceCard';
 import { COLORS, RADIUS } from '../constants/theme';
 import Icon from '../components/Icons';
+import { useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -29,12 +30,18 @@ const TYPES: ChipDef[] = [
 
 export default function ExplorerScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { user, refresh } = useAuth();
   const [exps, setExps]          = useState<any[]>([]);
   const [search, setSearch]      = useState('');
   const [segment, setSegment]    = useState('');
   const [type, setType]          = useState('');
   const [loading, setLoading]    = useState(true);
   const [refreshing, setRefresh] = useState(false);
+
+  const handleWishlist = useCallback(async (expId: string) => {
+    if (!user) { navigation.navigate('Profile'); return; }
+    try { await toggleWishlist(expId); await refresh(); } catch (_) {}
+  }, [user, refresh, navigation]);
 
   const load = useCallback(async () => {
     try {
@@ -178,6 +185,8 @@ export default function ExplorerScreen({ navigation }: any) {
                 exp={item}
                 wide
                 onPress={() => navigation.navigate('ExperienceDetail', { id: item.id })}
+                wishlist={user?.wishlist}
+                onWishlist={handleWishlist}
               />
             ))
           )}

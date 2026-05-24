@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, RADIUS, SHADOW } from '../constants/theme';
+import Icon from './Icons';
 
 const { width } = Dimensions.get('window');
 const CARD_W = width * 0.78;
@@ -17,6 +18,8 @@ interface Props {
   exp: any;
   onPress: () => void;
   wide?: boolean;
+  wishlist?: string[];
+  onWishlist?: (id: string) => void;
 }
 
 function difColor(dif: string): string {
@@ -26,10 +29,12 @@ function difColor(dif: string): string {
   return map[dif] || COLORS.sub;
 }
 
-export default function ExperienceCard({ exp, onPress, wide }: Props) {
-  const segColor = SEGMENT_COLORS[exp.segment] || COLORS.primary;
-  const segLabel = SEGMENT_LABELS[exp.segment] || exp.segment;
-  const cardW    = wide ? width - 32 : CARD_W;
+export default function ExperienceCard({ exp, onPress, wide, wishlist, onWishlist }: Props) {
+  const segColor  = SEGMENT_COLORS[exp.segment] || COLORS.primary;
+  const segLabel  = SEGMENT_LABELS[exp.segment] || exp.segment;
+  const cardW     = wide ? width - 32 : CARD_W;
+  const isSaved   = wishlist ? wishlist.includes(exp.id) : false;
+  const showHeart = !!onWishlist;
 
   return (
     <TouchableOpacity
@@ -53,11 +58,23 @@ export default function ExperienceCard({ exp, onPress, wide }: Props) {
           pointerEvents="none"
         />
 
-        {/* Promo badge top-right */}
+        {/* Promo badge top-left */}
         {exp.badge && (
           <View style={styles.promoBadge}>
             <Text style={styles.promoBadgeTxt}>★ {exp.badge}</Text>
           </View>
+        )}
+
+        {/* Heart / wishlist button top-right */}
+        {showHeart && (
+          <TouchableOpacity
+            style={[styles.heartBtn, isSaved && styles.heartBtnActive]}
+            onPress={(e) => { e.stopPropagation?.(); onWishlist!(exp.id); }}
+            activeOpacity={0.75}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Icon.Heart size={15} color={isSaved ? '#fff' : COLORS.muted} filled={isSaved} />
+          </TouchableOpacity>
         )}
 
         {/* Bottom row: rating + days */}
@@ -122,8 +139,11 @@ const styles = StyleSheet.create({
   imgFallback:{ backgroundColor: '#1e1e1e', alignItems: 'center', justifyContent: 'center' },
   imgEmoji:   { fontSize: 48 },
 
-  promoBadge:    { position: 'absolute', top: 12, right: 12, backgroundColor: 'rgba(240,192,64,0.93)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.sm },
+  promoBadge:    { position: 'absolute', top: 12, left: 12, backgroundColor: 'rgba(240,192,64,0.93)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.sm },
   promoBadgeTxt: { color: '#000', fontSize: 11, fontWeight: '800' },
+
+  heartBtn:       { position: 'absolute', top: 10, right: 10, width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
+  heartBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
 
   imgFooter:  { position: 'absolute', bottom: 12, left: 12, right: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   ratingPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.72)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.sm },

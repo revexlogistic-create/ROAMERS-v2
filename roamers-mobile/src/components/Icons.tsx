@@ -4,7 +4,7 @@
  * Usage: <Icon.Mountain size={22} color="#B8172E" />
  */
 import React from 'react';
-import { View, ViewStyle } from 'react-native';
+import { View, Text, ViewStyle } from 'react-native';
 
 interface P { size?: number; color?: string; style?: ViewStyle }
 
@@ -426,11 +426,23 @@ export function Flash({ size = 22, color = '#fff', style }: P) {
   );
 }
 
+/* ── Heart / Love ───────────────────────────────────────────────── */
+interface HP extends P { filled?: boolean }
+export function Heart({ size = 22, color = '#fff', filled = false, style }: HP) {
+  return (
+    <View style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}>
+      <Text style={{ fontSize: size * 0.9, color: color, lineHeight: size * 1.05, includeFontPadding: false }}>
+        {filled ? '♥' : '♡'}
+      </Text>
+    </View>
+  );
+}
+
 /* ── named export object for convenience ──────────────────────────── */
 const Icon = {
   Mountain, Pin, Compass, Person, Grid, Tent,
   Route, Bookmark, Globe, Sliders, Sun, Group,
   Shield, Leaf, Trophy, Calendar, Logout, Star, RoamersR,
-  Search, Close, Flash,
+  Search, Close, Flash, Heart,
 };
 export default Icon;

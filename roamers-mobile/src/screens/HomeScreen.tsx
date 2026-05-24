@@ -5,10 +5,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getExperiences, getSiteConfig } from '../services/api';
+import { getExperiences, getSiteConfig, toggleWishlist } from '../services/api';
 import ExperienceCard from '../components/ExperienceCard';
 import { COLORS, RADIUS } from '../constants/theme';
 import Icon from '../components/Icons';
+import { useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -28,11 +29,17 @@ const WHY_CARDS: { icon: () => React.ReactNode; title: string; desc: string }[] 
 
 export default function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { user, refresh } = useAuth();
   const [exps, setExps]         = useState<any[]>([]);
   const [config, setConfig]     = useState<any>({});
   const [segment, setSegment]   = useState('all');
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefresh]= useState(false);
+
+  const handleWishlist = useCallback(async (expId: string) => {
+    if (!user) { navigation.navigate('Profile'); return; }
+    try { await toggleWishlist(expId); await refresh(); } catch (_) {}
+  }, [user, refresh, navigation]);
 
   const load = useCallback(async () => {
     try {
@@ -107,7 +114,13 @@ export default function HomeScreen({ navigation }: any) {
         ? <Text style={styles.empty}>Aucune expérience dans cette catégorie</Text>
         : <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 4 }}>
             {filtered.slice(0, 8).map((e) => (
-              <ExperienceCard key={e.id} exp={e} onPress={() => navigation.navigate('ExperienceDetail', { id: e.id })} />
+              <ExperienceCard
+                key={e.id}
+                exp={e}
+                onPress={() => navigation.navigate('ExperienceDetail', { id: e.id })}
+                wishlist={user?.wishlist}
+                onWishlist={handleWishlist}
+              />
             ))}
           </ScrollView>
       }

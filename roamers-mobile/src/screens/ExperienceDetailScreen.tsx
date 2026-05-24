@@ -5,9 +5,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getExperience, getReviews, submitReview } from '../services/api';
+import { getExperience, getReviews, submitReview, toggleWishlist } from '../services/api';
 import { COLORS, RADIUS, SHADOW } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import Icon from '../components/Icons';
 
 const { width } = Dimensions.get('window');
 /* Instagram portrait ratio 4:5 */
@@ -112,10 +113,11 @@ function SectionHeader({ label, color }: { label: string; color: string }) {
 export default function ExperienceDetailScreen({ route, navigation }: any) {
   const { id } = route.params;
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const [exp, setExp]           = useState<any>(null);
   const [loading, setLoading]   = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'program' | 'info'>('overview');
+  const [wlLoading, setWlLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'program' | 'info'>(route.params?.initialTab || 'overview');
   const [imgIdx, setImgIdx]     = useState(0);
 
   /* Reviews state */
@@ -182,10 +184,22 @@ export default function ExperienceDetailScreen({ route, navigation }: any) {
     </View>
   );
 
-  const isClosed = exp.status === 'closed' || exp.status === 'full';
-  const segColor = SEG_COLORS[exp.segment] || COLORS.primary;
+  const isClosed  = exp.status === 'closed' || exp.status === 'full';
+  const segColor  = SEG_COLORS[exp.segment] || COLORS.primary;
   const imgs: string[] = exp.imgs?.length ? exp.imgs : (exp.img ? [exp.img] : []);
   const itinerary: any[] = exp.it || exp.itinerary || [];
+  const isSaved   = (user?.wishlist || []).includes(id);
+
+  async function handleWishlist() {
+    if (!user) { navigation.navigate('Login'); return; }
+    if (wlLoading) return;
+    setWlLoading(true);
+    try {
+      await toggleWishlist(id);
+      await refresh();
+    } catch (_) {}
+    finally { setWlLoading(false); }
+  }
 
   return (
     <View style={s.container}>
@@ -225,6 +239,16 @@ export default function ExperienceDetailScreen({ route, navigation }: any) {
           {/* ── Back button ── */}
           <TouchableOpacity style={[s.backBtn, { top: insets.top + 10 }]} onPress={() => navigation.goBack()}>
             <Text style={s.backTxt}>‹</Text>
+          </TouchableOpacity>
+
+          {/* ── Wishlist heart button ── */}
+          <TouchableOpacity
+            style={[s.heartFab, { top: insets.top + 10 }, isSaved && s.heartFabActive]}
+            onPress={handleWishlist}
+            activeOpacity={0.75}
+            disabled={wlLoading}
+          >
+            <Icon.Heart size={18} color={isSaved ? '#fff' : 'rgba(255,255,255,0.85)'} filled={isSaved} />
           </TouchableOpacity>
 
           {/* ── Instagram counter "2 / 5" ── */}
@@ -450,6 +474,17 @@ export default function ExperienceDetailScreen({ route, navigation }: any) {
           <View style={s.tabContent}>
             {itinerary.length > 0 ? (
               <>
+                {Array.isArray(exp.circuit) && exp.circuit.length >= 2 && (
+                  <TouchableOpacity
+                    style={[s.mapItBtn, { borderColor: segColor + '88' }]}
+                    onPress={() => navigation.navigate('Map', { circuit: exp.circuit, circuitCoords: exp.circuitCoords || [], expTitle: exp.title, expId: exp.id })}
+                    activeOpacity={0.82}
+                  >
+                    <Text style={s.mapItBtnIcon}>🗺️</Text>
+                    <Text style={[s.mapItBtnTxt, { color: segColor }]}>Voir l'itinéraire sur la carte</Text>
+                    <Text style={[s.mapItBtnArrow, { color: segColor }]}>→</Text>
+                  </TouchableOpacity>
+                )}
                 <Text style={s.progIntro}>Appuyez sur chaque jour pour voir le détail.</Text>
                 {itinerary.map((day: any, i: number) => (
                   <DayCard key={i} day={day} index={i} total={itinerary.length} accentColor={segColor} galleryImgs={imgs} />
@@ -527,14 +562,53 @@ export default function ExperienceDetailScreen({ route, navigation }: any) {
               <View style={{ marginTop: 8 }}>
                 <SectionHeader label="Prochaines dates" color={segColor} />
                 <View style={s.datesGrid}>
-                  {exp.dates.map((d: any, i: number) => (
-                    <View key={i} style={[s.datePill, i === 0 && { borderColor: segColor }]}>
-                      <Text style={[s.datePillTxt, i === 0 && { color: segColor, fontWeight: '700' }]}>
-                        {typeof d === 'object' ? d.label || d.raw : d}
-                      </Text>
-                      {i === 0 && <Text style={[s.datePillNext, { color: segColor }]}>Prochaine</Text>}
-                    </View>
-                  ))}
+                  {(() => {
+                    const today = new Date(); today.setHours(0,0,0,0);
+                    let firstAvailableMarked = false;
+                    return exp.dates.map((d: any, i: number) => {
+                      const raw    = typeof d === 'object' ? (d.raw   || '') : String(d);
+                      const label  = typeof d === 'object' ? (d.label || raw) : raw;
+                      const isFull = typeof d === 'object' && !!d.full;
+                      const dprice = typeof d === 'object' && d.price != null ? Number(d.price) : null;
+                      const booked = typeof d === 'object' ? (d.booked || 0) : 0;
+                      const maxP   = exp.maxP || 20;
+                      const remaining = Math.max(0, maxP - booked);
+                      /* Skip past dates */
+                      const isPast = raw && new Date(raw) < today;
+                      const isNext = !isFull && !isPast && !firstAvailableMarked;
+                      if (isNext) firstAvailableMarked = true;
+                      return (
+                        <View key={i} style={[
+                          s.datePill,
+                          isNext && { borderColor: segColor },
+                          isFull && s.datePillFull,
+                          isPast && s.datePillFull,
+                        ]}>
+                          <Text style={[
+                            s.datePillTxt,
+                            isNext && { color: segColor, fontWeight: '700' },
+                            (isFull || isPast) && s.datePillTxtFull,
+                          ]}>
+                            {label}
+                          </Text>
+                          {/* Per-date price */}
+                          {dprice != null && !isFull && !isPast && (
+                            <Text style={[s.datePillPrice, isNext && { color: segColor }]}>
+                              {dprice.toLocaleString('fr-MA')} MAD
+                            </Text>
+                          )}
+                          {/* Booking occupancy */}
+                          {!isFull && !isPast && booked > 0 && (
+                            <Text style={s.datePillBooked}>
+                              {remaining} place{remaining > 1 ? 's' : ''} restante{remaining > 1 ? 's' : ''}
+                            </Text>
+                          )}
+                          {isFull && <Text style={s.datePillComplet}>● Complet</Text>}
+                          {isNext && <Text style={[s.datePillNext, { color: segColor }]}>Prochaine</Text>}
+                        </View>
+                      );
+                    });
+                  })()}
                 </View>
               </View>
             )}
@@ -565,6 +639,10 @@ export default function ExperienceDetailScreen({ route, navigation }: any) {
         style={[s.ctaBar, { paddingBottom: insets.bottom + 14 }]}
       >
         <View>
+          {/* Show "À partir de" if any date has its own price */}
+          {exp.dates?.some((d: any) => typeof d === 'object' && d.price != null) && (
+            <Text style={s.ctaFromLbl}>À partir de</Text>
+          )}
           <Text style={[s.ctaPrice, { color: segColor }]}>{Number(exp.price).toLocaleString('fr-MA')} MAD</Text>
           <Text style={s.ctaNote}>par personne · acompte seulement</Text>
         </View>
@@ -693,6 +771,10 @@ const s = StyleSheet.create({
   reviewLoginTxt:    { color: COLORS.muted, fontSize: 13, textAlign: 'center' },
 
   /* Programme */
+  mapItBtn:      { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: RADIUS.pill, paddingVertical: 13, paddingHorizontal: 18, marginBottom: 14, backgroundColor: 'rgba(255,255,255,0.04)' },
+  mapItBtnIcon:  { fontSize: 18, marginRight: 8 },
+  mapItBtnTxt:   { flex: 1, fontSize: 14, fontWeight: '800', letterSpacing: 0.2 },
+  mapItBtnArrow: { fontSize: 16, fontWeight: '700' },
   progIntro:     { color: COLORS.muted, fontSize: 13, marginBottom: 16, fontStyle: 'italic' },
   emptyProg:     { alignItems: 'center', paddingVertical: 40 },
   emptyProgIcon: { fontSize: 48, marginBottom: 14 },
@@ -709,7 +791,12 @@ const s = StyleSheet.create({
   datesGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   datePill:      { backgroundColor: '#161616', borderRadius: RADIUS.sm, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: '#2a2a2a' },
   datePillTxt:   { color: COLORS.text, fontSize: 13 },
-  datePillNext:  { fontSize: 10, fontWeight: '700', marginTop: 2 },
+  datePillNext:   { fontSize: 10, fontWeight: '700', marginTop: 2 },
+  datePillFull:   { backgroundColor: '#111', borderColor: '#222', opacity: 0.6 },
+  datePillTxtFull:{ color: '#555', textDecorationLine: 'line-through' },
+  datePillComplet:{ fontSize: 10, fontWeight: '700', color: '#ef4444', marginTop: 2 },
+  datePillPrice:  { fontSize: 11, fontWeight: '700', color: COLORS.sub, marginTop: 3 },
+  datePillBooked: { fontSize: 10, fontWeight: '600', color: '#f59e0b', marginTop: 2 },
 
   /* Meeting point card */
   meetCard:    { flexDirection: 'row', alignItems: 'center', gap: 14, marginHorizontal: 16, marginTop: 12, backgroundColor: '#161616', borderRadius: RADIUS.lg, padding: 16, borderWidth: 1, borderColor: '#242424' },
@@ -725,11 +812,16 @@ const s = StyleSheet.create({
   whyTxt:     { color: COLORS.sub, fontSize: 14, flex: 1, lineHeight: 21 },
 
   /* CTA */
-  ctaBar:    { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 28 },
-  ctaPrice:  { fontSize: 22, fontWeight: '900', includeFontPadding: false },
-  ctaNote:   { color: COLORS.muted, fontSize: 11, marginTop: 3 },
+  ctaBar:     { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 28 },
+  ctaFromLbl: { color: COLORS.muted, fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  ctaPrice:   { fontSize: 22, fontWeight: '900', includeFontPadding: false },
+  ctaNote:    { color: COLORS.muted, fontSize: 11, marginTop: 3 },
   ctaBtn:    { paddingHorizontal: 26, paddingVertical: 14, borderRadius: RADIUS.pill },
   ctaBtnTxt: { color: '#fff', fontWeight: '900', fontSize: 15, letterSpacing: 0.5 },
+
+  /* Wishlist heart FAB */
+  heartFab:       { position: 'absolute', right: 14, width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', zIndex: 10 },
+  heartFabActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
 });
 
 /* ── Programme accordion ─────────────────────────────────────────────────── */
