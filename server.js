@@ -53,7 +53,7 @@ app.use(helmet({
       /* SPA uses inline scripts/styles — required for the SPA to function */
       scriptSrc:   ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
       styleSrc:    ["'self'", "'unsafe-inline'",
-                    'https://fonts.googleapis.com'],
+                    'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'],
       fontSrc:     ["'self'", 'https://fonts.gstatic.com', 'data:'],
       /* Images: self, data: URIs (base64), and https CDNs (Unsplash, etc.) */
       imgSrc:      ["'self'", 'data:', 'blob:', 'https:'],
@@ -220,10 +220,10 @@ app.get('/api/health', function(req, res) {
 /* ── APP VERSION (mobile update check) ──────────────────────── */
 app.get('/api/app-version', function(req, res) {
   res.json({
-    versionCode: 32,
-    versionName: '1.0.2',
+    versionCode: 33,
+    versionName: '1.0.3',
     downloadUrl: '/downloads/roamers.apk',
-    releaseNotes: 'Confirmation WhatsApp après inscription, tags carte → détail activité, connexion requise pour réserver, codes promo partenaires, points Roamers dans le profil.'
+    releaseNotes: 'Système de wishlist (cœur sur toutes les cartes), notifications configurables, lien de parrainage sur le Passeport, bouton cœur sur la page détail voyage.'
   });
 });
 
