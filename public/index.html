@@ -362,7 +362,9 @@ main#app{padding-top:72px}
 .gallery img:hover{transform:scale(1.04);opacity:.9}
 /* ── DETAIL IMAGE SLIDER ─────────────────── */
 .d-sl-track{display:flex;height:100%;transition:transform .4s cubic-bezier(.4,0,.2,1);will-change:transform}
-.d-sl-slide{flex:none;height:100%;overflow:hidden}
+/* flex:0 0 100% gives each slide exactly the container width without needing JS first;
+   initDetailSlider() still runs for pixel-perfect translation math */
+.d-sl-slide{flex:0 0 100%;height:100%;overflow:hidden}
 .d-sl-slide img{width:100%;height:100%;object-fit:cover;display:block}
 .d-sl-dots{position:absolute;bottom:76px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:10}
 .d-sl-dot{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.4);cursor:pointer;transition:all .25s}
@@ -2152,7 +2154,7 @@ function _renderItModal(){
   _IT.forEach(function(d, i){
     var img = d.img || (imgs.length ? imgs[i % imgs.length] : '');
     /* split description into sentences as mini steps */
-    var steps = d.desc.split(/\.\s+/).filter(Boolean);
+    var steps = (d.desc||'').split(/\.\s+/).filter(Boolean);
 
     html += '<div class="it-day-block" id="it-block-'+i+'" style="position:relative">';
 
@@ -2206,7 +2208,7 @@ function openBk(id){
   var exp=EXP.find(function(e){return e.id===id;});
   if(!exp)return;
   var u=ST.user;
-  ST.bk={exp:exp,step:1,date:'',adults:2,children:0,addons:{},
+  ST.bk={exp:exp,step:1,date:'',datePrice:null,adults:2,children:0,addons:{},
     payMethod: ST.stripeKey ? 'stripe' : (SETTINGS.bankRib||SETTINGS.bankIban||SETTINGS.bankBenef ? 'virement' : 'stripe'),
     name:u?u.fname:'',last:u?u.lname:'',email:u?u.email:'',
     phone:u?u.phone||'':'',country:u?u.country||'Morocco':'Morocco',notes:'',ref:''};
@@ -2217,28 +2219,48 @@ function openBk(id){
 function closeBk(){document.getElementById('bkModal').style.display='none';document.body.style.overflow='';}
 function bkBgClick(e){if(e.target===document.getElementById('bkModal'))closeBk();}
 function closeDates(){var m=document.getElementById('datesModal');if(m)m.remove();document.body.style.overflow='';}
+function _bkSelectDate(id,raw,price){
+  closeDates();
+  openBk(id);
+  ST.bk.date=raw;
+  ST.bk.datePrice=price!=null?price:null;
+  renderBk();
+}
 function openDates(id){
   var e=EXP.find(function(x){return x.id===id;});
   if(!e||!e.dates||!e.dates.length)return openBk(id);
+  var cap=e.maxP||20;
   var rows=e.dates.map(function(dt,i){
-    var spots=Math.max(2,e.maxP-Math.round((i+1)*e.maxP/e.dates.length)-Math.floor(i*1.5));
-    var almostFull=spots<=3;
-    var color=almostFull?'#D97706':'#16a34a';
-    var bdr=almostFull?'rgba(217,119,6,.35)':'var(--bdr)';
-    var bg=almostFull?'rgba(217,119,6,.04)':'#fff';
-    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1.5px solid '+bdr+';border-radius:12px;cursor:pointer;background:'+bg+'" onclick="closeDates();openBk(\''+id+'\');ST.bk.date=\''+dt.label+'\';renderBk()">'
+    var booked=dt.booked||0;
+    var avail=Math.max(0,cap-booked);
+    var isFull=dt.full||avail===0;
+    var almostFull=!isFull&&avail<=3;
+    var color=isFull?'#DC2626':almostFull?'#D97706':'#16a34a';
+    var bdr=isFull?'rgba(220,38,38,.3)':almostFull?'rgba(217,119,6,.35)':'var(--bdr)';
+    var bg=isFull?'rgba(220,38,38,.04)':almostFull?'rgba(217,119,6,.04)':'#fff';
+    var parts=dt.label.split(' ');
+    var datePrice=dt.price!=null?dt.price:null;
+    var priceStr=datePrice!=null?datePrice.toLocaleString()+' MAD / pers':(e.price?e.price.toLocaleString()+' MAD / pers':'');
+    var spotsStr=isFull?'🔴 Complet':almostFull?'⚠️ '+avail+' place'+(avail>1?'s':'')+' dispo':avail+' place'+(avail>1?'s':'')+' dispo';
+    var clickAttr=isFull?'style="cursor:not-allowed;opacity:.75"':' style="cursor:pointer" onclick="_bkSelectDate(\''+id+'\',\''+dt.raw+'\','+(datePrice!=null?datePrice:'null')+')"';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1.5px solid '+bdr+';border-radius:12px;background:'+bg+'" '+clickAttr+'>'
       +'<div style="display:flex;align-items:center;gap:12px">'
-        +'<div style="width:40px;height:40px;background:var(--red);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">'
-          +'<span style="color:#fff;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase">'+dt.label.split(' ')[1]+'</span>'
-          +'<span style="color:#fff;font-family:\'Bebas Neue\',cursive;font-size:17px;line-height:1">'+dt.label.split(' ')[0]+'</span>'
+        +'<div style="width:44px;height:44px;background:'+(isFull?'#9ca3af':'var(--red)')+';border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">'
+          +'<span style="color:#fff;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase">'+(parts[1]||'')+'</span>'
+          +'<span style="color:#fff;font-family:\'Bebas Neue\',cursive;font-size:18px;line-height:1">'+(parts[0]||dt.label)+'</span>'
         +'</div>'
-        +'<div><div style="font-weight:700;font-size:14px;color:var(--txt)">'+dt.label+'</div>'
-          +'<div style="font-size:12px;color:var(--mut);margin-top:2px">Départ '+(i===0?'<span style="color:var(--sage);font-weight:700">confirmé</span>':'programmé')+'</div>'
+        +'<div>'
+          +'<div style="font-weight:700;font-size:14px;color:var(--txt)">'+dt.label+'</div>'
+          +'<div style="font-size:12px;color:var(--mut);margin-top:2px">Départ '+(i===0?'<span style="color:#16a34a;font-weight:700">confirmé</span>':'programmé')+'</div>'
+          +(priceStr?'<div style="font-size:12px;font-weight:700;color:var(--red);margin-top:2px">'+priceStr+'</div>':'')
         +'</div>'
       +'</div>'
       +'<div style="text-align:right;flex-shrink:0">'
-        +'<div style="font-size:12px;font-weight:700;color:'+color+'">'+spots+' place'+(spots>1?'s':'')+' dispo</div>'
-        +'<div style="font-size:11px;color:var(--mut)">sur '+e.maxP+'</div>'
+        +'<div style="font-size:12px;font-weight:700;color:'+color+'">'+spotsStr+'</div>'
+        +'<div style="display:flex;gap:2px;margin-top:4px;justify-content:flex-end">'
+          +Array.from({length:Math.min(cap,10)},function(_,k){ return '<div style="width:8px;height:8px;border-radius:2px;background:'+(k<Math.min(booked,cap)?color:'rgba(0,0,0,.1)')+'"></div>'; }).join('')
+          +(cap>10?'<span style="font-size:10px;color:var(--mut);margin-left:2px">'+booked+'/'+cap+'</span>':'')
+        +'</div>'
       +'</div>'
     +'</div>';
   }).join('');
@@ -2257,9 +2279,10 @@ function openDates(id){
   document.body.style.overflow='hidden';
 }
 
+function _effPrice(b){ return b.datePrice!=null?b.datePrice:b.exp.price; }
 function calcP(){
   var b=ST.bk; if(!b.exp)return{adult:0,child:0,ao:0,total:0};
-  var ad=b.exp.price*b.adults;
+  var ad=_effPrice(b)*b.adults;
   var ch=b.exp.pChild?b.exp.pChild*b.children:0;
   var ao=0;
   Object.keys(b.addons).forEach(function(id){
@@ -2275,7 +2298,8 @@ function calcP(){
 }
 
 function pRows(p,b){
-  var h='<div class="pr"><span>'+b.adults+' adult'+(b.adults>1?'s':'')+' x '+b.exp.price.toLocaleString()+' MAD</span><span>'+p.adult.toLocaleString()+' MAD</span></div>';
+  var ep=_effPrice(b);
+  var h='<div class="pr"><span>'+b.adults+' adult'+(b.adults>1?'s':'')+' x '+ep.toLocaleString()+' MAD</span><span>'+p.adult.toLocaleString()+' MAD</span></div>';
   if(b.children&&b.exp.pChild)h+='<div class="pr"><span>'+b.children+' child'+(b.children>1?'ren':'')+' x '+b.exp.pChild.toLocaleString()+' MAD</span><span>'+p.child.toLocaleString()+' MAD</span></div>';
   if(p.ao)h+='<div class="pr"><span>Add-ons</span><span>+'+p.ao.toLocaleString()+' MAD</span></div>';
   h+='<div class="pr pt"><span>Total</span><span>'+p.total.toLocaleString()+' MAD</span></div>';
@@ -2334,15 +2358,35 @@ function confirmBk(){
       renderBk();
       syncNav();
     }
-  }).catch(function(){
+  }).catch(function(err){
+    /* If the server returned a meaningful validation error (4xx), show it
+       and re-enable the button so the user can correct and retry. */
+    if(err && err.data){
+      var btn2=document.querySelector('.mf .btn-r');
+      if(btn2){btn2.disabled=false;btn2.textContent=btn2.textContent.replace('⏳ En cours…','Confirmer la réservation');}
+      toast(err.message||'Erreur lors de la réservation','warn');
+      return;
+    }
+    /* Network/server error — save locally and still show the payment step
+       so the user receives their reference and payment instructions. */
     b.ref='RC-'+Math.random().toString(36).substr(2,4).toUpperCase()+Date.now().toString().slice(-4);
     var r={id:Date.now(),ref:b.ref,expId:b.exp.id,expTitle:b.exp.title,expImg:b.exp.img,expLoc:b.exp.loc,dur:b.exp.dur,date:b.date,adults:b.adults,children:b.children,addons:Object.assign({},b.addons),name:b.name+' '+b.last,email:b.email,phone:b.phone,country:b.country,notes:b.notes,total:p.total,status:'pending',created:new Date().toISOString()};
     ST.res.unshift(r);
     localStorage.setItem('rc_res',JSON.stringify(ST.res));
-    ST.bk.step=5;
-    renderBk();
-    syncNav();
-    toast('Réservation enregistrée ! Réf : '+b.ref);
+    /* Route to the payment step the same way the success path does */
+    var pm=b.payMethod||(ST.stripeKey?'stripe':(SETTINGS.bankRib||SETTINGS.bankIban?'virement':''));
+    if(pm==='virement'||(SETTINGS.bankRib||SETTINGS.bankIban||SETTINGS.bankBenef)){
+      ST.bk.payMethod='virement';
+      ST.bk.step=4;
+      renderBk();
+      syncNav();
+      toast('Réservation enregistrée ! Réf : '+b.ref);
+    } else {
+      ST.bk.payMethod='contact';
+      ST.bk.step=4;
+      renderBk();
+      syncNav();
+    }
   });
 }
 
@@ -2402,7 +2446,7 @@ function renderBk(){
   var p=calcP();
 
   if(b.step===1){
-    body='<div class="mm"><div class="fg"><label class="fl">Departure Date *</label><input type="date" class="fi" id="bkDt" min="'+today+'" value="'+b.date+'" onchange="ST.bk.date=this.value;var p=calcP();var pb=document.getElementById(\'pbd\');if(pb)pb.innerHTML=pRows(p,ST.bk)"></div><div class="fr"><div class="fg"><label class="fl">Adults (16+)</label><div class="cc"><button class="cb" onclick="chgCnt(\'a\',-1)">-</button><span class="cv" id="acnt">'+b.adults+'</span><button class="cb" onclick="chgCnt(\'a\',1)">+</button></div></div><div class="fg"><label class="fl">Children '+(b.exp.pChild?'':'<small style="color:var(--mut)">(N/A)</small>')+'</label><div class="cc" style="'+(b.exp.pChild?'':'opacity:.4;pointer-events:none')+'"><button class="cb" onclick="chgCnt(\'c\',-1)">-</button><span class="cv" id="ccnt">'+b.children+'</span><button class="cb" onclick="chgCnt(\'c\',1)">+</button></div></div></div><div class="pb" id="pbd">'+pRows(p,b)+'</div><p style="font-size:12px;color:var(--mut);text-align:center">Max '+b.exp.maxP+' · Min '+b.exp.minP+' people</p></div><div class="mf"><button class="btn btn-s" onclick="closeBk()">Cancel</button><button class="btn btn-r btn-lg" onclick="if(!ST.bk.date){toast(\'Please select a date\',\'warn\');return;}if(ST.bk.adults+ST.bk.children>ST.bk.exp.maxP){toast(\'Maximum \'+ST.bk.exp.maxP+\' people for this trip\',\'warn\');return;}ST.bk.step=2;renderBk()">Next: Your Details</button></div>';
+    body='<div class="mm"><div class="fg"><label class="fl">Departure Date *</label><input type="date" class="fi" id="bkDt" min="'+today+'" value="'+b.date+'" onchange="ST.bk.date=this.value;(function(v){var _d=ST.bk.exp&&ST.bk.exp.dates&&ST.bk.exp.dates.find(function(x){return x.raw===v;});ST.bk.datePrice=_d&&_d.price!=null?_d.price:null;})(this.value);var p=calcP();var pb=document.getElementById(\'pbd\');if(pb)pb.innerHTML=pRows(p,ST.bk)"></div><div class="fr"><div class="fg"><label class="fl">Adults (16+)</label><div class="cc"><button class="cb" onclick="chgCnt(\'a\',-1)">-</button><span class="cv" id="acnt">'+b.adults+'</span><button class="cb" onclick="chgCnt(\'a\',1)">+</button></div></div><div class="fg"><label class="fl">Children '+(b.exp.pChild?'':'<small style="color:var(--mut)">(N/A)</small>')+'</label><div class="cc" style="'+(b.exp.pChild?'':'opacity:.4;pointer-events:none')+'"><button class="cb" onclick="chgCnt(\'c\',-1)">-</button><span class="cv" id="ccnt">'+b.children+'</span><button class="cb" onclick="chgCnt(\'c\',1)">+</button></div></div></div><div class="pb" id="pbd">'+pRows(p,b)+'</div><p style="font-size:12px;color:var(--mut);text-align:center">Max '+b.exp.maxP+' · Min '+b.exp.minP+' people</p></div><div class="mf"><button class="btn btn-s" onclick="closeBk()">Cancel</button><button class="btn btn-r btn-lg" onclick="if(!ST.bk.date){toast(\'Please select a date\',\'warn\');return;}if(ST.bk.adults+ST.bk.children>ST.bk.exp.maxP){toast(\'Maximum \'+ST.bk.exp.maxP+\' people for this trip\',\'warn\');return;}ST.bk.step=2;renderBk()">Next: Your Details</button></div>';
   } else if(b.step===2){
     body='<div class="mm"><div class="fr"><div class="fg"><label class="fl">First Name *</label><input type="text" class="fi" id="bFn" value="'+b.name+'" oninput="ST.bk.name=this.value"></div><div class="fg"><label class="fl">Last Name *</label><input type="text" class="fi" id="bLn" value="'+b.last+'" oninput="ST.bk.last=this.value"></div></div><div class="fg"><label class="fl">Email *</label><input type="email" class="fi" id="bEm" value="'+b.email+'" oninput="ST.bk.email=this.value"></div><div class="fr"><div class="fg"><label class="fl">Phone / WhatsApp *</label><input type="tel" class="fi" id="bPh" value="'+b.phone+'" oninput="ST.bk.phone=this.value"></div><div class="fg"><label class="fl">Country</label><select class="fi" onchange="ST.bk.country=this.value">'+['Morocco','France','China','Japan','USA','UK','Germany','UAE','Canada','Other'].map(function(c){return '<option'+(b.country===c?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div></div><div class="fg"><label class="fl">Special Requests</label><textarea class="fi" rows="3" placeholder="Dietary requirements, special occasions..." oninput="ST.bk.notes=this.value">'+b.notes+'</textarea></div></div><div class="mf"><button class="btn btn-s" onclick="ST.bk.step=1;renderBk()">Back</button><button class="btn btn-r btn-lg" onclick="var fn=document.getElementById(\'bFn\');var em=document.getElementById(\'bEm\');var ph=document.getElementById(\'bPh\');if(!fn||!fn.value.trim()){toast(\'Enter your first name\',\'warn\');return;}if(!em||!em.value.includes(\'@\')){toast(\'Enter a valid email\',\'warn\');return;}if(!ph||ph.value.trim().length<8){toast(\'Enter a valid phone number\',\'warn\');return;}ST.bk.step=3;renderBk()">Next: Add-ons</button></div>';
   } else if(b.step===3){
@@ -3389,7 +3433,8 @@ function pgExpDetail(id){
   var multi = slImgs.length > 1;
   return '<div class="d-hero" style="position:relative;overflow:hidden" ontouchstart="dTouchStart(event)" ontouchend="dTouchEnd(event)">'
   +'<div class="d-sl-track" id="dSlTrack" data-cur="0">'
-  +slImgs.map(function(img){return '<div class="d-sl-slide"><img src="'+img+'" alt="'+e.title+'" loading="lazy"></div>';}).join('')
+  /* First slide is always visible (hero) — never lazy-load it */
+  +slImgs.map(function(img,i){return '<div class="d-sl-slide"><img src="'+img+'" alt="'+e.title+'"'+(i===0?'':' loading="lazy"')+'></div>';}).join('')
   +'</div>'
   +(multi?'<div class="d-sl-dots" id="dSlDots">'+slImgs.map(function(_,i){return '<span class="d-sl-dot'+(i===0?' act':'')+'" onclick="dSlideTo('+i+')"></span>';}).join('')+'</div>':'')
   +'</div>'
@@ -3413,10 +3458,10 @@ function pgExpDetail(id){
   +'</div>'
   +'<div class="d-body"><div>'
   +'<div style="margin:26px 0"><p style="font-size:15px;line-height:1.82;color:var(--mut)">'+e.desc+'</p></div>'
-  +'<div style="margin-bottom:24px"><h3 class="h3" style="font-size:20px;margin-bottom:13px;padding-bottom:8px;border-bottom:1px solid var(--bdr)">Points forts</h3><div style="display:flex;flex-direction:column;gap:9px">'+e.hi.map(function(h){return '<div style="display:flex;align-items:flex-start;gap:9px;font-size:14px"><div style="width:22px;height:22px;background:var(--sage-l);color:var(--sage);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">✓</div>'+h+'</div>';}).join('')+'</div></div>'
+  +'<div style="margin-bottom:24px"><h3 class="h3" style="font-size:20px;margin-bottom:13px;padding-bottom:8px;border-bottom:1px solid var(--bdr)">Points forts</h3><div style="display:flex;flex-direction:column;gap:9px">'+(e.hi||[]).map(function(h){return '<div style="display:flex;align-items:flex-start;gap:9px;font-size:14px"><div style="width:22px;height:22px;background:var(--sage-l);color:var(--sage);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">✓</div>'+h+'</div>';}).join('')+'</div></div>'
   +(e.dates&&e.dates.length?'<div style="margin-bottom:24px"><button onclick="openDates(\''+e.id+'\')" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border:1.5px solid var(--red);border-radius:14px;background:rgba(184,23,46,.04);cursor:pointer;transition:all .2s;font-family:inherit" onmouseover="this.style.background=\'rgba(184,23,46,.09)\'" onmouseout="this.style.background=\'rgba(184,23,46,.04)\'"><div style="display:flex;align-items:center;gap:11px"><span style="font-size:22px">📅</span><div style="text-align:left"><div style="font-size:15px;font-weight:700;color:var(--txt)">Prochaines dates de départ</div><div style="font-size:12px;color:var(--mut);margin-top:2px">'+e.dates.length+' date'+(e.dates.length>1?'s disponibles':' disponible')+' · Prochain départ : '+e.dates[0].label+'</div></div></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M8 5l5 5-5 5" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>':'')
-  +'<div style="margin-bottom:24px"><h3 class="h3" style="font-size:20px;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--bdr)">Programme jour par jour</h3><div class="it-timeline">'+e.it.map(function(d,i){return '<div class="it-day-card" onclick="openItDay('+i+')">'+'<div class="it-num"><span>Jour</span>'+d.d+'</div>'+'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'+'<div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--txt);margin-bottom:4px;line-height:1.3">'+d.t+'</div><div style="font-size:12px;color:var(--mut);line-height:1.55">'+d.desc.slice(0,90)+(d.desc.length>90?'…':'')+'</div></div>'+'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:2px;color:var(--red)"><path d="M6 3l5 5-5 5" stroke="var(--red)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'+'</div></div>';}).join('')+'</div></div>'
-  +'<div style="margin-bottom:24px"><h3 class="h3" style="font-size:20px;margin-bottom:13px;padding-bottom:8px;border-bottom:1px solid var(--bdr)">Ce qui est inclus</h3><div class="g2" style="gap:18px"><div><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sage);margin-bottom:9px">✓ Inclus</div><div style="display:flex;flex-direction:column;gap:7px">'+e.inc.map(function(i){return '<div style="font-size:13px;display:flex;gap:7px"><span style="color:var(--sage);flex-shrink:0">✓</span>'+i+'</div>';}).join('')+'</div></div><div><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#DC2626;margin-bottom:9px">✗ Non inclus</div><div style="display:flex;flex-direction:column;gap:7px">'+e.exc.map(function(x){return '<div style="font-size:13px;display:flex;gap:7px;color:var(--mut)"><span style="color:#DC2626;flex-shrink:0">✗</span>'+x+'</div>';}).join('')+'</div></div></div></div>'
+  +'<div style="margin-bottom:24px"><h3 class="h3" style="font-size:20px;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--bdr)">Programme jour par jour</h3><div class="it-timeline">'+(e.it||[]).map(function(d,i){var dd=d.desc||'';return '<div class="it-day-card" onclick="openItDay('+i+')">'+'<div class="it-num"><span>Jour</span>'+(d.d||i+1)+'</div>'+'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'+'<div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--txt);margin-bottom:4px;line-height:1.3">'+(d.t||'')+'</div><div style="font-size:12px;color:var(--mut);line-height:1.55">'+dd.slice(0,90)+(dd.length>90?'…':'')+'</div></div>'+'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:2px;color:var(--red)"><path d="M6 3l5 5-5 5" stroke="var(--red)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'+'</div></div>';}).join('')+'</div></div>'
+  +'<div style="margin-bottom:24px"><h3 class="h3" style="font-size:20px;margin-bottom:13px;padding-bottom:8px;border-bottom:1px solid var(--bdr)">Ce qui est inclus</h3><div class="g2" style="gap:18px"><div><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sage);margin-bottom:9px">✓ Inclus</div><div style="display:flex;flex-direction:column;gap:7px">'+(e.inc||[]).map(function(i){return '<div style="font-size:13px;display:flex;gap:7px"><span style="color:var(--sage);flex-shrink:0">✓</span>'+i+'</div>';}).join('')+'</div></div><div><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#DC2626;margin-bottom:9px">✗ Non inclus</div><div style="display:flex;flex-direction:column;gap:7px">'+(e.exc||[]).map(function(x){return '<div style="font-size:13px;display:flex;gap:7px;color:var(--mut)"><span style="color:#DC2626;flex-shrink:0">✗</span>'+x+'</div>';}).join('')+'</div></div></div></div>'
   +'<div style="margin-bottom:24px"><h3 class="h3" style="font-size:20px;margin-bottom:4px;padding-bottom:8px;border-bottom:1px solid var(--bdr)">🎒 À emporter</h3><p style="font-size:12px;color:var(--mut);margin-bottom:0">Cochez avant de partir</p><div class="pack-grid">'+packList(e.type)+'</div></div>'
   +'<div style="margin-bottom:24px"><h3 class="h3" style="font-size:20px;margin-bottom:13px;padding-bottom:8px;border-bottom:1px solid var(--bdr)">Questions fréquentes</h3><div class="faq-wrap">'
     +'<div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Comment fonctionne la réservation ?<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 6.5l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="faq-a">Réservez en ligne ou via WhatsApp. Un acompte de 30% confirme votre place. Le solde est réglé 7 jours avant le départ ou directement sur place.</div></div>'
@@ -3430,9 +3475,7 @@ function pgExpDetail(id){
   +'</div>'
   +'<div><div class="bk-sb">'
     +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="color:#F5A623;font-size:14px">★ '+e.rating+'</span><span style="font-size:13px;color:var(--mut)">('+e.rev+' avis)</span></div>'
-    +'<div style="font-family:\'Bebas Neue\',cursive;font-size:38px;color:var(--red);line-height:1">'+e.price.toLocaleString()+' MAD</div>'
-    +'<div style="font-size:12px;color:var(--mut);margin-bottom:10px">par personne, tout inclus</div>'
-    +'<div class="bk-deposit">🟢&nbsp; Réservez avec seulement <strong style="color:#16A34A;margin-left:4px">'+(Math.round(e.price*0.3)).toLocaleString()+' MAD</strong>&nbsp;d\'acompte</div>'
+    +(function(){var hp=e.dates&&e.dates.length&&e.dates.some(function(d){return d.price!=null;});var dp=hp&&e.dates[0].price!=null?e.dates[0].price:e.price;return '<div style="font-size:11px;color:var(--mut);margin-bottom:2px">'+(hp?'À partir de':'')+'</div><div style="font-family:\'Bebas Neue\',cursive;font-size:38px;color:var(--red);line-height:1">'+dp.toLocaleString()+' MAD</div><div style="font-size:12px;color:var(--mut);margin-bottom:10px">par personne, tout inclus</div><div class="bk-deposit">🟢&nbsp; Réservez avec seulement <strong style="color:#16A34A;margin-left:4px">'+(Math.round(dp*0.3)).toLocaleString()+' MAD</strong>&nbsp;d\'acompte</div>';})()+'<div></div>'
     +'<div class="qi"><div class="qi-r"><span>Durée</span><span>'+e.dur+'</span></div><div class="qi-r"><span>Difficulté</span><span style="color:'+difColor(e.dif||'Facile')+'">'+(e.dif||'Facile')+'</span></div><div class="qi-r"><span>Lieu</span><span>'+e.loc.split(',')[0]+'</span></div><div class="qi-r"><span>Groupe</span><span>'+e.minP+'–'+e.maxP+' pers.</span></div>'+(e.dates&&e.dates[0]?'<div class="qi-r"><span>Prochain départ</span><span style="color:var(--red);font-weight:700">'+e.dates[0].label+'</span></div>':'')+(e.pChild?'<div class="qi-r"><span>Enfant</span><span>'+e.pChild.toLocaleString()+' MAD</span></div>':'')+'</div>'
     +'<button class="btn btn-r btn-full btn-lg" style="font-size:14px;border-radius:12px;margin-top:4px" onclick="openDates(\''+e.id+'\')">📅 Voir les dates & réserver</button>'
     +'<div style="text-align:center;margin-top:10px"><a href="'+waUrl('Bonjour, je suis intéressé par : '+e.title)+'" target="_blank" style="font-size:13px;color:#25D366;font-weight:600">💬 Renseignements sur WhatsApp</a></div>'
@@ -6338,12 +6381,24 @@ function loadExpGallery(expId) {
 }
 function _applyExpGallery(expId, imgs) {
   var track = document.getElementById('dSlTrack');
-  if (!track || imgs.length <= 1) return;
-  /* Rebuild slides to match pgExpDetail slide structure */
+  if (!track || !imgs.length) return;
   var expObj = EXP.find(function(x){ return x.id === expId; });
   var alt = expObj ? expObj.title : '';
-  track.innerHTML = imgs.map(function(src) {
-    return '<div class="d-sl-slide"><img src="' + src + '" alt="' + alt + '" loading="lazy"></div>';
+
+  if (imgs.length === 1) {
+    /* Single image — just ensure the existing slide's src is correct.
+       The list endpoint strips imgs[] but always returns img (hero).
+       In rare cases they could differ; this keeps them in sync. */
+    var existingImg = track.querySelector('img');
+    if (existingImg && imgs[0] && existingImg.src !== imgs[0]) existingImg.src = imgs[0];
+    initDetailSlider();
+    return;
+  }
+
+  /* Multiple images — rebuild the slider */
+  /* First slide is the hero (always visible) — do NOT lazy-load it */
+  track.innerHTML = imgs.map(function(src, i) {
+    return '<div class="d-sl-slide"><img src="' + src + '" alt="' + alt + '"' + (i === 0 ? '' : ' loading="lazy"') + '></div>';
   }).join('');
   track.dataset.cur = '0';
   track.style.transform = 'translateX(0)';
@@ -6513,11 +6568,30 @@ function loadExperiencesFromApi(){
     d.experiences.forEach(function(e){
       if(!e.dates) e.dates = [];
       if(!e.dif)   e.dif   = 'Facile';
+      /* Defensive defaults — prevent pgExpDetail crashing on missing array fields */
+      if(!e.hi)    e.hi    = [];
+      if(!e.it)    e.it    = [];
+      if(!e.inc)   e.inc   = [];
+      if(!e.exc)   e.exc   = [];
+      if(!e.loc)   e.loc   = '';
+      if(!e.img)   e.img   = '';
       EXP.push(e);
     });
     if(ST.pg==='experiences' || ST.pg==='exp-detail' || ST.pg==='home'){
       var app=document.getElementById('app');
-      if(app){ app.innerHTML = render(); setTimeout(initReveal,80); }
+      if(app){
+        app.innerHTML = render();
+        /* After re-render, restore slider widths and gallery.
+           Without initDetailSlider() the flex slides collapse to 0px (no visible photos).
+           Without loadExpGallery() the multi-image gallery never reloads from cache. */
+        setTimeout(function(){
+          initReveal();
+          if(ST.pg==='exp-detail'){
+            initDetailSlider();
+            if(ST.param) loadExpGallery(ST.param);
+          }
+        }, 80);
+      }
     }
   }).catch(function(){});
 }
