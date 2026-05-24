@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Alert, Image, ActivityIndicator, Dimensions, Linking, Platform,
+  Alert, Image, ActivityIndicator, Dimensions, Linking, Platform, Share,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
@@ -69,6 +69,13 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   cancelled: { label: 'Annulée',     color: '#ef4444', bg: '#1a0505' },
 };
 const COUNTRIES = ['Maroc', 'France', 'Chine', 'Japon', 'USA', 'UK', 'Allemagne', 'EAU', 'Canada', 'Autre'];
+
+const REFERRAL_BASE = 'https://roamers-v2.vercel.app';
+
+/** Derive a short, deterministic referral code from user ID */
+function makeRefCode(userId: string): string {
+  return userId.replace(/-/g, '').toUpperCase().slice(0, 8);
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    Main component
@@ -278,7 +285,7 @@ export default function ProfileScreen({ navigation }: any) {
         }} navigation={navigation} />}
         {tab === 'requests' && <DemandesTab planReqs={planReqs} loading={loadingR} navigation={navigation} />}
         {tab === 'wishlist'  && <WishlistTab wishlist={wishlist} allExps={allExps} loading={loadingE} onRemove={async (expId: string) => { try { await toggleWishlist(expId); await refresh(); } catch {} }} navigation={navigation} />}
-        {tab === 'passport'  && <PassportTab bookings={bookings} wishlist={wishlist} totalSpent={totalSpent} earnedBadges={earnedBadges} level={level} />}
+        {tab === 'passport'  && <PassportTab user={user} bookings={bookings} wishlist={wishlist} totalSpent={totalSpent} earnedBadges={earnedBadges} level={level} />}
         {tab === 'edit'      && <EditProfileTab user={user} onSaved={refresh} />}
         {tab === 'settings'  && <SettingsTab onLogout={logout} />}
       </ScrollView>
@@ -622,7 +629,7 @@ function WishlistTab({ wishlist, allExps, loading, onRemove, navigation }: any) 
 /* ══════════════════════════════════════════════════════════════════════════
    Passport tab
    ══════════════════════════════════════════════════════════════════════════ */
-function PassportTab({ bookings, wishlist, totalSpent, earnedBadges, level }: any) {
+function PassportTab({ user, bookings, wishlist, totalSpent, earnedBadges, level }: any) {
   const destinations = [...new Set(bookings.filter((b: any) => b.expLoc).map((b: any) => b.expLoc as string))];
   const SEGS = [
     { key: 'groupe', icon: '🧭', label: 'Voyage Groupe', color: '#3b82f6' },
@@ -716,17 +723,72 @@ function PassportTab({ bookings, wishlist, totalSpent, earnedBadges, level }: an
         </View>
       )}
 
-      {/* Referral */}
-      <LinearGradient colors={['#1a000a', '#0e0e0e']} style={[s.card, { borderColor: COLORS.primary + '44' }]}>
-        <Text style={s.cardTitle}>🎁 Partagez l'aventure</Text>
-        <Text style={{ color: COLORS.sub, fontSize: 13, lineHeight: 19, marginBottom: 14 }}>
-          Invitez un ami et bénéficiez tous les deux de 5% sur votre prochaine réservation.
-        </Text>
-        <TouchableOpacity style={{ backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingVertical: 13, alignItems: 'center' }}
-          onPress={() => Alert.alert('Bientôt disponible', 'La fonctionnalité de parrainage arrive très bientôt !')}>
-          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800' }}>🎁 Mon lien de parrainage</Text>
-        </TouchableOpacity>
-      </LinearGradient>
+      {/* ── Referral ── */}
+      {(() => {
+        const refCode = makeRefCode(user?.id || '');
+        const refLink = `${REFERRAL_BASE}/?ref=${refCode}`;
+        const shareMsg =
+          `Découvrez le Maroc authentiquement avec Roamers ! 🏔️\n\n` +
+          `Utilisez mon code **${refCode}** pour bénéficier de 5% de réduction sur votre première réservation.\n\n` +
+          `👉 ${refLink}`;
+
+        async function handleShare() {
+          try {
+            await Share.share(
+              { message: shareMsg, url: refLink, title: 'Rejoignez Roamers 🏔️' },
+              { dialogTitle: 'Partager mon code Roamers' }
+            );
+          } catch (_) {}
+        }
+
+        return (
+          <LinearGradient colors={['#1a000a', '#0e0e0e']} style={[s.card, { borderColor: COLORS.primary + '44', gap: 0 }]}>
+            {/* Title */}
+            <Text style={[s.cardTitle, { marginBottom: 6 }]}>🎁 Partagez l'aventure</Text>
+            <Text style={{ color: COLORS.sub, fontSize: 13, lineHeight: 20, marginBottom: 18 }}>
+              Invitez un ami — vous bénéficiez tous les deux de{' '}
+              <Text style={{ color: COLORS.primary, fontWeight: '800' }}>5% de réduction</Text>{' '}
+              sur votre prochaine réservation.
+            </Text>
+
+            {/* Code card */}
+            <View style={s.refCodeCard}>
+              <Text style={s.refCodeLabel}>VOTRE CODE DE PARRAINAGE</Text>
+              <Text style={s.refCode} selectable>{refCode}</Text>
+              <View style={s.refDivider} />
+              <Text style={s.refLink} selectable numberOfLines={1}>{refLink}</Text>
+              <Text style={{ color: COLORS.muted, fontSize: 10, marginTop: 6 }}>
+                Maintenez appuyé pour copier le lien
+              </Text>
+            </View>
+
+            {/* How it works */}
+            <View style={{ gap: 10, marginBottom: 18 }}>
+              {[
+                { n: '1', t: 'Partagez votre code à un ami' },
+                { n: '2', t: "L'ami réserve avec votre code" },
+                { n: '3', t: 'Tous les deux : −5% sur votre prochaine resa' },
+              ].map((step) => (
+                <View key={step.n} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={s.refStepNum}>
+                    <Text style={{ color: COLORS.primary, fontSize: 11, fontWeight: '900' }}>{step.n}</Text>
+                  </View>
+                  <Text style={{ color: COLORS.sub, fontSize: 12, flex: 1, lineHeight: 17 }}>{step.t}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Share button */}
+            <TouchableOpacity
+              style={s.refShareBtn}
+              onPress={handleShare}
+              activeOpacity={0.85}
+            >
+              <Text style={s.refShareBtnTxt}>🚀 Partager mon code</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        );
+      })()}
     </View>
   );
 }
@@ -1309,6 +1371,16 @@ const s = StyleSheet.create({
   permBadgeOffTxt:  { color: '#f59e0b', fontSize: 11, fontWeight: '700' },
   permBanner:       { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, backgroundColor: COLORS.primary + '10', borderRadius: RADIUS.md, padding: 14, borderWidth: 1, borderColor: COLORS.primary + '30' },
   permBannerIconWrap:{ width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.primary + '20', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+
+  /* ── Referral card ── */
+  refCodeCard:  { backgroundColor: '#110005', borderRadius: RADIUS.md, padding: 18, marginBottom: 18, borderWidth: 1, borderColor: COLORS.primary + '44', alignItems: 'center' },
+  refCodeLabel: { color: COLORS.muted, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 10 },
+  refCode:      { color: COLORS.primary, fontSize: 34, fontWeight: '900', letterSpacing: 6, includeFontPadding: false },
+  refDivider:   { width: '80%', height: 1, backgroundColor: COLORS.primary + '28', marginVertical: 12 },
+  refLink:      { color: COLORS.sub, fontSize: 11, textAlign: 'center' },
+  refStepNum:   { width: 24, height: 24, borderRadius: 12, backgroundColor: COLORS.primary + '20', borderWidth: 1, borderColor: COLORS.primary + '44', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  refShareBtn:  { backgroundColor: COLORS.primary, borderRadius: RADIUS.pill, paddingVertical: 15, alignItems: 'center', shadowColor: COLORS.primary, shadowOpacity: 0.45, shadowOffset: { width: 0, height: 8 }, shadowRadius: 18, elevation: 12 },
+  refShareBtnTxt:{ color: '#fff', fontSize: 15, fontWeight: '900', letterSpacing: 0.3 },
 
   /* ── Sur Mesure ── */
   reqTag: { backgroundColor: COLORS.bg, borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: COLORS.border },
