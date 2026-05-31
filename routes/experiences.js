@@ -81,8 +81,9 @@ function enrichExp(exp) {
   var dates = (exp.dates || []).map(function(d) {
     var raw   = typeof d === 'object' ? (d.raw   || '') : String(d);
     var label = typeof d === 'object' ? (d.label || raw) : raw;
+    var price = typeof d === 'object' && d.price != null ? Number(d.price) : null;
     var booked = byDate[raw] || 0;
-    return { raw: raw, label: label, booked: booked, full: booked >= maxP };
+    return { raw: raw, label: label, price: price, booked: booked, full: booked >= maxP };
   });
   return Object.assign({}, exp, { dates: dates });
 }
@@ -192,7 +193,12 @@ router.post('/', adminOnly, async function(req, res) {
     created: now, updated: now
   };
   db.experiences.insert(doc);
-  await db.experiences.flush();
+  try {
+    await db.experiences.flush();
+  } catch(err) {
+    console.error('[experiences POST] DB flush failed:', err.message);
+    return res.status(503).json({ error: 'Sauvegarde échouée — base de données temporairement indisponible. Réessayez dans quelques secondes.' });
+  }
   res.status(201).json({ experience: doc });
 });
 
@@ -239,7 +245,12 @@ router.put('/:id', adminOnly, async function(req, res) {
 
   changes.updated = new Date().toISOString();
   db.experiences.update(function(e){ return e.id === req.params.id; }, changes);
-  await db.experiences.flush();
+  try {
+    await db.experiences.flush();
+  } catch(err) {
+    console.error('[experiences PUT] DB flush failed:', err.message);
+    return res.status(503).json({ error: 'Sauvegarde échouée — base de données temporairement indisponible. Réessayez dans quelques secondes.' });
+  }
   const updated = db.experiences.find(function(e){ return e.id === req.params.id; });
   res.json({ experience: updated });
 });
@@ -248,7 +259,12 @@ router.delete('/:id', adminOnly, async function(req, res) {
   const r = db.experiences.find(function(e){ return e.id === req.params.id; });
   if (!r) return res.status(404).json({ error: 'Experience not found' });
   db.experiences.remove(function(e){ return e.id === req.params.id; });
-  await db.experiences.flush();
+  try {
+    await db.experiences.flush();
+  } catch(err) {
+    console.error('[experiences DELETE] DB flush failed:', err.message);
+    return res.status(503).json({ error: 'Suppression échouée — base de données temporairement indisponible. Réessayez dans quelques secondes.' });
+  }
   res.json({ message: 'Experience deleted', id: req.params.id });
 });
 

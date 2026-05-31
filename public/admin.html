@@ -516,7 +516,10 @@ function mapExp(e) {
     days: e.days || null, nights: e.nights || null,
     capacity: e.maxP || 20, minP: e.minP || 1,
     booked: e.booked || 0, status: e.status || 'open',
-    dates: (e.dates||[]).map(function(d){ return typeof d==='object' ? d.raw||'' : d; }),
+    dates: (e.dates||[]).map(function(d){
+      if(typeof d==='object') return {raw:d.raw||'',label:d.label||d.raw||'',price:d.price||null,booked:d.booked||0,full:!!d.full};
+      return {raw:String(d),label:String(d),price:null,booked:0,full:false};
+    }),
     img: e.img || '', imgs: e.imgs || [],
     desc: e.desc || '', badge: e.badge || '',
     tags: e.tags || [], dif: e.dif || '',
@@ -2041,6 +2044,7 @@ function closeModal() { document.getElementById('modals').innerHTML = ''; }
 /* ── Admin trip form state ── */
 var _aPhotos = [];   /* [{dataUrl, isBase64}] */
 var _aIt     = [];   /* [{d,t,desc,img,imgData}] */
+var _aDates  = [];   /* [{raw, price}] — per-departure date with optional price */
 var _aEditId = null;
 
 function _aPhotoRead(file, cb){
@@ -2146,6 +2150,9 @@ function openTripModal(id) {
   _aEditId = id||null;
   _aPhotos = t && t.imgs ? t.imgs.slice() : (t && t.img ? [t.img] : []);
   _aIt = t && t.it ? t.it.map(function(d){return {d:d.d,t:d.t,desc:d.desc,img:d.img||'',imgData:''};}) : [];
+  _aDates = t && t.dates ? t.dates.map(function(d){
+    return typeof d==='object' ? {raw:d.raw||'',price:d.price!=null?String(d.price):''} : {raw:String(d),price:''};
+  }) : [];
 
   var SEGS = [
     {id:'groupe',  label:'Voyage Groupe',   icon:'🧭', desc:'Départs fixes, groupes organisés',   color:'#B8172E'},
@@ -2313,9 +2320,13 @@ function openTripModal(id) {
           +'</div>'
         +'</div>'
       +'</div>'
-      +'<div class="fg" style="margin-bottom:0"><label class="fl">Dates de départ</label>'
-        +'<input class="fi" id="mTripDates" placeholder="2024-05-10, 2024-06-15" value="'+(t&&t.dates?t.dates.join(', '):'')+'">'
-        +'<div style="font-size:11px;color:var(--text3);margin-top:3px">Format AAAA-MM-JJ, séparées par des virgules</div>'
+      +'<div class="fg" style="margin-bottom:0">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+          +'<label class="fl" style="margin-bottom:0">Dates de départ</label>'
+          +'<span style="font-size:11px;color:var(--text3)">Date · Prix spécifique (optionnel)</span>'
+        +'</div>'
+        +'<div id="aDatesBuilder" style="display:flex;flex-direction:column;gap:6px"></div>'
+        +'<button type="button" class="btn-add-day" style="margin-top:8px;width:auto;padding:6px 14px;font-size:12px" onclick="_aAddDate()">+ Ajouter une date</button>'
       +'</div>'
     +'</div>'
 
@@ -2360,11 +2371,53 @@ function openTripModal(id) {
   setTimeout(function(){
     _aRenderPhotos();
     _aRenderIt();
+    _renderDatesBuilder();
     if(t && t.dif) _aPickDif(t.dif);
   }, 0);
 }
 
 function editTrip(id) { openTripModal(id); }
+
+/* ── Dates-with-price builder ─────────────────────────────── */
+function _renderDatesBuilder() {
+  var el = document.getElementById('aDatesBuilder');
+  if (!el) return;
+  if (!_aDates.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:4px 0">Aucune date — cliquez sur « + Ajouter une date »</div>'; return; }
+  el.innerHTML = _aDates.map(function(d, i) {
+    var bookInfo = '';
+    /* If editing an existing trip, show live booking count for this date */
+    if (_aEditId) {
+      var trip = DB.trips.find(function(t){ return t.id === _aEditId; });
+      var dt = trip && trip.dates && trip.dates[i];
+      if (dt && dt.booked != null) {
+        var cap = trip.capacity || 20;
+        bookInfo = '<span style="font-size:11px;color:'+(dt.full?'#DC2626':'var(--text3)')+';white-space:nowrap;align-self:center">'
+          + (dt.full ? '🔴 Complet' : dt.booked+'/'+cap+' réservations')
+          + '</span>';
+      }
+    }
+    return '<div style="display:flex;align-items:center;gap:8px">'
+      + '<input type="date" class="fi" style="flex:2;min-width:0;font-size:13px;padding:7px 10px" value="'+d.raw+'" oninput="_aDates['+i+'].raw=this.value">'
+      + '<div style="display:flex;align-items:center;gap:4px;flex:1.2;min-width:0">'
+        + '<input type="number" class="fi" style="flex:1;min-width:0;font-size:13px;padding:7px 10px" placeholder="Prix MAD" min="0" value="'+(d.price||'')+'" oninput="_aDates['+i+'].price=this.value">'
+        + '<span style="font-size:11px;color:var(--text3);white-space:nowrap">MAD</span>'
+      + '</div>'
+      + bookInfo
+      + '<button type="button" onclick="_aRemoveDate('+i+')" style="flex-shrink:0;background:none;border:none;color:#DC2626;font-size:16px;cursor:pointer;padding:4px;line-height:1" title="Supprimer">✕</button>'
+    + '</div>';
+  }).join('');
+}
+function _aAddDate() {
+  _aDates.push({raw:'',price:''});
+  _renderDatesBuilder();
+  /* Focus the new date input */
+  var rows = document.querySelectorAll('#aDatesBuilder input[type="date"]');
+  if (rows.length) rows[rows.length-1].focus();
+}
+function _aRemoveDate(i) {
+  _aDates.splice(i, 1);
+  _renderDatesBuilder();
+}
 
 function pickSeg(val){
   var segColors={groupe:'#B8172E',weekend:'#7C3AED',express:'#16A34A',mesure:'#2563EB',team:'#D97706'};
@@ -2432,12 +2485,13 @@ function saveTrip(id) {
     minP:        parseInt((document.getElementById('mTripMin')||{value:1}).value)||1,
     booked:      existing ? existing.booked : 0,
     status:      statusEl ? statusEl.value : 'open',
-    dates:       ((document.getElementById('mTripDates')||{value:''}).value).split(',').map(function(d){
-                   var raw=d.trim(); if(!raw) return null;
+    dates:       _aDates.filter(function(d){return d.raw&&d.raw.trim();}).map(function(d){
+                   var raw=d.raw.trim();
                    var dt=new Date(raw+'T00:00:00');
                    var label=isNaN(dt)?raw:dt.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
-                   return {raw:raw,label:label};
-                 }).filter(Boolean),
+                   var price=d.price&&String(d.price).trim()!==''?parseInt(d.price)||null:null;
+                   return {raw:raw,label:label,price:price};
+                 }),
     services:    ((document.getElementById('mTripSvc') ||{value:''}).value).split(',').map(function(s){return s.trim();}).filter(Boolean),
     hi:          ((document.getElementById('mTripHi')  ||{value:''}).value).split('\n').map(function(s){return s.trim();}).filter(Boolean),
     exc:         ((document.getElementById('mTripExc') ||{value:''}).value).split(',').map(function(s){return s.trim();}).filter(Boolean),
@@ -2867,8 +2921,8 @@ function openMapPicker() {
   setTimeout(function(){
     if (window.L) { _doInit(); }
     else {
-      var lcs = document.createElement('link'); lcs.rel='stylesheet'; lcs.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(lcs);
-      var lsc = document.createElement('script'); lsc.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; lsc.onload=_doInit; document.head.appendChild(lsc);
+      var lcs = document.createElement('link'); lcs.rel='stylesheet'; lcs.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(lcs);
+      var lsc = document.createElement('script'); lsc.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'; lsc.onload=_doInit; document.head.appendChild(lsc);
     }
   }, 80);
 }
@@ -2972,8 +3026,8 @@ function openCircuitPicker() {
   setTimeout(function(){
     if (window.L) { _initCpMap(); }
     else {
-      var lcs = document.createElement('link'); lcs.rel='stylesheet'; lcs.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(lcs);
-      var lsc = document.createElement('script'); lsc.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; lsc.onload=_initCpMap; document.head.appendChild(lsc);
+      var lcs = document.createElement('link'); lcs.rel='stylesheet'; lcs.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(lcs);
+      var lsc = document.createElement('script'); lsc.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'; lsc.onload=_initCpMap; document.head.appendChild(lsc);
     }
   }, 80);
 }

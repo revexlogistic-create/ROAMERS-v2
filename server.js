@@ -223,7 +223,7 @@ app.get('/api/app-version', function(req, res) {
     versionCode: 34,
     versionName: '1.0.4',
     downloadUrl: '/downloads/roamers.apk',
-    releaseNotes: 'Espace Communauté : votre rang de Roamer, défis à relever, avis de la communauté et accès direct au groupe. Fiches voyage et boutons « Réserver » plus attractifs. Plus fluide : images optimisées, écrans plus rapides, bouton « Réessayer » hors connexion. Correction de la bannière de mise à jour.'
+    releaseNotes: 'Prix par date de départ, statut "Complet" sur les dates pleines, compteur de places restantes, 20 nouvelles destinations sur la carte, refresh de la carte.'
   });
 });
 

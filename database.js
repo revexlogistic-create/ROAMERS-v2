@@ -40,9 +40,12 @@ if (process.env.MONGODB_URI) {
   async function getMongoDb() {
     if (_mdb) return _mdb;
     _client = new MongoClient(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 8000,
-      connectTimeoutMS: 8000,
-      maxPoolSize: 5
+      serverSelectionTimeoutMS: 15000,
+      connectTimeoutMS: 15000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 3,       /* stay within Atlas M0 connection limit */
+      minPoolSize: 0,       /* don't keep idle connections in serverless */
+      maxIdleTimeMS: 20000  /* close connections idle > 20 s */
     });
     await _client.connect();
     _mdb = _client.db(process.env.MONGODB_DBNAME || 'roamers');
@@ -53,13 +56,28 @@ if (process.env.MONGODB_URI) {
   const _caches = {};
   TABLES.forEach(function(t){ _caches[t] = []; });
 
-  /* Serialised per-collection flush to avoid races */
+  /*
+   * Serialised per-collection flush to avoid races.
+   *
+   * Two chains per collection:
+   *   _flushChain  — sequencing only; always resolves so future flushes still run
+   *   _lastFlush   — exposed via flush(); rejects if the MongoDB write failed
+   *
+   * Route handlers should `await db.X.flush()` inside a try/catch and return 503
+   * if it rejects, so the client knows the save did NOT reach the database.
+   */
   const _flushChain = {};
-  TABLES.forEach(function(t){ _flushChain[t] = Promise.resolve(); });
+  const _lastFlush  = {};
+  TABLES.forEach(function(t){
+    _flushChain[t] = Promise.resolve();
+    _lastFlush[t]  = Promise.resolve();
+  });
 
   function scheduleFlush(name) {
-    _flushChain[name] = _flushChain[name].then(async function() {
-      try {
+    /* The actual work — may reject if MongoDB write fails */
+    var work = _flushChain[name]
+      .catch(function(){})           /* recover from any previous chain error */
+      .then(async function() {
         const mdb  = await getMongoDb();
         const col  = mdb.collection(name);
         const docs = (_caches[name] || []).map(function(d){
@@ -67,10 +85,15 @@ if (process.env.MONGODB_URI) {
         });
         await col.deleteMany({});
         if (docs.length) await col.insertMany(docs);
-      } catch(err) {
-        console.error('[DB] flush error ('+name+'):', err.message);
-      }
+      });
+
+    /* Sequencing chain: always resolves so the next flush still queues */
+    _flushChain[name] = work.catch(function(err){
+      console.error('[DB] flush error ('+name+'):', err.message);
     });
+
+    /* Exposed to callers — rejects on MongoDB write failure */
+    _lastFlush[name] = work;
   }
 
   function makeTable(name) {
@@ -82,8 +105,8 @@ if (process.env.MONGODB_URI) {
       insert: function(doc)   { _caches[name].push(doc); scheduleFlush(name); return doc; },
       update: function(fn,ch) { _caches[name].forEach(function(r,i){ if(fn(r)) _caches[name][i]=Object.assign({},r,ch); }); scheduleFlush(name); },
       remove: function(fn)    { _caches[name]=_caches[name].filter(function(r){return !fn(r);}); scheduleFlush(name); },
-      /* Await the pending MongoDB flush — call this before res.json() in write routes */
-      flush:  function()      { return _flushChain[name] || Promise.resolve(); }
+      /* Await the pending MongoDB write — may reject on DB failure */
+      flush:  function()      { return _lastFlush[name] || Promise.resolve(); }
     };
   }
 

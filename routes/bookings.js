@@ -42,6 +42,21 @@ router.post('/', optionalAuth, audit.audit('booking:create'), async function(req
 
   var adults   = Math.max(1, parseInt(f.adults) || 1);
   var children = Math.max(0, parseInt(f.children) || 0);
+
+  /* ── Per-date capacity check ── */
+  var selectedDate = String(f.date).trim();
+  if (exp.maxP) {
+    var datePax = db.bookings.all(function(b) {
+      return b.expId === exp.id &&
+             String(b.date || '').trim() === selectedDate &&
+             b.status !== 'cancelled';
+    }).reduce(function(sum, b) {
+      return sum + (parseInt(b.adults) || 1) + (parseInt(b.children) || 0);
+    }, 0);
+    if (datePax + adults + children > exp.maxP) {
+      return res.status(400).json({ error: 'Cette date est complète. Veuillez choisir une autre date disponible.' });
+    }
+  }
   var adultPrc = Number(exp.price)  || 0;
   var childPrc = exp.pChild != null ? Number(exp.pChild) : adultPrc;
 

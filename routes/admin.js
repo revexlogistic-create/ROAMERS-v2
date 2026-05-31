@@ -339,6 +339,8 @@ router.post('/activities', auditMod.audit('admin:activity:create'), async functi
     highlights:   parseLines(f.highlights),
     inc:          parseLines(f.inc),
     exc:          parseLines(f.exc),
+    rating:       Number.isFinite(+f.rating) ? +f.rating : 4.8,
+    rev:          parseInt(f.rev) || 0,
     created:    now, updated: now
   });
   await db.activities.flush();
@@ -371,6 +373,8 @@ router.put('/activities/:id', auditMod.audit('admin:activity:update'), async fun
   if (f.highlights !== undefined) changes.highlights = parseLines(f.highlights);
   if (f.inc        !== undefined) changes.inc        = parseLines(f.inc);
   if (f.exc        !== undefined) changes.exc        = parseLines(f.exc);
+  if (f.rating     !== undefined) changes.rating     = Number.isFinite(+f.rating) ? +f.rating : 4.8;
+  if (f.rev        !== undefined) changes.rev        = parseInt(f.rev) || 0;
   if (f.category !== undefined) {
     if (!ACTIVITY_CATS.includes(f.category)) return res.status(400).json({ error: 'Invalid category' });
     changes.category = f.category;
