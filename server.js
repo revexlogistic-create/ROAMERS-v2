@@ -220,10 +220,10 @@ app.get('/api/health', function(req, res) {
 /* ── APP VERSION (mobile update check) ──────────────────────── */
 app.get('/api/app-version', function(req, res) {
   res.json({
-    versionCode: 34,
-    versionName: '1.0.4',
+    versionCode: 35,
+    versionName: '1.0.5',
     downloadUrl: '/downloads/roamers.apk',
-    releaseNotes: 'Prix par date de départ, statut "Complet" sur les dates pleines, compteur de places restantes, 20 nouvelles destinations sur la carte, refresh de la carte.'
+    releaseNotes: 'Espace Communauté (rang, défis, mur d\'avis, lien groupe), lien de parrainage, écran "Réessayer" hors-ligne, prix par date de départ, dates « Complet » et places restantes, nouvelles destinations sur la carte.'
   });
 });
 
