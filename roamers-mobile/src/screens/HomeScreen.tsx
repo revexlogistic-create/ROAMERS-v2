@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getExperiences, getSiteConfig, toggleWishlist } from '../services/api';
 import ExperienceCard from '../components/ExperienceCard';
+import ErrorState from '../components/ErrorState';
 import { COLORS, RADIUS } from '../constants/theme';
 import Icon from '../components/Icons';
 import { useAuth } from '../context/AuthContext';
@@ -35,6 +36,7 @@ export default function HomeScreen({ navigation }: any) {
   const [segment, setSegment]   = useState('all');
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefresh]= useState(false);
+  const [error, setError]       = useState(false);
 
   const handleWishlist = useCallback(async (expId: string) => {
     if (!user) { navigation.navigate('Profile'); return; }
@@ -43,9 +45,10 @@ export default function HomeScreen({ navigation }: any) {
 
   const load = useCallback(async () => {
     try {
+      setError(false);
       const [e, c] = await Promise.all([getExperiences(), getSiteConfig()]);
       setExps(e); setConfig(c);
-    } catch (_) {}
+    } catch (_) { setError(true); }
     setLoading(false); setRefresh(false);
   }, []);
 
@@ -57,6 +60,12 @@ export default function HomeScreen({ navigation }: any) {
 
   if (loading) return (
     <View style={styles.loader}><ActivityIndicator color={COLORS.primary} size="large" /></View>
+  );
+
+  if (error && exps.length === 0) return (
+    <View style={[styles.loader, { paddingTop: insets.top }]}>
+      <ErrorState onRetry={() => { setLoading(true); load(); }} />
+    </View>
   );
 
   return (

@@ -16,8 +16,12 @@ import {
 import { getAppVersion } from './src/services/api';
 import * as Notifications from 'expo-notifications';
 import { API_BASE, COLORS } from './src/constants/theme';
+import appConfig from './app.json';
 
-const APP_VERSION_CODE = 32;
+/* Read the installed build number straight from app.json so it can never
+   drift from the value baked into the APK (previously hardcoded → caused a
+   permanent "update available" banner when the two fell out of sync). */
+const APP_VERSION_CODE = appConfig.expo.android.versionCode;
 const DISMISSED_KEY = 'update_dismissed_vc';
 
 export default function App() {

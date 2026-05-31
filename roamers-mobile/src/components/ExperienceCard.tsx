@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, RADIUS, SHADOW } from '../constants/theme';
 import Icon from './Icons';
@@ -29,12 +29,13 @@ function difColor(dif: string): string {
   return map[dif] || COLORS.sub;
 }
 
-export default function ExperienceCard({ exp, onPress, wide, wishlist, onWishlist }: Props) {
+function ExperienceCard({ exp, onPress, wide, wishlist, onWishlist }: Props) {
   const segColor  = SEGMENT_COLORS[exp.segment] || COLORS.primary;
   const segLabel  = SEGMENT_LABELS[exp.segment] || exp.segment;
   const cardW     = wide ? width - 32 : CARD_W;
   const isSaved   = wishlist ? wishlist.includes(exp.id) : false;
   const showHeart = !!onWishlist;
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   return (
     <TouchableOpacity
@@ -48,7 +49,19 @@ export default function ExperienceCard({ exp, onPress, wide, wishlist, onWishlis
       {/* Image */}
       <View style={styles.imgWrap}>
         {exp.img
-          ? <Image source={{ uri: exp.img }} style={styles.img} resizeMode="cover" />
+          ? <>
+              <Image
+                source={{ uri: exp.img }}
+                style={styles.img}
+                resizeMode="cover"
+                onLoadEnd={() => setImgLoaded(true)}
+              />
+              {!imgLoaded && (
+                <View style={[StyleSheet.absoluteFill, styles.imgFallback]}>
+                  <ActivityIndicator color={COLORS.primary} />
+                </View>
+              )}
+            </>
           : <View style={[styles.img, styles.imgFallback]}><Text style={styles.imgEmoji}>🏔️</Text></View>
         }
         <LinearGradient
@@ -128,6 +141,15 @@ export default function ExperienceCard({ exp, onPress, wide, wishlist, onWishlis
     </TouchableOpacity>
   );
 }
+
+/* Memoised: in lists/carousels, avoids re-rendering every card when only
+   one wishlist entry or an unrelated parent state changes. */
+export default React.memo(ExperienceCard, (prev, next) =>
+  prev.exp === next.exp &&
+  prev.wide === next.wide &&
+  prev.onWishlist === next.onWishlist &&
+  (prev.wishlist?.includes(prev.exp.id) ?? false) === (next.wishlist?.includes(next.exp.id) ?? false)
+);
 
 const styles = StyleSheet.create({
   card:       { backgroundColor: '#161616', borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#242424' },

@@ -220,10 +220,10 @@ app.get('/api/health', function(req, res) {
 /* ── APP VERSION (mobile update check) ──────────────────────── */
 app.get('/api/app-version', function(req, res) {
   res.json({
-    versionCode: 33,
-    versionName: '1.0.3',
+    versionCode: 34,
+    versionName: '1.0.4',
     downloadUrl: '/downloads/roamers.apk',
-    releaseNotes: 'Système de wishlist (cœur sur toutes les cartes), notifications configurables, lien de parrainage sur le Passeport, bouton cœur sur la page détail voyage.'
+    releaseNotes: 'Performance et fiabilité : chargement des images plus fluide, écrans plus rapides, et messages clairs avec bouton « Réessayer » en cas de coupure réseau. Correction de la bannière de mise à jour qui s\'affichait à tort.'
   });
 });
 

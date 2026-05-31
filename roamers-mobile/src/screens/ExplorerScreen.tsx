@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getExperiences, toggleWishlist } from '../services/api';
 import ExperienceCard from '../components/ExperienceCard';
+import ErrorState from '../components/ErrorState';
 import { COLORS, RADIUS } from '../constants/theme';
 import Icon from '../components/Icons';
 import { useAuth } from '../context/AuthContext';
@@ -37,6 +38,7 @@ export default function ExplorerScreen({ navigation }: any) {
   const [type, setType]          = useState('');
   const [loading, setLoading]    = useState(true);
   const [refreshing, setRefresh] = useState(false);
+  const [error, setError]        = useState(false);
 
   const handleWishlist = useCallback(async (expId: string) => {
     if (!user) { navigation.navigate('Profile'); return; }
@@ -45,12 +47,13 @@ export default function ExplorerScreen({ navigation }: any) {
 
   const load = useCallback(async () => {
     try {
+      setError(false);
       const params: any = {};
       if (segment) params.segment = segment;
       if (type)    params.type    = type;
       const data = await getExperiences(params);
       setExps(data);
-    } catch (_) {} finally { setLoading(false); setRefresh(false); }
+    } catch (_) { setError(true); } finally { setLoading(false); setRefresh(false); }
   }, [segment, type]);
 
   useEffect(() => { load(); }, [load]);
@@ -160,6 +163,8 @@ export default function ExplorerScreen({ navigation }: any) {
       {/* ── List ── */}
       {loading ? (
         <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 40 }} />
+      ) : error && exps.length === 0 ? (
+        <ErrorState onRetry={() => { setLoading(true); load(); }} />
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
