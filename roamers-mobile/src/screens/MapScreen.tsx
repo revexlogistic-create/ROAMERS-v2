@@ -49,6 +49,24 @@ const COORD_MAP: Record<string, [number, number]> = {
   nador:           [35.1681, -2.9286],
   oujda:           [34.6805, -1.9112],
   errachidia:      [31.9314, -4.4249],
+  'al hoceima':    [35.2517, -3.9372],
+  hoceima:         [35.2517, -3.9372],
+  azilal:          [31.9672, -6.5753],
+  imsefran:        [31.9672, -6.5753],
+  ahansal:         [31.9500, -6.5000],
+  taliouine:       [30.5333, -7.9167],
+  ouzoud:          [32.0179, -6.7199],
+  midelt:          [32.6815, -4.7327],
+  'cap spartel':   [35.7833, -5.9167],
+  kénitra:         [34.2610, -6.5802],
+  kenitra:         [34.2610, -6.5802],
+  saghro:          [31.2000, -5.5000],
+  khamlia:         [31.0667, -3.9833],
+  'cala iris':     [35.1583, -4.9583],
+  'bin el ouidane':[32.0500, -6.4500],
+  'kelaat mgouna': [31.2333, -6.1167],
+  boumalne:        [31.3700, -5.9900],
+  aoulouz:         [30.6667, -8.1167],
   safi:            [32.2994, -9.2372],
   'el jadida':     [33.2316, -8.5007],
   'beni mellal':   [32.3373, -6.3498],
@@ -127,8 +145,12 @@ export default function MapScreen({ navigation, route }: any) {
   const [acts, setActs]         = useState<any[]>([]);
   const [filter, setFilter]     = useState<FilterKey>('all');
   const [selected, setSelected] = useState<any | null>(null);
-  const [loading, setLoading]   = useState(true);
-  const [cardImgIdx, setCardImgIdx] = useState(0);
+  const [loading, setLoading]           = useState(true);
+  const [refreshing, setRefreshing]     = useState(false);
+  const [mapKey, setMapKey]             = useState(0);
+  const [cardImgIdx, setCardImgIdx]     = useState(0);
+  const [itineraryMode, setItineraryMode]   = useState(false);
+  const [itineraryTitle, setItineraryTitle] = useState('');
 
   /* Planning mode */
   const [planMode, setPlanMode]     = useState(false);
@@ -171,6 +193,7 @@ export default function MapScreen({ navigation, route }: any) {
         type: 'exp', cat: e.segment,
         loc: e.loc, days: e.days, img: e.img || '',
         circuit: Array.isArray(e.circuit) ? e.circuit : [],
+        circuitCoords: Array.isArray(e.circuitCoords) ? e.circuitCoords : [],
       };
     })
     .filter(Boolean);
@@ -235,6 +258,24 @@ export default function MapScreen({ navigation, route }: any) {
     webViewRef.current?.injectJavaScript(
       'if(allMarkers.length>0){map.fitBounds(L.latLngBounds(allMarkers.map(function(m){return[m.lat,m.lng];})).pad(0.2));}else{map.setView([31.0,-6.5],5);}true;'
     );
+  }
+
+  async function refreshData() {
+    if (refreshing) return;
+    setRefreshing(true);
+    setSelected(null);
+    setWebViewReady(false);
+    try {
+      const [newExps, newActs] = await Promise.all([
+        getExperiences().catch(() => exps),
+        getActivities().then((list) => Array.isArray(list) ? list : acts).catch(() => acts),
+      ]);
+      setExps(newExps);
+      setActs(newActs);
+      setMapKey((k) => k + 1); // force WebView remount with fresh markers
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   /* Plan mode */
@@ -363,6 +404,42 @@ export default function MapScreen({ navigation, route }: any) {
     setPlanError(null);
   }, [route?.params?.itinerary]);
 
+  /* Auto-draw circuit when navigated from ExperienceDetailScreen */
+  useEffect(() => {
+    if (!webViewReady) return;
+    const coords   = route?.params?.circuitCoords;
+    const circuit  = route?.params?.circuit;
+    const title    = route?.params?.expTitle || '';
+    const hasRoute = (coords && coords.length >= 2 && coords.some((s: any) => s.lat != null))
+                   || (circuit && circuit.length >= 2);
+    if (!hasRoute) return;
+
+    /* Enter itinerary mode — hide all voyage/activity markers */
+    setItineraryMode(true);
+    setItineraryTitle(title);
+    setSelected(null);
+    webViewRef.current?.injectJavaScript('leafletMks.forEach(function(mk){try{map.removeLayer(mk);}catch(e){}});true;');
+
+    if (coords && coords.length >= 2 && coords.some((s: any) => s.lat != null)) {
+      webViewRef.current?.injectJavaScript(`drawCircuitCoords(${JSON.stringify(coords)});true;`);
+    } else {
+      webViewRef.current?.injectJavaScript(`drawCircuit(${JSON.stringify(circuit)});true;`);
+    }
+  }, [route?.params?.circuit, route?.params?.circuitCoords, webViewReady]);
+
+  function exitItineraryMode() {
+    /* Restore markers before leaving */
+    webViewRef.current?.injectJavaScript('leafletMks.forEach(function(mk){try{mk.addTo(map);}catch(e){}});clearRoute();true;');
+    setItineraryMode(false);
+    setItineraryTitle('');
+    const expId = route?.params?.expId;
+    if (expId) {
+      navigation.navigate('ExperienceDetail', { id: expId, initialTab: 'program' });
+    } else {
+      navigation.goBack();
+    }
+  }
+
   /* Enter plan-selection mode when navigated from PlanScreen */
   useEffect(() => {
     if (!route?.params?.selectForPlan) return;
@@ -419,6 +496,7 @@ export default function MapScreen({ navigation, route }: any) {
           </View>
         ) : (
           <WebView
+            key={mapKey}
             ref={webViewRef}
             source={{ html: mapHtml }}
             style={styles.map}
@@ -432,7 +510,19 @@ export default function MapScreen({ navigation, route }: any) {
         )}
 
         {/* ── Filter chips floating over map ── */}
-        {selectForPlan && (
+        {/* ── Itinerary mode banner ── */}
+        {itineraryMode && (
+          <View style={styles.itinBanner}>
+            <TouchableOpacity onPress={exitItineraryMode} style={styles.itinBackBtn} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+              <Text style={styles.itinBackTxt}>← Retour</Text>
+            </TouchableOpacity>
+            <Text style={styles.itinTitle} numberOfLines={1}>
+              🗺️ {itineraryTitle || 'Itinéraire'}
+            </Text>
+          </View>
+        )}
+
+        {selectForPlan && !itineraryMode && (
           <View style={styles.selectBanner}>
             <Text style={styles.selectBannerTxt}>📍 Appuyez sur la carte pour ajouter une étape</Text>
           </View>
@@ -440,7 +530,7 @@ export default function MapScreen({ navigation, route }: any) {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={[styles.filterOverlay, selectForPlan && { opacity: 0 }]}
+          style={[styles.filterOverlay, (selectForPlan || itineraryMode) && { opacity: 0, pointerEvents: 'none' }]}
           contentContainerStyle={styles.filterContent}
         >
           {FILTERS.map((f) => {
@@ -459,7 +549,7 @@ export default function MapScreen({ navigation, route }: any) {
           })}
         </ScrollView>
 
-        {/* ── Zoom + reset controls ── */}
+        {/* ── Zoom + reset + refresh controls ── */}
         {!loading && (
           <View style={styles.zoomPanel}>
             <TouchableOpacity style={styles.zoomBtn} onPress={zoomIn} activeOpacity={0.8}>
@@ -473,11 +563,23 @@ export default function MapScreen({ navigation, route }: any) {
             <TouchableOpacity style={[styles.zoomBtn, { marginTop: 8 }]} onPress={resetView} activeOpacity={0.8}>
               <Text style={[styles.zoomBtnTxt, { fontSize: 15 }]}>⌂</Text>
             </TouchableOpacity>
+            <View style={[styles.zoomSep, { marginTop: 8 }]} />
+            <TouchableOpacity
+              style={[styles.zoomBtn, { marginTop: 8 }, refreshing && { opacity: 0.55 }]}
+              onPress={refreshData}
+              activeOpacity={0.8}
+              disabled={refreshing}
+            >
+              {refreshing
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={[styles.zoomBtnTxt, { fontSize: 18 }]}>↺</Text>
+              }
+            </TouchableOpacity>
           </View>
         )}
 
         {/* ── FAB ── */}
-        {!selected && !loading && !planMode && (
+        {!selected && !loading && !planMode && !itineraryMode && (
           <TouchableOpacity
             style={[styles.fab, { bottom: 20 + insets.bottom }]}
             onPress={() => navigation.navigate('Plan')}
@@ -800,6 +902,13 @@ var COORDS={
   'taza':[34.2100,-3.9970],'tanger':[35.7595,-5.8340],'tangier':[35.7595,-5.8340],
   'tétouan':[35.5785,-5.3684],'tetouan':[35.5785,-5.3684],
   'nador':[35.1681,-2.9286],'oujda':[34.6805,-1.9112],'errachidia':[31.9314,-4.4249],
+  'al hoceima':[35.2517,-3.9372],'hoceima':[35.2517,-3.9372],
+  'azilal':[31.9672,-6.5753],'imsefran':[31.9672,-6.5753],'ahansal':[31.9500,-6.5000],
+  'taliouine':[30.5333,-7.9167],'ouzoud':[32.0179,-6.7199],'midelt':[32.6815,-4.7327],
+  'cap spartel':[35.7833,-5.9167],'kénitra':[34.2610,-6.5802],'kenitra':[34.2610,-6.5802],
+  'saghro':[31.2000,-5.5000],'khamlia':[31.0667,-3.9833],'cala iris':[35.1583,-4.9583],
+  'bin el ouidane':[32.0500,-6.4500],'kelaat mgouna':[31.2333,-6.1167],
+  'boumalne':[31.3700,-5.9900],'aoulouz':[30.6667,-8.1167],
   'zagora':[30.3319,-5.8378],'tinghir':[31.5152,-5.5337],'safi':[32.2994,-9.2372],
   'el jadida':[33.2316,-8.5007],'beni mellal':[32.3373,-6.3498],'béni mellal':[32.3373,-6.3498],
   'khenifra':[32.9342,-5.6700],'khénifra':[32.9342,-5.6700],
@@ -940,24 +1049,36 @@ function fetchOrsRoute(stops){
   });
 }
 
-/* ── ORS Geocoding → resolve unknown city names ── */
+/* ── Nominatim Geocoding → resolve unknown city names (free, no key) ── */
 function geocodeCity(name){
   return fetch(
-    'https://api.openrouteservice.org/geocode/search?api_key='+ORS_KEY+
-    '&text='+encodeURIComponent(name+', Maroc')+'&boundary.country=MA&size=1'
+    'https://nominatim.openstreetmap.org/search?format=json&q='+
+    encodeURIComponent(name+', Maroc')+'&countrycodes=ma&limit=1&accept-language=fr',
+    {headers:{'Accept-Language':'fr','User-Agent':'RoamersApp/1.0'}}
   )
   .then(function(r){return r.json();})
   .then(function(d){
-    if(d.features&&d.features.length>0){
-      var c=d.features[0].geometry.coordinates;
-      return{name:name,lng:c[0],lat:c[1]};
+    if(d&&d.length>0){
+      return{name:name,lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)};
     }
     return null;
   })
   .catch(function(){return null;});
 }
 
-/* ── Main circuit entry point ── */
+/* ── Draw circuit from exact coords (no geocoding needed) ── */
+function drawCircuitCoords(stops){
+  clearRoute();
+  var valid = stops.filter(function(s){ return s.lat!=null && s.lng!=null; });
+  if(valid.length<2) return;
+  drawStopMarkers(valid);
+  var latlngs = valid.map(function(s){return[s.lat,s.lng];});
+  map.fitBounds(L.latLngBounds(latlngs).pad(0.25),{animate:true,duration:0.7});
+  /* Draw real road route via ORS if key available, else straight polyline */
+  fetchOrsRoute(valid);
+}
+
+/* ── Main circuit entry point (resolves names → coords) ── */
 function drawCircuit(circuit){
   clearRoute();
   if(!circuit||circuit.length<2)return;
@@ -1041,7 +1162,13 @@ allMarkers.forEach(function(m){
     var dot=this.getElement()&&this.getElement().querySelector('.mk-dot');
     if(dot){dot.style.transform='scale(1.15)';dot.style.boxShadow='0 0 0 4px rgba(255,255,255,0.35)';}
     map.panTo([m.lat,m.lng],{animate:true,duration:0.5});
-    if(m.type==='exp'&&m.circuit&&m.circuit.length>=2){drawCircuit(m.circuit);}else{clearRoute();}
+    if(m.type==='exp'){
+      if(m.circuitCoords&&m.circuitCoords.length>=2&&m.circuitCoords.some(function(s){return s.lat!=null;})){
+        drawCircuitCoords(m.circuitCoords);
+      } else if(m.circuit&&m.circuit.length>=2){
+        drawCircuit(m.circuit);
+      } else { clearRoute(); }
+    } else { clearRoute(); }
     try{window.ReactNativeWebView.postMessage(JSON.stringify(m));}catch(e){}
   });
   leafletMks.push(mk);
@@ -1199,6 +1326,12 @@ const styles = StyleSheet.create({
   map:          { flex: 1, backgroundColor: '#0e0e0e' },
   loader:       { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loaderTxt:    { color: COLORS.sub, fontSize: 14, marginTop: 12 },
+
+  /* Itinerary mode banner */
+  itinBanner:   { position: 'absolute', top: 12, left: 12, right: 12, zIndex: 10, backgroundColor: 'rgba(10,10,10,0.92)', borderRadius: 22, paddingVertical: 10, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
+  itinBackBtn:  { paddingRight: 12, borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.15)', marginRight: 12 },
+  itinBackTxt:  { color: COLORS.primary, fontSize: 13, fontWeight: '700' },
+  itinTitle:    { flex: 1, color: '#fff', fontSize: 13, fontWeight: '700' },
 
   /* Select-for-plan banner */
   selectBanner:    { position: 'absolute', top: 12, left: 16, right: 16, zIndex: 10, backgroundColor: 'rgba(184,23,46,0.88)', borderRadius: 20, paddingVertical: 9, paddingHorizontal: 16, alignItems: 'center' },

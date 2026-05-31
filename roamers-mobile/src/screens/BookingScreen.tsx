@@ -70,6 +70,7 @@ export default function BookingScreen({ route, navigation }: any) {
   const [adults,   setAdults]   = useState(1);
   const [children, setChildren] = useState(0);
   const [date,     setDate]     = useState('');
+  const [datePrice, setDatePrice] = useState<number | null>(null); /* per-date price override */
 
   /* Step 2 – Contact */
   const [name,    setName]    = useState(user ? `${user.fname} ${user.lname}`.trim() : '');
@@ -88,7 +89,8 @@ export default function BookingScreen({ route, navigation }: any) {
   const [promoLoading,  setPromoLoading]  = useState(false);
   const [promoError,    setPromoError]    = useState<string | null>(null);
 
-  const adultPrice = Number(exp?.price) || 0;
+  /* If the selected date has its own price, use it; otherwise fall back to exp.price */
+  const adultPrice = datePrice !== null ? datePrice : (Number(exp?.price) || 0);
   const childPrice = exp?.pChild != null ? Number(exp.pChild) : adultPrice;
   const baseTotal  = adults * adultPrice + children * childPrice;
   const discount   = promoApplied ? Math.round(baseTotal * promoApplied.discountPct / 100) : 0;
@@ -257,18 +259,52 @@ export default function BookingScreen({ route, navigation }: any) {
               return (
                 <View style={styles.datesGrid}>
                   {futureDates.map((d: any) => {
-                    const raw = typeof d === 'object' ? d.raw : d;
-                    const label = typeof d === 'object' ? d.label : raw;
-                    const selected = date === raw;
+                    const raw       = typeof d === 'object' ? d.raw    : d;
+                    const label     = typeof d === 'object' ? d.label  : raw;
+                    const isFull    = typeof d === 'object' && !!d.full;
+                    const dprice    = typeof d === 'object' && d.price != null ? Number(d.price) : null;
+                    const booked    = typeof d === 'object' ? (d.booked || 0) : 0;
+                    const selected  = !isFull && date === raw;
                     return (
                       <TouchableOpacity
                         key={raw}
-                        style={[styles.dateChip, selected && styles.dateChipActive]}
-                        onPress={() => setDate(raw)}
-                        activeOpacity={0.75}
+                        style={[
+                          styles.dateChip,
+                          selected  && styles.dateChipActive,
+                          isFull    && styles.dateChipFull,
+                        ]}
+                        onPress={() => {
+                          if (!isFull) {
+                            setDate(raw);
+                            setDatePrice(dprice);
+                          }
+                        }}
+                        activeOpacity={isFull ? 1 : 0.75}
+                        disabled={isFull}
                       >
-                        <Text style={[styles.dateChipTxt, selected && styles.dateChipTxtActive]}>{label}</Text>
-                        {selected && <Text style={{ color: COLORS.primary, fontSize: 14, marginTop: 2 }}>✓</Text>}
+                        <Text style={[
+                          styles.dateChipTxt,
+                          selected && styles.dateChipTxtActive,
+                          isFull   && styles.dateChipTxtFull,
+                        ]}>
+                          {label}
+                        </Text>
+                        {/* Per-date price (only if different from base) */}
+                        {dprice != null && !isFull && (
+                          <Text style={[styles.dateChipPrice, selected && { color: COLORS.primary }]}>
+                            {dprice.toLocaleString('fr-MA')} MAD
+                          </Text>
+                        )}
+                        {/* Booking counter */}
+                        {!isFull && booked > 0 && exp?.maxP && (
+                          <Text style={styles.dateChipBooked}>
+                            {exp.maxP - booked} place{exp.maxP - booked > 1 ? 's' : ''} restante{exp.maxP - booked > 1 ? 's' : ''}
+                          </Text>
+                        )}
+                        {isFull
+                          ? <Text style={styles.dateChipComplet}>Complet</Text>
+                          : selected && <Text style={{ color: COLORS.primary, fontSize: 14, marginTop: 2 }}>✓</Text>
+                        }
                       </TouchableOpacity>
                     );
                   })}
@@ -684,4 +720,9 @@ const styles = StyleSheet.create({
   dateChipActive:    { borderColor: COLORS.primary, backgroundColor: '#1a0208' },
   dateChipTxt:       { color: COLORS.sub, fontSize: 14, fontWeight: '600', textAlign: 'center' },
   dateChipTxtActive: { color: '#fff', fontWeight: '800' },
+  dateChipFull:      { backgroundColor: '#111', borderColor: '#222', opacity: 0.5 },
+  dateChipTxtFull:   { color: '#444', textDecorationLine: 'line-through' },
+  dateChipComplet:   { color: '#ef4444', fontSize: 10, fontWeight: '700', marginTop: 3 },
+  dateChipPrice:     { color: COLORS.sub, fontSize: 11, fontWeight: '700', marginTop: 3 },
+  dateChipBooked:    { color: '#f59e0b', fontSize: 10, fontWeight: '600', marginTop: 2 },
 });
