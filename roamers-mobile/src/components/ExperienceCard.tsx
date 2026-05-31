@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, RADIUS, SHADOW } from '../constants/theme';
 import Icon from './Icons';
@@ -29,12 +29,13 @@ function difColor(dif: string): string {
   return map[dif] || COLORS.sub;
 }
 
-export default function ExperienceCard({ exp, onPress, wide, wishlist, onWishlist }: Props) {
+function ExperienceCard({ exp, onPress, wide, wishlist, onWishlist }: Props) {
   const segColor  = SEGMENT_COLORS[exp.segment] || COLORS.primary;
   const segLabel  = SEGMENT_LABELS[exp.segment] || exp.segment;
   const cardW     = wide ? width - 32 : CARD_W;
   const isSaved   = wishlist ? wishlist.includes(exp.id) : false;
   const showHeart = !!onWishlist;
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   return (
     <TouchableOpacity
@@ -48,7 +49,19 @@ export default function ExperienceCard({ exp, onPress, wide, wishlist, onWishlis
       {/* Image */}
       <View style={styles.imgWrap}>
         {exp.img
-          ? <Image source={{ uri: exp.img }} style={styles.img} resizeMode="cover" />
+          ? <>
+              <Image
+                source={{ uri: exp.img }}
+                style={styles.img}
+                resizeMode="cover"
+                onLoadEnd={() => setImgLoaded(true)}
+              />
+              {!imgLoaded && (
+                <View style={[StyleSheet.absoluteFill, styles.imgFallback]}>
+                  <ActivityIndicator color={COLORS.primary} />
+                </View>
+              )}
+            </>
           : <View style={[styles.img, styles.imgFallback]}><Text style={styles.imgEmoji}>🏔️</Text></View>
         }
         <LinearGradient
@@ -120,7 +133,12 @@ export default function ExperienceCard({ exp, onPress, wide, wishlist, onWishlis
               <Text style={styles.priceCur}> MAD</Text>
             </Text>
           </View>
-          <View style={[styles.cta, { backgroundColor: segColor }]}>
+          <View style={[styles.cta, { backgroundColor: segColor, shadowColor: segColor }]}>
+            <LinearGradient
+              colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)', 'rgba(0,0,0,0.14)']}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
             <Text style={styles.ctaTxt}>Voir →</Text>
           </View>
         </View>
@@ -128,6 +146,15 @@ export default function ExperienceCard({ exp, onPress, wide, wishlist, onWishlis
     </TouchableOpacity>
   );
 }
+
+/* Memoised: in lists/carousels, avoids re-rendering every card when only
+   one wishlist entry or an unrelated parent state changes. */
+export default React.memo(ExperienceCard, (prev, next) =>
+  prev.exp === next.exp &&
+  prev.wide === next.wide &&
+  prev.onWishlist === next.onWishlist &&
+  (prev.wishlist?.includes(prev.exp.id) ?? false) === (next.wishlist?.includes(next.exp.id) ?? false)
+);
 
 const styles = StyleSheet.create({
   card:       { backgroundColor: '#161616', borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#242424' },
@@ -169,6 +196,6 @@ const styles = StyleSheet.create({
   priceLabel: { color: COLORS.muted, fontSize: 11, marginBottom: 2 },
   price:      { color: COLORS.primary, fontSize: 22, fontWeight: '900', includeFontPadding: false },
   priceCur:   { fontSize: 13, color: COLORS.sub },
-  cta:        { paddingHorizontal: 20, paddingVertical: 11, borderRadius: RADIUS.pill },
+  cta:        { paddingHorizontal: 20, paddingVertical: 11, borderRadius: RADIUS.pill, overflow: 'hidden', shadowOpacity: 0.45, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   ctaTxt:     { color: '#fff', fontWeight: '800', fontSize: 14 },
 });

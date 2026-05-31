@@ -638,21 +638,32 @@ export default function ExperienceDetailScreen({ route, navigation }: any) {
         colors={['transparent', 'rgba(10,10,10,0.97)', '#0e0e0e']}
         style={[s.ctaBar, { paddingBottom: insets.bottom + 14 }]}
       >
-        <View>
+        <View style={s.ctaInfo}>
           {/* Show "À partir de" if any date has its own price */}
           {exp.dates?.some((d: any) => typeof d === 'object' && d.price != null) && (
             <Text style={s.ctaFromLbl}>À partir de</Text>
           )}
-          <Text style={[s.ctaPrice, { color: segColor }]}>{Number(exp.price).toLocaleString('fr-MA')} MAD</Text>
-          <Text style={s.ctaNote}>par personne · acompte seulement</Text>
+          <View style={s.ctaPriceRow}>
+            <Text style={[s.ctaPrice, { color: segColor }]}>{Number(exp.price).toLocaleString('fr-MA')}</Text>
+            <Text style={s.ctaPriceCur}> MAD</Text>
+          </View>
+          <Text style={s.ctaReassure}>🔒 Annulation gratuite · acompte seulement</Text>
         </View>
         <TouchableOpacity
-          style={[s.ctaBtn, { backgroundColor: isClosed ? COLORS.muted : segColor }]}
+          style={[s.ctaBtn, { backgroundColor: isClosed ? COLORS.muted : segColor, shadowColor: isClosed ? '#000' : segColor }]}
           disabled={isClosed}
           onPress={() => user ? navigation.navigate('Booking', { exp }) : navigation.navigate('Login')}
-          activeOpacity={0.85}
+          activeOpacity={0.88}
         >
-          <Text style={s.ctaBtnTxt}>{isClosed ? '🔒 Complet' : '◆  Réserver'}</Text>
+          {!isClosed && (
+            <LinearGradient
+              colors={['rgba(255,255,255,0.24)', 'rgba(255,255,255,0)', 'rgba(0,0,0,0.16)']}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+          )}
+          <Text style={s.ctaBtnTxt}>{isClosed ? '🔒 Complet' : 'Réserver'}</Text>
+          {!isClosed && <Text style={s.ctaBtnArrow}>→</Text>}
         </TouchableOpacity>
       </LinearGradient>
     </View>
@@ -737,10 +748,10 @@ const s = StyleSheet.create({
   crossIcon:     { color: '#555', fontSize: 13, fontWeight: '900', marginRight: 12, marginTop: 4, width: 14 },
 
   /* Trust */
-  trustGrid:     { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 22 },
-  trustItem:     { flexDirection: 'row', alignItems: 'center', width: '50%', paddingVertical: 5, paddingRight: 8 },
-  trustIcon:     { fontSize: 13, marginRight: 8 },
-  trustLabel:    { color: COLORS.sub, fontSize: 12, fontWeight: '600', flex: 1 },
+  trustGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
+  trustItem:     { flexDirection: 'row', alignItems: 'center', width: (width - 32 - 8) / 2, backgroundColor: '#161616', borderWidth: 1, borderColor: '#242424', borderRadius: RADIUS.md, paddingVertical: 11, paddingHorizontal: 12 },
+  trustIcon:     { fontSize: 16, marginRight: 9 },
+  trustLabel:    { color: COLORS.text, fontSize: 12.5, fontWeight: '600', flex: 1 },
 
   /* Tags */
   tagsRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 22 },
@@ -812,12 +823,16 @@ const s = StyleSheet.create({
   whyTxt:     { color: COLORS.sub, fontSize: 14, flex: 1, lineHeight: 21 },
 
   /* CTA */
-  ctaBar:     { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 28 },
-  ctaFromLbl: { color: COLORS.muted, fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
-  ctaPrice:   { fontSize: 22, fontWeight: '900', includeFontPadding: false },
-  ctaNote:    { color: COLORS.muted, fontSize: 11, marginTop: 3 },
-  ctaBtn:    { paddingHorizontal: 26, paddingVertical: 14, borderRadius: RADIUS.pill },
-  ctaBtnTxt: { color: '#fff', fontWeight: '900', fontSize: 15, letterSpacing: 0.5 },
+  ctaBar:      { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 28 },
+  ctaInfo:     { flex: 1, marginRight: 14 },
+  ctaFromLbl:  { color: COLORS.muted, fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  ctaPriceRow: { flexDirection: 'row', alignItems: 'baseline' },
+  ctaPrice:    { fontSize: 24, fontWeight: '900', includeFontPadding: false },
+  ctaPriceCur: { color: COLORS.sub, fontSize: 13, fontWeight: '700' },
+  ctaReassure: { color: COLORS.sub, fontSize: 11, marginTop: 4, fontWeight: '600' },
+  ctaBtn:      { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 30, paddingVertical: 16, borderRadius: RADIUS.pill, overflow: 'hidden', shadowOpacity: 0.55, shadowRadius: 16, shadowOffset: { width: 0, height: 7 }, elevation: 12 },
+  ctaBtnTxt:   { color: '#fff', fontWeight: '900', fontSize: 16, letterSpacing: 0.5 },
+  ctaBtnArrow: { color: '#fff', fontSize: 18, fontWeight: '900', marginTop: -1 },
 
   /* Wishlist heart FAB */
   heartFab:       { position: 'absolute', right: 14, width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', zIndex: 10 },

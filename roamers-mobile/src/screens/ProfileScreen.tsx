@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import {
-  getMyBookings, getExperiences,
+  getMyBookings, getExperiences, getSiteConfig, getCommunityReviews,
   changePassword, updateProfile, toggleWishlist,
   cancelBooking, deleteAccount, getMyPlanRequests, getAppVersion,
 } from '../services/api';
@@ -21,15 +21,15 @@ import Icon from '../components/Icons';
 const { width, height } = Dimensions.get('window');
 const HALF = (width - 48) / 2;
 
-const APP_VERSION_CODE = 33;
-const APP_VERSION_NAME = '1.0.3';
+const APP_VERSION_CODE = 34;
+const APP_VERSION_NAME = '1.0.4';
 
 /* ── Member levels ──────────────────────────────────────────────────────── */
 const LEVELS = [
-  { min: 0,     max: 4999,     icon: '🌱', label: 'Nouveau Roamer',    color: '#6b7280', next: 5000 },
-  { min: 5000,  max: 14999,    icon: '🧭', label: 'Explorateur Actif', color: '#3b82f6', next: 15000 },
-  { min: 15000, max: 49999,    icon: '⛺', label: 'Roamer Aguerri',    color: '#8b5cf6', next: 50000 },
-  { min: 50000, max: Infinity, icon: '🏆', label: 'Elite Explorer',    color: '#d97706', next: null },
+  { min: 0,     max: 4999,     icon: '🌱', label: 'Nouveau Roamer',    color: '#6b7280', next: 5000,  rank: null      },
+  { min: 5000,  max: 14999,    icon: '🧭', label: 'Explorateur Actif', color: '#3b82f6', next: 15000, rank: 'Top 25%' },
+  { min: 15000, max: 49999,    icon: '⛺', label: 'Roamer Aguerri',    color: '#8b5cf6', next: 50000, rank: 'Top 10%' },
+  { min: 50000, max: Infinity, icon: '🏆', label: 'Elite Explorer',    color: '#d97706', next: null,  rank: 'Top 1%'  },
 ];
 function getLevel(spent: number) {
   return LEVELS.find((l) => spent >= l.min && spent <= l.max) || LEVELS[0];
@@ -91,11 +91,19 @@ export default function ProfileScreen({ navigation }: any) {
   const [loadingE, setLoadingE] = useState(false);
   const [planReqs, setPlanReqs] = useState<any[]>([]);
   const [loadingR, setLoadingR] = useState(false);
+  const [config, setConfig]     = useState<any>({});
+  const [commReviews, setCommReviews] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) { setLoadingB(false); return; }
     getMyBookings().then(setBookings).catch(() => {}).finally(() => setLoadingB(false));
   }, [user]);
+
+  /* Community / brand data (social proof, WhatsApp, recent reviews) — non-blocking */
+  useEffect(() => {
+    getSiteConfig().then(setConfig).catch(() => {});
+    getCommunityReviews(10).then((d) => setCommReviews(d.reviews || [])).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (tab !== 'wishlist' || allExps.length > 0) return;
@@ -221,8 +229,15 @@ export default function ProfileScreen({ navigation }: any) {
           <View style={{ flex: 1, gap: 4 }}>
             <Text style={styles.headerName}>{user.fname} {user.lname}</Text>
             <Text style={styles.headerEmail} numberOfLines={1}>{user.email}</Text>
-            <View style={[styles.levelBadge, { backgroundColor: level.color + '22', borderColor: level.color + '55' }]}>
-              <Text style={[styles.levelBadgeTxt, { color: level.color }]}>{level.icon} {level.label}</Text>
+            <View style={styles.badgeRow}>
+              <View style={[styles.levelBadge, { backgroundColor: level.color + '22', borderColor: level.color + '55' }]}>
+                <Text style={[styles.levelBadgeTxt, { color: level.color }]}>{level.icon} {level.label}</Text>
+              </View>
+              {level.rank && (
+                <View style={styles.rankBadge}>
+                  <Text style={styles.rankBadgeTxt}>🔝 {level.rank} des Roamers</Text>
+                </View>
+              )}
             </View>
           </View>
           <View style={styles.headerStatsMini}>
@@ -273,7 +288,7 @@ export default function ProfileScreen({ navigation }: any) {
 
       {/* ── Content ── */}
       <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
-        {tab === 'overview'     && <OverviewTab user={user} bookings={bookings} loading={loadingB} confirmed={confirmed} totalSpent={totalSpent} wishlist={wishlist} level={level} nextProg={nextProg} upcomingB={upcomingB} earnedBadges={earnedBadges} navigation={navigation} />}
+        {tab === 'overview'     && <OverviewTab user={user} bookings={bookings} loading={loadingB} confirmed={confirmed} totalSpent={totalSpent} wishlist={wishlist} level={level} nextProg={nextProg} upcomingB={upcomingB} earnedBadges={earnedBadges} navigation={navigation} setTab={setTab} config={config} commReviews={commReviews} />}
         {tab === 'reservations' && <ReservationsTab bookings={bookings} loading={loadingB} onCancel={async (id: string) => {
           Alert.alert('Annuler', 'Annuler cette réservation ?', [
             { text: 'Non', style: 'cancel' },
@@ -296,9 +311,30 @@ export default function ProfileScreen({ navigation }: any) {
 /* ══════════════════════════════════════════════════════════════════════════
    Overview tab
    ══════════════════════════════════════════════════════════════════════════ */
-function OverviewTab({ user, bookings, loading, confirmed, totalSpent, wishlist, level, nextProg, upcomingB, earnedBadges, navigation }: any) {
+function OverviewTab({ user, bookings, loading, confirmed, totalSpent, wishlist, level, nextProg, upcomingB, earnedBadges, navigation, setTab, config, commReviews }: any) {
   const h = new Date().getHours();
   const greeting = h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
+
+  /* Community social proof — from CMS config with safe fallbacks */
+  const commMembers = config?.cmsHeroSt1Val || '500+';
+  const commSatisf  = config?.cmsHeroSt3Val || '98%';
+  const commWa      = (config?.whatsapp || '212600000000').replace(/[^0-9]/g, '');
+  const joinWhatsApp = () => {
+    /* Prefer a real community link (WhatsApp Community / Instagram) if configured */
+    if (config?.communityUrl) { Linking.openURL(config.communityUrl).catch(() => {}); return; }
+    const msg = encodeURIComponent(`Bonjour ! Je suis ${user.fname}, membre de la communauté Roamers 🌍. J'aimerais en savoir plus.`);
+    Linking.openURL(`https://wa.me/${commWa}?text=${msg}`).catch(() => {});
+  };
+
+  /* ── Community challenges — real progress from bookings & badges ── */
+  const activeB    = bookings.filter((b: any) => b.status !== 'cancelled');
+  const universes  = new Set(activeB.map((b: any) => b.segment).filter(Boolean));
+  const destSet    = new Set(activeB.map((b: any) => b.expLoc).filter(Boolean));
+  const CHALLENGES = [
+    { icon: '🌍', label: 'Explorez 3 univers',     cur: universes.size,       goal: 3,                color: '#10b981' },
+    { icon: '🎖️', label: 'Débloquez 6 badges',     cur: earnedBadges.length,  goal: 6,                color: '#d97706' },
+    { icon: '📍', label: 'Visitez 5 destinations', cur: destSet.size,         goal: 5,                color: '#3b82f6' },
+  ];
 
   return (
     <View style={s.section}>
@@ -368,6 +404,114 @@ function OverviewTab({ user, bookings, loading, confirmed, totalSpent, wishlist,
         ))}
       </View>
 
+      {/* ── COMMUNITY HUB ── */}
+      <LinearGradient colors={['#06140f', '#0e0e0e']} style={[s.card, { borderColor: '#10b98144', padding: 16, gap: 0 }]}>
+        <View style={s.commHead}>
+          <View style={s.commLogo}><Icon.Globe size={18} color="#10b981" /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.commTitle}>Communauté Roamers</Text>
+            <Text style={s.commSub}>Pas une agence. Une communauté. 🌍</Text>
+          </View>
+        </View>
+
+        {/* Social proof */}
+        <View style={s.commProof}>
+          {[
+            { v: commMembers, l: 'voyageurs' },
+            { v: commSatisf,  l: 'satisfaits' },
+            { v: `${earnedBadges.length}/${BADGE_DEFS.length}`, l: 'vos badges' },
+          ].map((p, i) => (
+            <React.Fragment key={p.l}>
+              {i > 0 && <View style={s.commProofDiv} />}
+              <View style={s.commProofItem}>
+                <Text style={s.commProofVal}>{p.v}</Text>
+                <Text style={s.commProofLbl}>{p.l}</Text>
+              </View>
+            </React.Fragment>
+          ))}
+        </View>
+
+        {/* Impact line — ties to the brand's social mission */}
+        <View style={s.commImpact}>
+          <Text style={{ fontSize: 15 }}>🌱</Text>
+          <Text style={s.commImpactTxt}>
+            Vos voyages soutiennent l'emploi local et les coopératives marocaines.
+          </Text>
+        </View>
+
+        {/* Actions */}
+        <View style={s.commActions}>
+          <TouchableOpacity style={[s.commBtn, { backgroundColor: '#10b981' }]} onPress={joinWhatsApp} activeOpacity={0.86}>
+            <Text style={s.commBtnTxt}>💬  Rejoindre</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.commBtnAlt} onPress={() => setTab && setTab('passport')} activeOpacity={0.86}>
+            <Text style={s.commBtnAltTxt}>🎁  Parrainer un ami</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+
+      {/* ── COMMUNITY CHALLENGES ── */}
+      <View style={s.card}>
+        <View style={s.cardHead}>
+          <Text style={s.cardTitle}>🎯 Défis Roamers</Text>
+          <Text style={{ color: COLORS.muted, fontSize: 11, fontWeight: '600' }}>Progression communauté</Text>
+        </View>
+        <View style={{ gap: 12 }}>
+          {CHALLENGES.map((c) => {
+            const pct  = Math.min(c.cur / c.goal, 1);
+            const done = c.cur >= c.goal;
+            return (
+              <View key={c.label} style={s.chalRow}>
+                <View style={[s.chalIcon, { backgroundColor: c.color + '20' }]}>
+                  <Text style={{ fontSize: 16 }}>{c.icon}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={s.chalTop}>
+                    <Text style={[s.chalLabel, done && { color: c.color }]}>{c.label}</Text>
+                    <Text style={[s.chalCount, { color: done ? c.color : COLORS.muted }]}>
+                      {done ? '✓ Réussi' : `${Math.min(c.cur, c.goal)}/${c.goal}`}
+                    </Text>
+                  </View>
+                  <View style={s.chalTrack}>
+                    <View style={[s.chalFill, { width: `${pct * 100}%` as any, backgroundColor: c.color }]} />
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* ── COMMUNITY REVIEWS WALL ── */}
+      {commReviews && commReviews.length > 0 && (
+        <View style={s.card}>
+          <View style={s.cardHead}>
+            <Text style={s.cardTitle}>💬 La communauté a adoré</Text>
+            <Text style={{ color: COLORS.muted, fontSize: 11, fontWeight: '600' }}>Avis récents</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 4 }}>
+            {commReviews.map((rv: any) => (
+              <TouchableOpacity
+                key={rv.id}
+                style={s.revWallCard}
+                activeOpacity={0.85}
+                onPress={() => rv.expId && navigation.navigate('ExperienceDetail', { id: rv.expId, initialTab: 'overview' })}
+              >
+                <View style={s.revWallHead}>
+                  <View style={s.revWallAvatar}><Text style={s.revWallAvatarTxt}>{rv.initial || '?'}</Text></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.revWallName} numberOfLines={1}>{rv.displayName || 'Roamer'}</Text>
+                    <Text style={s.revWallStars}>{'★'.repeat(Math.max(0, Math.min(5, rv.rating)))}</Text>
+                  </View>
+                </View>
+                <Text style={s.revWallTxt} numberOfLines={4}>"{rv.text}"</Text>
+                {!!rv.expTitle && <Text style={s.revWallExp} numberOfLines={1}>📍 {rv.expTitle}</Text>}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Rewards Points card */}
       {(() => {
         const pts = Math.floor(totalSpent / 10);
@@ -416,7 +560,7 @@ function OverviewTab({ user, bookings, loading, confirmed, totalSpent, wishlist,
         <View style={s.card}>
           <View style={s.cardHead}>
             <Text style={s.cardTitle}>📖 Mon histoire</Text>
-            <TouchableOpacity onPress={() => {/* setTab('reservations') */}}>
+            <TouchableOpacity onPress={() => setTab && setTab('reservations')}>
               <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '700' }}>Tout voir →</Text>
             </TouchableOpacity>
           </View>
@@ -1250,8 +1394,11 @@ const s = StyleSheet.create({
   avatarInitials: { color: '#fff', fontSize: 18, fontWeight: '900' },
   headerName: { color: COLORS.text, fontSize: 17, fontWeight: '900' },
   headerEmail: { color: COLORS.muted, fontSize: 12, marginBottom: 4 },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
   levelBadge: { borderRadius: RADIUS.pill, paddingHorizontal: 9, paddingVertical: 3, borderWidth: 1, alignSelf: 'flex-start' },
   levelBadgeTxt: { fontSize: 11, fontWeight: '800' },
+  rankBadge: { borderRadius: RADIUS.pill, paddingHorizontal: 9, paddingVertical: 3, borderWidth: 1, borderColor: '#f0c04066', backgroundColor: '#f0c04018', alignSelf: 'flex-start' },
+  rankBadgeTxt: { color: '#f0c040', fontSize: 11, fontWeight: '800' },
 
   headerStatsMini: { alignItems: 'center', gap: 4 },
   miniStat: { alignItems: 'center' },
@@ -1282,6 +1429,43 @@ const s = StyleSheet.create({
   card: { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: 18, borderWidth: 1, borderColor: COLORS.border },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   cardTitle: { color: COLORS.text, fontSize: 15, fontWeight: '800', marginBottom: 10 },
+
+  /* ── Community challenges ── */
+  chalRow:   { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  chalIcon:  { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  chalTop:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  chalLabel: { color: COLORS.sub, fontSize: 13, fontWeight: '700' },
+  chalCount: { fontSize: 11, fontWeight: '800' },
+  chalTrack: { height: 5, backgroundColor: '#1a1a1a', borderRadius: 3, overflow: 'hidden' },
+  chalFill:  { height: '100%', borderRadius: 3 },
+
+  /* ── Community reviews wall ── */
+  revWallCard:      { width: 230, backgroundColor: '#111', borderRadius: RADIUS.md, padding: 14, borderWidth: 1, borderColor: '#242424' },
+  revWallHead:      { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  revWallAvatar:    { width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  revWallAvatarTxt: { color: '#fff', fontWeight: '900', fontSize: 14 },
+  revWallName:      { color: COLORS.text, fontSize: 13, fontWeight: '800' },
+  revWallStars:     { color: '#FFD700', fontSize: 11, marginTop: 1 },
+  revWallTxt:       { color: COLORS.sub, fontSize: 12.5, lineHeight: 18, fontStyle: 'italic', minHeight: 72 },
+  revWallExp:       { color: COLORS.primary, fontSize: 11, fontWeight: '700', marginTop: 8 },
+
+  /* ── Community hub ── */
+  commHead:      { flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 14 },
+  commLogo:      { width: 38, height: 38, borderRadius: 11, backgroundColor: '#10b98122', borderWidth: 1, borderColor: '#10b98140', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  commTitle:     { color: '#fff', fontSize: 15, fontWeight: '900' },
+  commSub:       { color: '#10b981', fontSize: 12, fontWeight: '600', marginTop: 1 },
+  commProof:     { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16,185,129,0.06)', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#10b98122', paddingVertical: 12, marginBottom: 12 },
+  commProofItem: { flex: 1, alignItems: 'center' },
+  commProofDiv:  { width: 1, height: 26, backgroundColor: '#10b98126' },
+  commProofVal:  { color: '#fff', fontSize: 17, fontWeight: '900' },
+  commProofLbl:  { color: COLORS.muted, fontSize: 10, fontWeight: '600', marginTop: 2 },
+  commImpact:    { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 16 },
+  commImpactTxt: { color: COLORS.sub, fontSize: 12, lineHeight: 17, flex: 1 },
+  commActions:   { flexDirection: 'row', gap: 10 },
+  commBtn:       { flex: 1, paddingVertical: 13, borderRadius: RADIUS.md, alignItems: 'center', shadowColor: '#10b981', shadowOpacity: 0.45, shadowOffset: { width: 0, height: 5 }, shadowRadius: 12, elevation: 8 },
+  commBtnTxt:    { color: '#fff', fontSize: 13, fontWeight: '900' },
+  commBtnAlt:    { flex: 1, paddingVertical: 13, borderRadius: RADIUS.md, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' },
+  commBtnAltTxt: { color: '#fff', fontSize: 13, fontWeight: '800' },
 
   /* ── Stats ── */
   statCard: { flex: 1, minWidth: HALF - 4, borderRadius: RADIUS.md, padding: 14, alignItems: 'center', borderWidth: 1 },
