@@ -123,4 +123,11 @@ export const getReviews = (expId: string) =>
 export const submitReview = (data: { expId: string; rating: number; text: string }) =>
   api.post('/api/reviews', data).then((r) => r.data);
 
+/* Recent community reviews across all experiences (for the community wall) */
+export const getCommunityReviews = (limit = 12) =>
+  api.get('/api/reviews', { params: { limit } }).then((r) => r.data as {
+    reviews: any[];
+    total: number;
+  });
+
 export default api;

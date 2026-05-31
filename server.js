@@ -223,7 +223,7 @@ app.get('/api/app-version', function(req, res) {
     versionCode: 34,
     versionName: '1.0.4',
     downloadUrl: '/downloads/roamers.apk',
-    releaseNotes: 'Nouveau design : fiches voyage et boutons « Réserver » plus attractifs, signaux de confiance repensés. Plus fluide et fiable : chargement des images optimisé, écrans plus rapides, message clair avec bouton « Réessayer » hors connexion. Correction de la bannière de mise à jour.'
+    releaseNotes: 'Espace Communauté : votre rang de Roamer, défis à relever, avis de la communauté et accès direct au groupe. Fiches voyage et boutons « Réserver » plus attractifs. Plus fluide : images optimisées, écrans plus rapides, bouton « Réessayer » hors connexion. Correction de la bannière de mise à jour.'
   });
 });
 
@@ -249,6 +249,7 @@ app.get('/api/site-config', function(req, res) {
     address:  s.settCompanyAddr  || 'Casablanca, Maroc',
     hours:    s.settHours        || 'Lun–Sam : 9h – 19h',
     site:     s.settCompanySite  || 'https://roamerscommunity.ma',
+    communityUrl: s.settCommunityUrl || process.env.COMMUNITY_URL || '',
     /* Media */
     heroImg:    s.settHeroImg    || '',
     heroVideo:  s.settHeroVideo  || '',

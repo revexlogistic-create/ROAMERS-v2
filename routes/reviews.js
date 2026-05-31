@@ -11,6 +11,30 @@ const crypto = require('crypto');
 const db     = require('../database');
 const { auth: requireAuth, adminOnly } = require('../middleware/auth');
 
+/* ── GET recent community reviews (across all experiences) ──── */
+router.get('/', function(req, res) {
+  var limit = Math.min(parseInt(req.query.limit, 10) || 12, 30);
+  var approved = db.reviews.all(function(r) { return r.status === 'approved'; });
+  var recent = approved
+    .sort(function(a, b) { return b.created > a.created ? 1 : -1; })
+    .slice(0, limit)
+    .map(function(r) {
+      var exp = db.experiences.find(function(e) { return e.id === r.expId; });
+      return {
+        id:          r.id,
+        rating:      r.rating,
+        text:        r.text,
+        displayName: r.displayName,
+        initial:     r.initial,
+        created:     r.created,
+        expId:       r.expId,
+        expTitle:    exp ? exp.title : '',
+        expLoc:      exp ? (exp.loc || '') : ''
+      };
+    });
+  res.json({ reviews: recent, total: approved.length });
+});
+
 /* ── GET reviews for one experience ───────────────────────── */
 router.get('/:expId', function(req, res) {
   var expId = req.params.expId;
