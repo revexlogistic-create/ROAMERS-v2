@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import {
-  getMyBookings, getExperiences,
+  getMyBookings, getExperiences, getSiteConfig,
   changePassword, updateProfile, toggleWishlist,
   cancelBooking, deleteAccount, getMyPlanRequests, getAppVersion,
 } from '../services/api';
@@ -21,8 +21,8 @@ import Icon from '../components/Icons';
 const { width, height } = Dimensions.get('window');
 const HALF = (width - 48) / 2;
 
-const APP_VERSION_CODE = 33;
-const APP_VERSION_NAME = '1.0.3';
+const APP_VERSION_CODE = 34;
+const APP_VERSION_NAME = '1.0.4';
 
 /* ── Member levels ──────────────────────────────────────────────────────── */
 const LEVELS = [
@@ -91,11 +91,17 @@ export default function ProfileScreen({ navigation }: any) {
   const [loadingE, setLoadingE] = useState(false);
   const [planReqs, setPlanReqs] = useState<any[]>([]);
   const [loadingR, setLoadingR] = useState(false);
+  const [config, setConfig]     = useState<any>({});
 
   useEffect(() => {
     if (!user) { setLoadingB(false); return; }
     getMyBookings().then(setBookings).catch(() => {}).finally(() => setLoadingB(false));
   }, [user]);
+
+  /* Community / brand data (social proof + WhatsApp) — non-blocking */
+  useEffect(() => {
+    getSiteConfig().then(setConfig).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (tab !== 'wishlist' || allExps.length > 0) return;
@@ -273,7 +279,7 @@ export default function ProfileScreen({ navigation }: any) {
 
       {/* ── Content ── */}
       <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
-        {tab === 'overview'     && <OverviewTab user={user} bookings={bookings} loading={loadingB} confirmed={confirmed} totalSpent={totalSpent} wishlist={wishlist} level={level} nextProg={nextProg} upcomingB={upcomingB} earnedBadges={earnedBadges} navigation={navigation} />}
+        {tab === 'overview'     && <OverviewTab user={user} bookings={bookings} loading={loadingB} confirmed={confirmed} totalSpent={totalSpent} wishlist={wishlist} level={level} nextProg={nextProg} upcomingB={upcomingB} earnedBadges={earnedBadges} navigation={navigation} setTab={setTab} config={config} />}
         {tab === 'reservations' && <ReservationsTab bookings={bookings} loading={loadingB} onCancel={async (id: string) => {
           Alert.alert('Annuler', 'Annuler cette réservation ?', [
             { text: 'Non', style: 'cancel' },
@@ -296,9 +302,18 @@ export default function ProfileScreen({ navigation }: any) {
 /* ══════════════════════════════════════════════════════════════════════════
    Overview tab
    ══════════════════════════════════════════════════════════════════════════ */
-function OverviewTab({ user, bookings, loading, confirmed, totalSpent, wishlist, level, nextProg, upcomingB, earnedBadges, navigation }: any) {
+function OverviewTab({ user, bookings, loading, confirmed, totalSpent, wishlist, level, nextProg, upcomingB, earnedBadges, navigation, setTab, config }: any) {
   const h = new Date().getHours();
   const greeting = h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
+
+  /* Community social proof — from CMS config with safe fallbacks */
+  const commMembers = config?.cmsHeroSt1Val || '500+';
+  const commSatisf  = config?.cmsHeroSt3Val || '98%';
+  const commWa      = (config?.whatsapp || '212600000000').replace(/[^0-9]/g, '');
+  const joinWhatsApp = () => {
+    const msg = encodeURIComponent(`Bonjour ! Je suis ${user.fname}, membre de la communauté Roamers 🌍. J'aimerais en savoir plus.`);
+    Linking.openURL(`https://wa.me/${commWa}?text=${msg}`).catch(() => {});
+  };
 
   return (
     <View style={s.section}>
@@ -368,6 +383,52 @@ function OverviewTab({ user, bookings, loading, confirmed, totalSpent, wishlist,
         ))}
       </View>
 
+      {/* ── COMMUNITY HUB ── */}
+      <LinearGradient colors={['#06140f', '#0e0e0e']} style={[s.card, { borderColor: '#10b98144', padding: 16, gap: 0 }]}>
+        <View style={s.commHead}>
+          <View style={s.commLogo}><Icon.Globe size={18} color="#10b981" /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.commTitle}>Communauté Roamers</Text>
+            <Text style={s.commSub}>Pas une agence. Une communauté. 🌍</Text>
+          </View>
+        </View>
+
+        {/* Social proof */}
+        <View style={s.commProof}>
+          {[
+            { v: commMembers, l: 'voyageurs' },
+            { v: commSatisf,  l: 'satisfaits' },
+            { v: `${earnedBadges.length}/${BADGE_DEFS.length}`, l: 'vos badges' },
+          ].map((p, i) => (
+            <React.Fragment key={p.l}>
+              {i > 0 && <View style={s.commProofDiv} />}
+              <View style={s.commProofItem}>
+                <Text style={s.commProofVal}>{p.v}</Text>
+                <Text style={s.commProofLbl}>{p.l}</Text>
+              </View>
+            </React.Fragment>
+          ))}
+        </View>
+
+        {/* Impact line — ties to the brand's social mission */}
+        <View style={s.commImpact}>
+          <Text style={{ fontSize: 15 }}>🌱</Text>
+          <Text style={s.commImpactTxt}>
+            Vos voyages soutiennent l'emploi local et les coopératives marocaines.
+          </Text>
+        </View>
+
+        {/* Actions */}
+        <View style={s.commActions}>
+          <TouchableOpacity style={[s.commBtn, { backgroundColor: '#10b981' }]} onPress={joinWhatsApp} activeOpacity={0.86}>
+            <Text style={s.commBtnTxt}>💬  Rejoindre</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.commBtnAlt} onPress={() => setTab && setTab('passport')} activeOpacity={0.86}>
+            <Text style={s.commBtnAltTxt}>🎁  Parrainer un ami</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+
       {/* Rewards Points card */}
       {(() => {
         const pts = Math.floor(totalSpent / 10);
@@ -416,7 +477,7 @@ function OverviewTab({ user, bookings, loading, confirmed, totalSpent, wishlist,
         <View style={s.card}>
           <View style={s.cardHead}>
             <Text style={s.cardTitle}>📖 Mon histoire</Text>
-            <TouchableOpacity onPress={() => {/* setTab('reservations') */}}>
+            <TouchableOpacity onPress={() => setTab && setTab('reservations')}>
               <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '700' }}>Tout voir →</Text>
             </TouchableOpacity>
           </View>
@@ -1282,6 +1343,24 @@ const s = StyleSheet.create({
   card: { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: 18, borderWidth: 1, borderColor: COLORS.border },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   cardTitle: { color: COLORS.text, fontSize: 15, fontWeight: '800', marginBottom: 10 },
+
+  /* ── Community hub ── */
+  commHead:      { flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 14 },
+  commLogo:      { width: 38, height: 38, borderRadius: 11, backgroundColor: '#10b98122', borderWidth: 1, borderColor: '#10b98140', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  commTitle:     { color: '#fff', fontSize: 15, fontWeight: '900' },
+  commSub:       { color: '#10b981', fontSize: 12, fontWeight: '600', marginTop: 1 },
+  commProof:     { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16,185,129,0.06)', borderRadius: RADIUS.md, borderWidth: 1, borderColor: '#10b98122', paddingVertical: 12, marginBottom: 12 },
+  commProofItem: { flex: 1, alignItems: 'center' },
+  commProofDiv:  { width: 1, height: 26, backgroundColor: '#10b98126' },
+  commProofVal:  { color: '#fff', fontSize: 17, fontWeight: '900' },
+  commProofLbl:  { color: COLORS.muted, fontSize: 10, fontWeight: '600', marginTop: 2 },
+  commImpact:    { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 16 },
+  commImpactTxt: { color: COLORS.sub, fontSize: 12, lineHeight: 17, flex: 1 },
+  commActions:   { flexDirection: 'row', gap: 10 },
+  commBtn:       { flex: 1, paddingVertical: 13, borderRadius: RADIUS.md, alignItems: 'center', shadowColor: '#10b981', shadowOpacity: 0.45, shadowOffset: { width: 0, height: 5 }, shadowRadius: 12, elevation: 8 },
+  commBtnTxt:    { color: '#fff', fontSize: 13, fontWeight: '900' },
+  commBtnAlt:    { flex: 1, paddingVertical: 13, borderRadius: RADIUS.md, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' },
+  commBtnAltTxt: { color: '#fff', fontSize: 13, fontWeight: '800' },
 
   /* ── Stats ── */
   statCard: { flex: 1, minWidth: HALF - 4, borderRadius: RADIUS.md, padding: 14, alignItems: 'center', borderWidth: 1 },
