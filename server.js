@@ -223,7 +223,7 @@ app.get('/api/app-version', function(req, res) {
     versionCode: 34,
     versionName: '1.0.4',
     downloadUrl: '/downloads/roamers.apk',
-    releaseNotes: 'Performance et fiabilité : chargement des images plus fluide, écrans plus rapides, et messages clairs avec bouton « Réessayer » en cas de coupure réseau. Correction de la bannière de mise à jour qui s\'affichait à tort.'
+    releaseNotes: 'Nouveau design : fiches voyage et boutons « Réserver » plus attractifs, signaux de confiance repensés. Plus fluide et fiable : chargement des images optimisé, écrans plus rapides, message clair avec bouton « Réessayer » hors connexion. Correction de la bannière de mise à jour.'
   });
 });
 

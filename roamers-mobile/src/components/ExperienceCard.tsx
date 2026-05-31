@@ -133,7 +133,12 @@ function ExperienceCard({ exp, onPress, wide, wishlist, onWishlist }: Props) {
               <Text style={styles.priceCur}> MAD</Text>
             </Text>
           </View>
-          <View style={[styles.cta, { backgroundColor: segColor }]}>
+          <View style={[styles.cta, { backgroundColor: segColor, shadowColor: segColor }]}>
+            <LinearGradient
+              colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)', 'rgba(0,0,0,0.14)']}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
             <Text style={styles.ctaTxt}>Voir →</Text>
           </View>
         </View>
@@ -191,6 +196,6 @@ const styles = StyleSheet.create({
   priceLabel: { color: COLORS.muted, fontSize: 11, marginBottom: 2 },
   price:      { color: COLORS.primary, fontSize: 22, fontWeight: '900', includeFontPadding: false },
   priceCur:   { fontSize: 13, color: COLORS.sub },
-  cta:        { paddingHorizontal: 20, paddingVertical: 11, borderRadius: RADIUS.pill },
+  cta:        { paddingHorizontal: 20, paddingVertical: 11, borderRadius: RADIUS.pill, overflow: 'hidden', shadowOpacity: 0.45, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   ctaTxt:     { color: '#fff', fontWeight: '800', fontSize: 14 },
 });
