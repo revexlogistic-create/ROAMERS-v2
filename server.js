@@ -220,10 +220,10 @@ app.get('/api/health', function(req, res) {
 /* ── APP VERSION (mobile update check) ──────────────────────── */
 app.get('/api/app-version', function(req, res) {
   res.json({
-    versionCode: 37,
-    versionName: '1.0.7',
+    versionCode: 38,
+    versionName: '1.0.8',
     downloadUrl: '/downloads/roamers.apk',
-    releaseNotes: 'Formulaire sur mesure simplifié (plus de double question sur le groupe), ajout des coordonnées de chaque participant lors des réservations à plusieurs, et nouveau bouton pour partager l\'application avec vos amis.'
+    releaseNotes: 'Formulaire sur mesure simplifié (plus de double question sur le groupe), ajout des coordonnées de chaque participant lors des réservations à plusieurs, bouton pour partager l\'application avec vos amis, et détection automatique des mises à jour dans votre profil.'
   });
 });
 

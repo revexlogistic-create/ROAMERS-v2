@@ -1151,7 +1151,7 @@ function SettingsTab({ onLogout }: any) {
     finally { setPassLoading(false); }
   }
 
-  async function checkForUpdate() {
+  async function checkForUpdate(silent = false) {
     setUpdateState('checking');
     try {
       const info = await getAppVersion();
@@ -1159,9 +1159,14 @@ function SettingsTab({ onLogout }: any) {
       setUpdateState(info.versionCode > APP_VERSION_CODE ? 'available' : 'upToDate');
     } catch {
       setUpdateState('idle');
-      Alert.alert('Erreur', 'Impossible de vérifier les mises à jour. Vérifiez votre connexion.');
+      if (!silent) Alert.alert('Erreur', 'Impossible de vérifier les mises à jour. Vérifiez votre connexion.');
     }
   }
+
+  /* Auto-check on mount so the "update available" banner appears on its own,
+     without the user having to tap "Vérifier les mises à jour". Silent on
+     failure (e.g. offline) — the manual button still surfaces errors. */
+  useEffect(() => { checkForUpdate(true); }, []);
 
   function handleDelete() {
     Alert.alert('⚠️ Supprimer le compte', 'Cette action est irréversible. Toutes vos données seront supprimées.', [
@@ -1319,7 +1324,7 @@ function SettingsTab({ onLogout }: any) {
                 ? { borderColor: COLORS.border, backgroundColor: COLORS.card }
                 : { borderColor: COLORS.primary + '55', backgroundColor: COLORS.primary + '12' }
             ]}
-            onPress={checkForUpdate}
+            onPress={() => checkForUpdate()}
             disabled={updateState === 'checking'}
             activeOpacity={0.8}
           >
