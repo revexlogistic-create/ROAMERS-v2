@@ -262,9 +262,10 @@ app.get('/api/site-config', function(req, res) {
     cmsHeroTitle:  h.title    || 'Explorez le Maroc<br><em class="s">autrement.</em>',
     cmsHeroSub:    h.subtitle || '5 façons de vivre le Maroc. Des déserts infinis aux sommets de l\'Atlas — expériences de groupe, weekends thématiques, activités express et voyages sur mesure.',
     cmsHeroCta:    h.cta      || '✦ Explorer tous les voyages',
-    cmsHeroSt1Val: h.stat1Val || '500+', cmsHeroSt1Lbl: h.stat1Lbl || 'Voyages organisés',
-    cmsHeroSt2Val: h.stat2Val || '16',   cmsHeroSt2Lbl: h.stat2Lbl || 'Expériences',
-    cmsHeroSt3Val: h.stat3Val || '98%',  cmsHeroSt3Lbl: h.stat3Lbl || 'Satisfaction',
+    /* Stats are shown only when the admin enters real figures — no fabricated numbers */
+    cmsHeroSt1Val: h.stat1Val || '', cmsHeroSt1Lbl: h.stat1Lbl || '',
+    cmsHeroSt2Val: h.stat2Val || '', cmsHeroSt2Lbl: h.stat2Lbl || '',
+    cmsHeroSt3Val: h.stat3Val || '', cmsHeroSt3Lbl: h.stat3Lbl || '',
     /* Why Roamers CMS */
     cmsWhyTitle:   w.title   || 'Pas un simple voyage.',
     cmsWhyTitleEm: w.titleEm || 'Une transformation.',
@@ -293,12 +294,8 @@ app.get('/api/site-config', function(req, res) {
     /* About CMS */
     cmsAboutTitle: ab.title || 'We built a community, not an agency.',
     cmsAboutBody:  ab.body  || 'Roamers Community was founded by passionate Moroccan explorers who believed travel could create genuine human connection and support local communities.',
-    /* Testimonials */
-    cmsTestimonials: tst.length ? tst : [
-      {name:'Karim Bensouda',role:'DRH, OCP Group',text:'Notre équipe de 45 est venue au Maroc sans attentes particulières. Ce que nous avons vécu a été transformateur — le bivouac désert a redéfini notre façon de travailler ensemble.',rating:5,featured:true,seg:'team',img:'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=80&q=70'},
-      {name:'Wei Zhang',role:'Tour Operator, Shanghai',text:'En tant qu\'opérateur de voyage chinois, la logistique était ma grande inquiétude. Roamers a fourni un guide mandarin et c\'est l\'un des circuits les mieux organisés que nous ayons vécus en Afrique.',rating:5,featured:true,seg:'groupe',img:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=70'},
-      {name:'Sophie Martin',role:'Travel Blogger, Lyon',text:'J\'ai voyagé dans 50+ pays. Le trek Atlas avec Roamers est dans mon top 3. Nos guides étaient des historiens, des conteurs et des experts montagne réunis en une seule personne.',rating:5,featured:true,seg:'weekend',img:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=70'}
-    ],
+    /* Testimonials — only genuine, admin-published reviews; never fabricated endorsements */
+    cmsTestimonials: tst.length ? tst : [],
     /* SEO */
     seoTitle:       seo.title       || 'Roamers Community — Morocco Adventure Booking',
     seoDescription: seo.description || 'Morocco\'s premier experiential travel platform. Book desert treks, mountain adventures, and cultural tours.',

@@ -105,20 +105,42 @@ export default function HomeScreen({ navigation }: any) {
         <TouchableOpacity style={styles.heroCta} onPress={() => navigation.navigate('Explorer')} activeOpacity={0.85}>
           <Text style={styles.heroCtaTxt}>{config.cmsHeroCta || '✦ Explorer tous les voyages'}</Text>
         </TouchableOpacity>
-        {/* Stats */}
-        <View style={styles.statsRow}>
-          {[
-            { val: config.cmsHeroSt1Val || '500+', lbl: config.cmsHeroSt1Lbl || 'Voyages' },
-            { val: config.cmsHeroSt2Val || '16',   lbl: config.cmsHeroSt2Lbl || 'Expériences' },
-            { val: config.cmsHeroSt3Val || '98%',  lbl: config.cmsHeroSt3Lbl || 'Satisfaction' },
-          ].map((s, i) => (
-            <View key={i} style={styles.stat}>
-              <Text style={styles.statVal}>{s.val}</Text>
-              <Text style={styles.statLbl}>{s.lbl}</Text>
+        {/* Stats — only real, admin-entered figures; never fabricated */}
+        {(() => {
+          const stats = [
+            { val: config.cmsHeroSt1Val, lbl: config.cmsHeroSt1Lbl },
+            { val: config.cmsHeroSt2Val, lbl: config.cmsHeroSt2Lbl },
+            { val: config.cmsHeroSt3Val, lbl: config.cmsHeroSt3Lbl },
+          ].filter((s) => s.val);
+          if (stats.length === 0) return null;
+          return (
+            <View style={styles.statsRow}>
+              {stats.map((s, i) => (
+                <View key={i} style={styles.stat}>
+                  <Text style={styles.statVal}>{s.val}</Text>
+                  <Text style={styles.statLbl}>{s.lbl}</Text>
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
+          );
+        })()}
       </LinearGradient>
+
+      {/* ── SHARE THE APP (2nd section) ── */}
+      <TouchableOpacity activeOpacity={0.9} onPress={shareApp} style={{ marginHorizontal: 16, marginTop: 20 }}>
+        <LinearGradient colors={['#d4173a', '#8f1122']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.shareCard}>
+          <View style={styles.shareIconCircle}>
+            <Icon.Share size={24} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.shareTitle}>Partagez Roamers</Text>
+            <Text style={styles.shareDesc}>Invitez vos amis à télécharger l'application et à explorer le Maroc avec vous.</Text>
+          </View>
+          <View style={styles.shareBtn}>
+            <Text style={styles.shareBtnTxt}>Partager</Text>
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
 
       {/* ── SEGMENT FILTERS ── */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.segmentBar} contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}>
@@ -166,7 +188,8 @@ export default function HomeScreen({ navigation }: any) {
         <Icon.Group size={42} color={COLORS.primary} style={{ opacity: 0.5, marginLeft: 12 }} />
       </View>
 
-      {/* ── WHY ROAMERS ── */}
+      {/* ── WHY ROAMERS — hidden if the admin removes all cards ── */}
+      {(config.cmsWhyCards && config.cmsWhyCards.length > 0) ? (
       <LinearGradient colors={['#0e0e0e', '#140306', '#0e0e0e']} style={styles.whySection}>
         <Text style={styles.whyEyebrow}>Pourquoi nous choisir</Text>
         <Text style={styles.whyTitle}>
@@ -174,7 +197,7 @@ export default function HomeScreen({ navigation }: any) {
           <Text style={styles.whyEm}>{config.cmsWhyTitleEm || 'Une transformation.'}</Text>
         </Text>
         <View style={styles.whyGrid}>
-          {(config.cmsWhyCards || []).map((c: any, i: number) => (
+          {config.cmsWhyCards.map((c: any, i: number) => (
             <View key={i} style={styles.whyCard}>
               <Text style={{ fontSize: 26, marginBottom: 12 }}>{c.icon}</Text>
               <Text style={styles.whyCardTitle}>{c.title}</Text>
@@ -183,6 +206,7 @@ export default function HomeScreen({ navigation }: any) {
           ))}
         </View>
       </LinearGradient>
+      ) : null}
 
       {/* ── QUICK ACTIONS ── */}
       <Text style={styles.sectionTitle2}>Services</Text>
@@ -200,42 +224,29 @@ export default function HomeScreen({ navigation }: any) {
         ))}
       </View>
 
-      {/* ── SHARE THE APP ── */}
-      <TouchableOpacity activeOpacity={0.9} onPress={shareApp} style={{ marginHorizontal: 16, marginTop: 36 }}>
-        <LinearGradient colors={['#d4173a', '#8f1122']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.shareCard}>
-          <View style={styles.shareIconCircle}>
-            <Icon.Share size={24} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.shareTitle}>Partagez Roamers</Text>
-            <Text style={styles.shareDesc}>Invitez vos amis à télécharger l'application et à explorer le Maroc avec vous.</Text>
-          </View>
-          <View style={styles.shareBtn}>
-            <Text style={styles.shareBtnTxt}>Partager</Text>
-          </View>
-        </LinearGradient>
-      </TouchableOpacity>
-
-      {/* ── TESTIMONIALS ── */}
-      <Text style={styles.sectionTitle2}>Ce qu'ils disent</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8 }}>
-        {(config.cmsTestimonials || defaultTestimonials).filter((t: any) => t.featured).map((t: any, i: number) => (
-          <View key={i} style={styles.testCard}>
-            <Text style={styles.testStars}>{'⭐'.repeat(t.rating || 5)}</Text>
-            <Text style={styles.testText} numberOfLines={4}>"{t.text}"</Text>
-            <Text style={styles.testName}>{t.name}</Text>
-            <Text style={styles.testRole}>{t.role}</Text>
-          </View>
-        ))}
-      </ScrollView>
+      {/* ── TESTIMONIALS — only genuine, admin-published reviews ── */}
+      {(() => {
+        const reviews = (config.cmsTestimonials || []).filter((t: any) => t.featured);
+        if (reviews.length === 0) return null;
+        return (
+          <>
+            <Text style={styles.sectionTitle2}>Ce qu'ils disent</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+              {reviews.map((t: any, i: number) => (
+                <View key={i} style={styles.testCard}>
+                  <Text style={styles.testStars}>{'⭐'.repeat(t.rating || 5)}</Text>
+                  <Text style={styles.testText} numberOfLines={4}>"{t.text}"</Text>
+                  <Text style={styles.testName}>{t.name}</Text>
+                  <Text style={styles.testRole}>{t.role}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </>
+        );
+      })()}
     </ScrollView>
   );
 }
-
-const defaultTestimonials = [
-  { name: 'Karim Bensouda', role: 'DRH, OCP Group', text: 'Notre équipe de 45 est venue au Maroc sans attentes particulières. Ce que nous avons vécu a été transformateur.', rating: 5, featured: true },
-  { name: 'Sophie Martin', role: 'Travel Blogger', text: 'J\'ai voyagé dans 50+ pays. Le trek Atlas avec Roamers est dans mon top 3.', rating: 5, featured: true },
-];
 
 const styles = StyleSheet.create({
   scroll:       { flex: 1, backgroundColor: COLORS.bg },
