@@ -220,10 +220,10 @@ app.get('/api/health', function(req, res) {
 /* ── APP VERSION (mobile update check) ──────────────────────── */
 app.get('/api/app-version', function(req, res) {
   res.json({
-    versionCode: 35,
-    versionName: '1.0.5',
+    versionCode: 36,
+    versionName: '1.0.6',
     downloadUrl: '/downloads/roamers.apk',
-    releaseNotes: 'Espace Communauté (rang, défis, mur d\'avis, lien groupe), lien de parrainage, écran "Réessayer" hors-ligne, prix par date de départ, dates « Complet » et places restantes, nouvelles destinations sur la carte.'
+    releaseNotes: 'Voyage sur mesure repensé (sélection sur la carte, calendrier, étapes guidées), menu profil simplifié, indicatif téléphonique automatique à l\'inscription, vérification OTP renforcée, et confirmations WhatsApp automatiques pour vos réservations.'
   });
 });
 
