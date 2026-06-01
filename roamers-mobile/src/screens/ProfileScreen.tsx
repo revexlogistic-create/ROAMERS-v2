@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import * as Application from 'expo-application';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
@@ -21,8 +22,11 @@ import Icon from '../components/Icons';
 const { width, height } = Dimensions.get('window');
 const HALF = (width - 48) / 2;
 
-const APP_VERSION_CODE = 35;
-const APP_VERSION_NAME = '1.0.5';
+/* Read the REAL installed binary version so the update check and the
+   displayed version can never drift from the actual APK (avoids a
+   perpetual "update available" banner after installing). */
+const APP_VERSION_CODE = parseInt(Application.nativeBuildVersion || '0', 10) || 0;
+const APP_VERSION_NAME = Application.nativeApplicationVersion || '0.0.0';
 
 /* ── Member levels ──────────────────────────────────────────────────────── */
 const LEVELS = [
