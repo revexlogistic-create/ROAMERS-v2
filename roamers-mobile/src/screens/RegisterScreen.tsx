@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, KeyboardAvoidingView, Platform, TextInput,
+  Alert, KeyboardAvoidingView, Platform, TextInput, Modal, FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,26 @@ import { verifyOtp, resendOtp } from '../services/api';
 const OTP_LENGTH   = 6;
 const RESEND_DELAY = 60;
 
+/* Country calling codes — Morocco first (default), then common diaspora/MENA/EU */
+const COUNTRIES: { code: string; dial: string; flag: string; name: string }[] = [
+  { code: 'MA', dial: '+212', flag: '🇲🇦', name: 'Maroc' },
+  { code: 'FR', dial: '+33',  flag: '🇫🇷', name: 'France' },
+  { code: 'ES', dial: '+34',  flag: '🇪🇸', name: 'Espagne' },
+  { code: 'BE', dial: '+32',  flag: '🇧🇪', name: 'Belgique' },
+  { code: 'NL', dial: '+31',  flag: '🇳🇱', name: 'Pays-Bas' },
+  { code: 'DE', dial: '+49',  flag: '🇩🇪', name: 'Allemagne' },
+  { code: 'IT', dial: '+39',  flag: '🇮🇹', name: 'Italie' },
+  { code: 'GB', dial: '+44',  flag: '🇬🇧', name: 'Royaume-Uni' },
+  { code: 'CH', dial: '+41',  flag: '🇨🇭', name: 'Suisse' },
+  { code: 'US', dial: '+1',   flag: '🇺🇸', name: 'États-Unis / Canada' },
+  { code: 'DZ', dial: '+213', flag: '🇩🇿', name: 'Algérie' },
+  { code: 'TN', dial: '+216', flag: '🇹🇳', name: 'Tunisie' },
+  { code: 'EG', dial: '+20',  flag: '🇪🇬', name: 'Égypte' },
+  { code: 'SA', dial: '+966', flag: '🇸🇦', name: 'Arabie Saoudite' },
+  { code: 'AE', dial: '+971', flag: '🇦🇪', name: 'Émirats Arabes Unis' },
+  { code: 'QA', dial: '+974', flag: '🇶🇦', name: 'Qatar' },
+];
+
 export default function RegisterScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const { register, loginWithToken } = useAuth();
@@ -22,6 +42,12 @@ export default function RegisterScreen({ navigation, route }: any) {
   const [form, setForm]     = useState({ fname: '', lname: '', email: '', phone: '', password: '', confirm: '' });
   const [submitting, setSubmitting] = useState(false);
   const set = (k: string) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  /* ── Phone country code ─────────────────────────────────────── */
+  const [country, setCountry]       = useState(COUNTRIES[0]);   // default Morocco +212
+  const [pickerOpen, setPickerOpen] = useState(false);
+  /* full phone = dial code + local digits (strip any leading 0 of the local part) */
+  const fullPhone = `${country.dial} ${form.phone.replace(/^0+/, '').trim()}`.trim();
 
   /* ── OTP state ──────────────────────────────────────────────── */
   const [step, setStep]               = useState<'form' | 'otp'>(route?.params?.verifyEmail ? 'otp' : 'form');
@@ -118,11 +144,11 @@ export default function RegisterScreen({ navigation, route }: any) {
     try {
       const data = await register({
         fname: form.fname, lname: form.lname,
-        email: form.email, phone: form.phone,
+        email: form.email, phone: fullPhone,
         password: form.password,
       });
       if (data.requireVerification) {
-        setMaskedPhone(data.phone || form.phone);
+        setMaskedPhone(data.phone || fullPhone);
         setRegEmail(data.email  || form.email.toLowerCase().trim());
         if (data.devCode) setDevCode(data.devCode);
         setOtp('');
@@ -261,7 +287,26 @@ export default function RegisterScreen({ navigation, route }: any) {
               </View>
             </View>
             <RInput label="Email" value={form.email} onChangeText={set('email')} placeholder="email@exemple.com" keyboardType="email-address" autoCapitalize="none" />
-            <RInput label="Téléphone *" value={form.phone} onChangeText={set('phone')} placeholder="+212 6 XX XX XX XX" keyboardType="phone-pad" />
+
+            {/* Phone with country calling-code picker */}
+            <View style={styles.phoneWrap}>
+              <Text style={styles.phoneLabel}>Téléphone *</Text>
+              <View style={styles.phoneRow}>
+                <TouchableOpacity style={styles.dialBtn} onPress={() => setPickerOpen(true)} activeOpacity={0.7}>
+                  <Text style={styles.dialFlag}>{country.flag}</Text>
+                  <Text style={styles.dialCode}>{country.dial}</Text>
+                  <Text style={styles.dialChevron}>▾</Text>
+                </TouchableOpacity>
+                <TextInput
+                  value={form.phone}
+                  onChangeText={set('phone')}
+                  placeholder="6 XX XX XX XX"
+                  placeholderTextColor={COLORS.muted}
+                  keyboardType="phone-pad"
+                  style={styles.phoneInput}
+                />
+              </View>
+            </View>
             <RInput label="Mot de passe" value={form.password} onChangeText={set('password')} placeholder="Min. 8 caractères" secureTextEntry />
             <RInput label="Confirmer le mot de passe" value={form.confirm} onChangeText={set('confirm')} placeholder="Répéter le mot de passe" secureTextEntry />
             <RButton label="Créer mon compte" onPress={handleRegister} loading={submitting} style={{ marginTop: 8 }} />
@@ -273,6 +318,29 @@ export default function RegisterScreen({ navigation, route }: any) {
 
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Country picker */}
+      <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>
+        <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setPickerOpen(false)}>
+          <View style={styles.pickerSheet}>
+            <Text style={styles.pickerTitle}>Indicatif du pays</Text>
+            <FlatList
+              data={COUNTRIES}
+              keyExtractor={(c) => c.code}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.pickerItem, item.code === country.code && styles.pickerItemActive]}
+                  onPress={() => { setCountry(item); setPickerOpen(false); }}
+                >
+                  <Text style={styles.pickerFlag}>{item.flag}</Text>
+                  <Text style={styles.pickerName}>{item.name}</Text>
+                  <Text style={styles.pickerDial}>{item.dial}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -289,6 +357,26 @@ const styles = StyleSheet.create({
   form:        { backgroundColor: COLORS.card, borderRadius: RADIUS.xl, padding: 20, borderWidth: 1, borderColor: COLORS.border, marginBottom: 20 },
   row:         { flexDirection: 'row', gap: 10 },
   loginLink:   { alignItems: 'center', padding: 12 },
+
+  /* Phone field with dial-code picker */
+  phoneWrap:   { marginBottom: 14 },
+  phoneLabel:  { color: COLORS.sub, fontSize: 13, fontWeight: '600', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
+  phoneRow:    { flexDirection: 'row', gap: 8 },
+  dialBtn:     { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 12 },
+  dialFlag:    { fontSize: 18 },
+  dialCode:    { color: COLORS.text, fontSize: 15, fontWeight: '700' },
+  dialChevron: { color: COLORS.sub, fontSize: 12 },
+  phoneInput:  { flex: 1, color: COLORS.text, fontSize: 15, backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 14, paddingVertical: 13 },
+
+  /* Country picker modal */
+  pickerOverlay:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  pickerSheet:      { backgroundColor: COLORS.bg, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, paddingTop: 16, paddingBottom: 32, maxHeight: '70%' },
+  pickerTitle:      { color: COLORS.text, fontSize: 17, fontWeight: '800', textAlign: 'center', marginBottom: 12 },
+  pickerItem:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 24, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  pickerItemActive: { backgroundColor: COLORS.card },
+  pickerFlag:       { fontSize: 22 },
+  pickerName:       { flex: 1, color: COLORS.text, fontSize: 15 },
+  pickerDial:       { color: COLORS.primary, fontSize: 15, fontWeight: '700' },
   loginTxt:    { color: COLORS.sub, fontSize: 14 },
 
   /* DEV banner */

@@ -297,6 +297,12 @@ router.delete('/messages/:id', auditMod.audit('admin:message:delete'), async fun
 /* ── ACTIVITIES ──────────────────────────────────────────────── */
 var ACTIVITY_CATS    = ['adventure','culture','corporate','wellness','other'];
 var ACTIVITY_STATUS  = ['active','inactive'];
+var ACTIVITY_AVAIL   = ['always','weekends','dates'];
+
+function cleanDate(v) {
+  var s = String(v || '').trim().slice(0, 20);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : '';
+}
 
 router.get('/activities', function(req, res) {
   res.json({ activities: db.activities.all().sort(function(a, b){ return new Date(a.created) - new Date(b.created); }) });
@@ -339,6 +345,9 @@ router.post('/activities', auditMod.audit('admin:activity:create'), async functi
     highlights:   parseLines(f.highlights),
     inc:          parseLines(f.inc),
     exc:          parseLines(f.exc),
+    availMode:    ACTIVITY_AVAIL.includes(f.availMode) ? f.availMode : 'always',
+    availFrom:    cleanDate(f.availFrom),
+    availTo:      cleanDate(f.availTo),
     rating:       Number.isFinite(+f.rating) ? +f.rating : 4.8,
     rev:          parseInt(f.rev) || 0,
     created:    now, updated: now
@@ -373,6 +382,9 @@ router.put('/activities/:id', auditMod.audit('admin:activity:update'), async fun
   if (f.highlights !== undefined) changes.highlights = parseLines(f.highlights);
   if (f.inc        !== undefined) changes.inc        = parseLines(f.inc);
   if (f.exc        !== undefined) changes.exc        = parseLines(f.exc);
+  if (f.availMode  !== undefined) changes.availMode  = ACTIVITY_AVAIL.includes(f.availMode) ? f.availMode : 'always';
+  if (f.availFrom  !== undefined) changes.availFrom  = cleanDate(f.availFrom);
+  if (f.availTo    !== undefined) changes.availTo    = cleanDate(f.availTo);
   if (f.rating     !== undefined) changes.rating     = Number.isFinite(+f.rating) ? +f.rating : 4.8;
   if (f.rev        !== undefined) changes.rev        = parseInt(f.rev) || 0;
   if (f.category !== undefined) {

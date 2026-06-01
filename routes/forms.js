@@ -94,6 +94,10 @@ router.post('/plan', audit.audit('form:plan'), async function(req, res) {
     name: doc.fname,
     ref:  id
   }).catch(function(){});
+  notify.notifyWhatsApp(doc.phone, 'plan_request', {
+    name: doc.fname,
+    ref:  id
+  }).catch(function(){});
 
   await db.plans.flush();
   res.status(201).json({ message: 'Plan request submitted', ref: id });
@@ -143,6 +147,11 @@ router.post('/team', audit.audit('form:team-building'), async function(req, res)
 
   /* Push notification — team building request received */
   notify.notifyByEmail(doc.email, 'team_request', {
+    name:    doc.contactFn,
+    company: doc.company,
+    ref:     id
+  }).catch(function(){});
+  notify.notifyWhatsApp(doc.phone, 'team_request', {
     name:    doc.contactFn,
     company: doc.company,
     ref:     id

@@ -114,13 +114,16 @@ router.post('/', optionalAuth, audit.audit('booking:create'), async function(req
   mailer.sendBookingConfirmation(booking).catch(function(){});
 
   /* Push notification — booking created */
-  notify.notifyByEmail(booking.email, 'booking_created', {
+  var bookingVars = {
     name:      booking.name,
     tripTitle: booking.expTitle,
     date:      booking.date,
     total:     Number(booking.total).toLocaleString('fr-MA'),
     ref:       id
-  }).catch(function(){});
+  };
+  notify.notifyByEmail(booking.email, 'booking_created', bookingVars).catch(function(){});
+  /* WhatsApp confirmation from ROAMERS COMMUNITY */
+  notify.notifyWhatsApp(booking.phone, 'booking_created', bookingVars).catch(function(){});
 
   await db.bookings.flush();
   res.status(201).json({ booking: booking, ref: id });
@@ -164,6 +167,10 @@ router.patch('/:id/cancel', auth, audit.audit('booking:cancel'), async function(
 
   /* Push notification — booking cancelled */
   notify.notifyByEmail(b.email, 'booking_cancelled', {
+    name:      b.name,
+    tripTitle: b.expTitle
+  }).catch(function(){});
+  notify.notifyWhatsApp(b.phone, 'booking_cancelled', {
     name:      b.name,
     tripTitle: b.expTitle
   }).catch(function(){});

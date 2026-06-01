@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
   KeyboardAvoidingView, Platform, Dimensions,
@@ -95,9 +95,98 @@ const SOURCES = ['Instagram', 'Google', 'Recommandation', 'Facebook', 'Agence', 
 
 const STEPS = ['Itinéraire', 'Votre voyage', 'Votre profil', 'Coordonnées'];
 
+/* Known location → ambiance map, drives trip-type compatibility */
+const LOC_HINTS: Array<{ match: RegExp; moods: string[] }> = [
+  { match: /merzouga|sahara|d[ée]sert|erg|zagora|mhamid|ouarzazate/i, moods: ['desert'] },
+  { match: /toubkal|atlas|imlil|ourika|randonn|ifrane|azilal/i,        moods: ['atlas'] },
+  { match: /essaouira|taghazout|agadir|c[ôo]te|oualidia|dakhla|plage/i, moods: ['coast'] },
+  { match: /marrakech|fes|f[èe]s|mekn[èe]s|rabat|m[ée]dina|chefchaouen|tanger/i, moods: ['medina'] },
+  { match: /dad[èe]s|dra[âa]|ziz|todra|oasis|vall[ée]e|skoura/i,        moods: ['oasis'] },
+];
+
 /* ── helpers ──────────────────────────────────────────────────────────── */
 function toggle(arr: string[], key: string): string[] {
   return arr.includes(key) ? arr.filter((k) => k !== key) : [...arr, key];
+}
+
+const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const DAYS_FR = ['L','M','M','J','V','S','D'];
+
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function prettyDate(s: string): string {
+  if (!s) return '';
+  const [y, m, dd] = s.split('-').map(Number);
+  return `${dd} ${MONTHS_FR[m - 1]?.slice(0, 4)}. ${y}`;
+}
+
+/* ── Inline calendar range picker (pure JS, no native dep) ─────────────── */
+function CalendarRange({ from, to, onChange }: { from: string; to: string; onChange: (from: string, to: string) => void }) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const [view, setView] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+
+  const year = view.getFullYear(), month = view.getMonth();
+  const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Mon=0
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: Array<number | null> = [
+    ...Array(firstDow).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+
+  function pick(day: number) {
+    const sel = ymd(new Date(year, month, day));
+    if (!from || (from && to)) { onChange(sel, ''); return; }   // start a new range
+    if (sel < from) { onChange(sel, ''); return; }              // earlier → restart
+    onChange(from, sel);                                        // set end
+  }
+
+  const inRange = (day: number) => {
+    const s = ymd(new Date(year, month, day));
+    if (from && to) return s >= from && s <= to;
+    return s === from;
+  };
+  const isEdge = (day: number) => {
+    const s = ymd(new Date(year, month, day));
+    return s === from || s === to;
+  };
+  const isPast = (day: number) => ymd(new Date(year, month, day)) < ymd(today);
+
+  return (
+    <View style={cal.wrap}>
+      <View style={cal.head}>
+        <TouchableOpacity onPress={() => setView(new Date(year, month - 1, 1))} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Text style={cal.nav}>‹</Text>
+        </TouchableOpacity>
+        <Text style={cal.title}>{MONTHS_FR[month]} {year}</Text>
+        <TouchableOpacity onPress={() => setView(new Date(year, month + 1, 1))} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Text style={cal.nav}>›</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={cal.dowRow}>
+        {DAYS_FR.map((d, i) => <Text key={i} style={cal.dow}>{d}</Text>)}
+      </View>
+      <View style={cal.grid}>
+        {cells.map((day, i) => {
+          if (day === null) return <View key={i} style={cal.cell} />;
+          const past = isPast(day);
+          const range = inRange(day);
+          const edge = isEdge(day);
+          return (
+            <TouchableOpacity
+              key={i}
+              style={[cal.cell, range && cal.cellRange, edge && cal.cellEdge]}
+              disabled={past}
+              onPress={() => pick(day)}
+              activeOpacity={0.7}
+            >
+              <Text style={[cal.cellTxt, past && cal.cellTxtPast, edge && cal.cellTxtEdge]}>{day}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
 }
 
 /* ── Step bar ─────────────────────────────────────────────────────────── */
@@ -146,13 +235,71 @@ export default function PlanScreen({ navigation, route }: any) {
   /* Pre-fill waypoints when returning from MapScreen after city selection */
   useEffect(() => {
     const wps = route?.params?.waypoints;
-    if (Array.isArray(wps) && wps.length >= 2) setWaypoints(wps);
+    if (Array.isArray(wps) && wps.length >= 1) {
+      // dedupe by name (case-insensitive) — guards against double steps
+      const seen = new Set<string>();
+      const unique = wps.filter((w: any) => {
+        const k = String(w?.name || '').trim().toLowerCase();
+        if (!k || seen.has(k)) return false;
+        seen.add(k); return true;
+      });
+      setWaypoints(unique);
+    }
   }, [route?.params?.waypoints]);
 
   const set  = (k: string) => (v: any) => setForm((f) => ({ ...f, [k]: v }));
   const togM = (v: string) => setForm((f) => ({ ...f, moods: toggle(f.moods, v) }));
   const togL = (v: string) => setForm((f) => ({ ...f, lang:  toggle(f.lang,  v) }));
   const togN = (v: string) => setForm((f) => ({ ...f, needs: toggle(f.needs, v) }));
+
+  const stopCount = waypoints.length;
+
+  /* Moods recommended by the selected locations (trip-type compatibility) */
+  const recoMoods = useMemo(() => {
+    const acc = new Set<string>();
+    for (const w of waypoints) {
+      for (const h of LOC_HINTS) if (h.match.test(w.name)) h.moods.forEach((m) => acc.add(m));
+    }
+    return acc;
+  }, [waypoints]);
+
+  /* Dynamic form: which segments / durations make sense for the selection */
+  const availableSegments = useMemo(() => {
+    if (stopCount <= 1) return SEGMENTS.filter((s) => s.key !== 'groupe'); // 1 lieu → pas de circuit groupe fixe
+    return SEGMENTS;
+  }, [stopCount]);
+
+  const availableDurations = useMemo(() => {
+    if (form.segment === 'express') return DURATIONS.filter((d) => ['demi', '1j'].includes(d.key));
+    if (form.segment === 'weekend') return DURATIONS.filter((d) => ['1j', '2-3j', 'flex'].includes(d.key));
+    if (stopCount === 1)            return DURATIONS.filter((d) => d.key !== '8j+');
+    return DURATIONS;
+  }, [form.segment, stopCount]);
+
+  /* Keep dependent fields valid when the form narrows dynamically */
+  useEffect(() => {
+    if (form.segment && !availableSegments.find((s) => s.key === form.segment)) set('segment')('');
+  }, [availableSegments]);
+  useEffect(() => {
+    if (form.duration && !availableDurations.find((d) => d.key === form.duration)) set('duration')('');
+  }, [availableDurations]);
+
+  /* Step-completion gate — block advancing without selecting the current step */
+  function stepError(s: number): string | null {
+    if (s === 0) return stopCount >= 1 ? null : 'Sélectionnez au moins une destination sur la carte.';
+    if (s === 1) {
+      if (!form.segment) return 'Choisissez un type de programme.';
+      if (form.moods.length === 0) return 'Sélectionnez au moins une ambiance.';
+      return null;
+    }
+    if (s === 2) {
+      if (!form.groupSize) return 'Indiquez la taille du groupe.';
+      if (!form.duration)  return 'Choisissez une durée.';
+      if (!form.flexDate && !form.dateFrom) return 'Sélectionnez une date de départ (ou cochez « dates flexibles »).';
+      return null;
+    }
+    return null;
+  }
 
   if (sent) return (
     <View style={[styles.successWrap, { paddingTop: insets.top }]}>
@@ -165,6 +312,8 @@ export default function PlanScreen({ navigation, route }: any) {
   );
 
   function nextStep() {
+    const err = stepError(step);
+    if (err) { Alert.alert('Étape incomplète', err); return; }
     if (step === 2 && !user) { navigation.navigate('Login'); return; }
     if (step < 3) { setStep((s) => s + 1); return; }
     submit();
@@ -250,19 +399,25 @@ export default function PlanScreen({ navigation, route }: any) {
 
             {/* Mood — colored cards */}
             <Text style={styles.qTitle}>🌍 Quelle ambiance vous fait rêver ?</Text>
-            <Text style={styles.qSub}>Sélectionnez une ou plusieurs ambiances</Text>
+            <Text style={styles.qSub}>
+              {recoMoods.size > 0
+                ? 'Surlignées : recommandées pour votre destination'
+                : 'Sélectionnez une ou plusieurs ambiances'}
+            </Text>
             <View style={styles.grid2}>
               {MOODS.map((m) => {
                 const active = form.moods.includes(m.key);
+                const reco = recoMoods.has(m.key);
                 return (
                   <TouchableOpacity
                     key={m.key}
-                    style={[styles.moodCard, { backgroundColor: m.bg, borderColor: active ? m.color : '#2a2a2a' }, active && { borderWidth: 2 }]}
+                    style={[styles.moodCard, { backgroundColor: m.bg, borderColor: active ? m.color : reco ? m.color + '88' : '#2a2a2a' }, active && { borderWidth: 2 }]}
                     onPress={() => togM(m.key)}
                     activeOpacity={0.82}
                   >
                     {/* colored top accent bar */}
                     <View style={[styles.moodAccent, { backgroundColor: m.color }]} />
+                    {reco && !active && <View style={[styles.moodReco, { backgroundColor: m.color }]}><Text style={styles.moodRecoTxt}>★</Text></View>}
                     <Text style={styles.moodIcon}>{m.icon}</Text>
                     <Text style={[styles.moodLabel, active && { color: m.color }]}>{m.label}</Text>
                     <Text style={styles.moodSub}>{m.sub}</Text>
@@ -297,8 +452,9 @@ export default function PlanScreen({ navigation, route }: any) {
 
             {/* Segment */}
             <Text style={[styles.qTitle, { marginTop: 28 }]}>🗺️ Type de programme</Text>
+            {stopCount === 1 && <Text style={styles.qSub}>Adapté à une destination unique</Text>}
             <View style={styles.grid2}>
-              {SEGMENTS.map((s) => {
+              {availableSegments.map((s) => {
                 const active = form.segment === s.key;
                 return (
                   <TouchableOpacity
@@ -359,7 +515,7 @@ export default function PlanScreen({ navigation, route }: any) {
             {/* Duration */}
             <Text style={[styles.qTitle, { marginTop: 28 }]}>⏱ Durée du voyage</Text>
             <View style={styles.pillWrap}>
-              {DURATIONS.map((d) => {
+              {availableDurations.map((d) => {
                 const active = form.duration === d.key;
                 return (
                   <TouchableOpacity key={d.key} style={[styles.pill, active && styles.pillActive]}
@@ -387,10 +543,25 @@ export default function PlanScreen({ navigation, route }: any) {
 
             {/* Dates */}
             <Text style={[styles.qTitle, { marginTop: 28 }]}>📅 Dates souhaitées</Text>
-            <View style={styles.row2}>
-              <View style={{ flex: 1 }}><RInput label="Départ estimé" value={form.dateFrom} onChangeText={set('dateFrom')} placeholder="ex : 15 juin 2025" /></View>
-              <View style={{ flex: 1 }}><RInput label="Retour estimé" value={form.dateTo} onChangeText={set('dateTo')} placeholder="ex : 22 juin 2025" /></View>
-            </View>
+            <Text style={styles.qSub}>Touchez le départ puis le retour sur le calendrier</Text>
+            {(form.dateFrom || form.dateTo) && (
+              <View style={styles.dateBadgeRow}>
+                <View style={styles.dateBadge}>
+                  <Text style={styles.dateBadgeLbl}>Départ</Text>
+                  <Text style={styles.dateBadgeVal}>{prettyDate(form.dateFrom) || '—'}</Text>
+                </View>
+                <Text style={styles.dateArrow}>→</Text>
+                <View style={styles.dateBadge}>
+                  <Text style={styles.dateBadgeLbl}>Retour</Text>
+                  <Text style={styles.dateBadgeVal}>{prettyDate(form.dateTo) || '—'}</Text>
+                </View>
+              </View>
+            )}
+            <CalendarRange
+              from={form.dateFrom}
+              to={form.dateTo}
+              onChange={(f, t) => setForm((prev) => ({ ...prev, dateFrom: f, dateTo: t }))}
+            />
             <TouchableOpacity style={styles.checkRow} onPress={() => set('flexDate')(!form.flexDate)}>
               <View style={[styles.checkbox, form.flexDate && styles.checkboxOn]}>
                 {form.flexDate && <Text style={styles.checkMark}>✓</Text>}
@@ -535,6 +706,8 @@ const styles = StyleSheet.create({
   moodSub:      { color: COLORS.muted, fontSize: 11, includeFontPadding: false },
   moodCheck:    { position: 'absolute', top: 10, right: 10, width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   moodCheckTxt: { color: '#fff', fontSize: 11, fontWeight: '900' },
+  moodReco:     { position: 'absolute', top: 10, right: 10, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', opacity: 0.9 },
+  moodRecoTxt:  { color: '#fff', fontSize: 10, fontWeight: '900' },
 
   /* ── Who cards ── */
   grid3:        { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
@@ -580,6 +753,13 @@ const styles = StyleSheet.create({
   checkboxOn:   { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   checkMark:    { color: '#fff', fontSize: 12, fontWeight: '900' },
   checkLabel:   { color: COLORS.sub, fontSize: 13, flex: 1, lineHeight: 19 },
+
+  /* ── Date range badges ── */
+  dateBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  dateBadge:    { flex: 1, backgroundColor: COLORS.card, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.primary + '40', paddingVertical: 8, paddingHorizontal: 12 },
+  dateBadgeLbl: { color: COLORS.muted, fontSize: 10, fontWeight: '700', marginBottom: 2 },
+  dateBadgeVal: { color: COLORS.text, fontSize: 14, fontWeight: '800' },
+  dateArrow:    { color: COLORS.primary, fontSize: 16, fontWeight: '900' },
 
   /* ── Needs ── */
   needCard:     { width: COL2, flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: RADIUS.md, padding: 11, marginBottom: 8, borderWidth: 1.5, borderColor: '#2e2e2e' },
@@ -635,4 +815,20 @@ const sb = StyleSheet.create({
   labelActive: { color: COLORS.primary, fontWeight: '700' },
   line:        { flex: 1, height: 2, backgroundColor: '#222', marginBottom: 16, marginHorizontal: 6 },
   lineActive:  { backgroundColor: '#22c55e' },
+});
+
+const cal = StyleSheet.create({
+  wrap:     { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, padding: 12, marginBottom: 4 },
+  head:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingHorizontal: 4 },
+  nav:      { color: COLORS.primary, fontSize: 26, fontWeight: '900', paddingHorizontal: 10, includeFontPadding: false },
+  title:    { color: COLORS.text, fontSize: 15, fontWeight: '800' },
+  dowRow:   { flexDirection: 'row', marginBottom: 4 },
+  dow:      { flex: 1, textAlign: 'center', color: COLORS.muted, fontSize: 11, fontWeight: '700' },
+  grid:     { flexDirection: 'row', flexWrap: 'wrap' },
+  cell:     { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', marginVertical: 1 },
+  cellRange:{ backgroundColor: COLORS.primary + '22' },
+  cellEdge: { backgroundColor: COLORS.primary, borderRadius: 8 },
+  cellTxt:  { color: COLORS.sub, fontSize: 13, fontWeight: '600' },
+  cellTxtPast: { color: '#3a3a3a' },
+  cellTxtEdge: { color: '#fff', fontWeight: '900' },
 });

@@ -21,12 +21,18 @@ const SEGMENTS: { key: string; label: string; icon: (a: boolean) => React.ReactN
   { key: 'weekend', label: 'Weekend',        icon: (a) => <Icon.Sun     size={14} color={a ? '#fff' : COLORS.sub} /> },
 ];
 
-const WHY_CARDS: { icon: () => React.ReactNode; title: string; desc: string }[] = [
-  { icon: () => <Icon.Compass size={28} color={COLORS.primary} />, title: 'Guides locaux experts', desc: 'Des Marocains qui connaissent chaque histoire derrière chaque pierre.' },
-  { icon: () => <Icon.Route   size={28} color={COLORS.primary} />, title: '100% sur mesure',        desc: 'Pas d\'itinéraires génériques. Chaque expérience conçue pour vous.' },
-  { icon: () => <Icon.Leaf    size={28} color={COLORS.primary} />, title: 'Impact social réel',     desc: 'Votre aventure finance l\'emploi local et les coopératives.' },
-  { icon: () => <Icon.Shield  size={28} color={COLORS.primary} />, title: 'Sécurisé & sans souci',  desc: 'Logistique complète, assurances et support 24/7.' },
-];
+/* Renders admin CMS strings that may contain <br> and <em>…</em> (web markup) */
+function CmsText({ html, fallback, style, emStyle }: { html?: string; fallback?: string; style?: any; emStyle?: any }) {
+  const src = String(html ?? fallback ?? '');
+  const parts: { t: string; em: boolean }[] = [];
+  src.split(/(<br\s*\/?>|<em[^>]*>.*?<\/em>)/gi).forEach((seg) => {
+    if (!seg) return;
+    if (/^<br/i.test(seg)) parts.push({ t: '\n', em: false });
+    else if (/^<em/i.test(seg)) parts.push({ t: seg.replace(/<[^>]+>/g, ''), em: true });
+    else { const t = seg.replace(/<[^>]+>/g, ''); if (t) parts.push({ t, em: false }); }
+  });
+  return <Text style={style}>{parts.map((p, i) => <Text key={i} style={p.em ? emStyle : undefined}>{p.t}</Text>)}</Text>;
+}
 
 export default function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -81,10 +87,10 @@ export default function HomeScreen({ navigation }: any) {
             <Text style={styles.contactBtnTxt}>Contact</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.heroTitle}>Explorez le Maroc{'\n'}<Text style={styles.heroEm}>autrement.</Text></Text>
-        <Text style={styles.heroSub}>Déserts, montagnes, côtes et médinas — 5 façons de vivre le Maroc authentiquement.</Text>
+        <CmsText html={config.cmsHeroTitle} fallback={'Explorez le Maroc<br><em>autrement.</em>'} style={styles.heroTitle} emStyle={styles.heroEm} />
+        <CmsText html={config.cmsHeroSub} fallback="Déserts, montagnes, côtes et médinas — 5 façons de vivre le Maroc authentiquement." style={styles.heroSub} />
         <TouchableOpacity style={styles.heroCta} onPress={() => navigation.navigate('Explorer')} activeOpacity={0.85}>
-          <Text style={styles.heroCtaTxt}>✦ Explorer tous les voyages</Text>
+          <Text style={styles.heroCtaTxt}>{config.cmsHeroCta || '✦ Explorer tous les voyages'}</Text>
         </TouchableOpacity>
         {/* Stats */}
         <View style={styles.statsRow}>
@@ -134,33 +140,36 @@ export default function HomeScreen({ navigation }: any) {
           </ScrollView>
       }
 
-      {/* ── WHY ROAMERS ── */}
-      <LinearGradient colors={['#0e0e0e', '#140306', '#0e0e0e']} style={styles.whySection}>
-        <Text style={styles.whyEyebrow}>Pourquoi nous choisir</Text>
-        <Text style={styles.whyTitle}>Pas un simple voyage.{'\n'}<Text style={styles.whyEm}>Une transformation.</Text></Text>
-        <View style={styles.whyGrid}>
-          {WHY_CARDS.map((c, i) => (
-            <View key={i} style={styles.whyCard}>
-              <View style={{ marginBottom: 12 }}>{c.icon()}</View>
-              <Text style={styles.whyCardTitle}>{c.title}</Text>
-              <Text style={styles.whyCardDesc}>{c.desc}</Text>
-            </View>
-          ))}
-        </View>
-      </LinearGradient>
-
-      {/* ── TEAM BUILDING BANNER ── */}
+      {/* ── TEAM BUILDING BANNER (3rd section) ── */}
       <View style={styles.tbBanner}>
         <View style={styles.tbLeft}>
-          <Text style={styles.tbEyebrow}>Pour les entreprises</Text>
-          <Text style={styles.tbTitle}>Le team building{'\n'}<Text style={styles.tbEm}>qui fonctionne.</Text></Text>
-          <Text style={styles.tbDesc}>Désert, montagne, côte ou médina — 4 univers, une seule mission.</Text>
+          <Text style={styles.tbEyebrow}>{config.cmsTbEyebrow || 'Pour les entreprises'}</Text>
+          <CmsText html={config.cmsTbTitle} fallback={'Le team building<br><em>qui fonctionne.</em>'} style={styles.tbTitle} emStyle={styles.tbEm} />
+          <CmsText html={config.cmsTbDesc} fallback="Désert, montagne, côte ou médina — 4 univers, une seule mission." style={styles.tbDesc} />
           <TouchableOpacity style={styles.tbCta} onPress={() => navigation.navigate('Team')} activeOpacity={0.85}>
             <Text style={styles.tbCtaTxt}>Demander un devis →</Text>
           </TouchableOpacity>
         </View>
         <Icon.Group size={42} color={COLORS.primary} style={{ opacity: 0.5, marginLeft: 12 }} />
       </View>
+
+      {/* ── WHY ROAMERS ── */}
+      <LinearGradient colors={['#0e0e0e', '#140306', '#0e0e0e']} style={styles.whySection}>
+        <Text style={styles.whyEyebrow}>Pourquoi nous choisir</Text>
+        <Text style={styles.whyTitle}>
+          {config.cmsWhyTitle || 'Pas un simple voyage.'}{'\n'}
+          <Text style={styles.whyEm}>{config.cmsWhyTitleEm || 'Une transformation.'}</Text>
+        </Text>
+        <View style={styles.whyGrid}>
+          {(config.cmsWhyCards || []).map((c: any, i: number) => (
+            <View key={i} style={styles.whyCard}>
+              <Text style={{ fontSize: 26, marginBottom: 12 }}>{c.icon}</Text>
+              <Text style={styles.whyCardTitle}>{c.title}</Text>
+              <Text style={styles.whyCardDesc}>{c.desc}</Text>
+            </View>
+          ))}
+        </View>
+      </LinearGradient>
 
       {/* ── QUICK ACTIONS ── */}
       <Text style={styles.sectionTitle2}>Services</Text>
@@ -235,7 +244,7 @@ const styles = StyleSheet.create({
   whyIcon:      { fontSize: 30, marginBottom: 10 },
   whyCardTitle: { color: COLORS.text, fontSize: 16, fontWeight: '700', marginBottom: 6 },
   whyCardDesc:  { color: COLORS.sub, fontSize: 14, lineHeight: 20 },
-  tbBanner:     { marginHorizontal: 16, marginTop: 4, backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: 24, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
+  tbBanner:     { marginHorizontal: 16, marginTop: 36, backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: 24, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
   tbLeft:       { flex: 1 },
   tbEyebrow:    { color: COLORS.primary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
   tbTitle:      { color: COLORS.text, fontSize: 20, fontWeight: '900', lineHeight: 26, marginBottom: 8 },

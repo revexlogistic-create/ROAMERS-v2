@@ -11,6 +11,7 @@
 
 var db  = require('../database');
 var fcm = require('./fcm');
+var wa  = require('./whatsapp');
 
 /* ─── Default templates ──────────────────────────────────────── */
 var DEFAULT_TEMPLATES = {
@@ -111,8 +112,36 @@ async function notifyByEmail(email, eventType, vars) {
   }
 }
 
+/**
+ * Send an automatic WhatsApp confirmation to the client, sent by
+ * "ROAMERS COMMUNITY". Reuses the same admin-managed templates as push.
+ * Safe to call fire-and-forget (.catch(() => {})).
+ *
+ * @param {string} phone      - recipient phone (international format)
+ * @param {string} eventType  - key in DEFAULT_TEMPLATES
+ * @param {object} vars       - template variables { name, tripTitle, … }
+ */
+async function notifyWhatsApp(phone, eventType, vars) {
+  try {
+    if (!phone) return;
+
+    var tpl = getTemplate(eventType);
+    if (!tpl.enabled || !tpl.body) return;
+
+    var title = fillVars(tpl.title, vars);
+    var body  = fillVars(tpl.body,  vars);
+    var msg   = '*ROAMERS COMMUNITY*\n\n' + (title ? title + '\n\n' : '') + body;
+
+    await wa.sendMessage(phone, msg);
+    console.log('[Notify:WA]', eventType, '->', phone, '— sent');
+  } catch (err) {
+    console.warn('[Notify:WA]', eventType, '->', phone, '— Error:', err.message);
+  }
+}
+
 module.exports = {
   notifyByEmail:    notifyByEmail,
+  notifyWhatsApp:   notifyWhatsApp,
   getTemplate:      getTemplate,
   DEFAULT_TEMPLATES: DEFAULT_TEMPLATES,
   TEMPLATE_VARS: {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Alert, Image, ActivityIndicator, Dimensions, Linking, Platform, Share,
+  Alert, Image, ActivityIndicator, Dimensions, Linking, Platform, Share, Modal, Pressable,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
@@ -85,6 +85,7 @@ export default function ProfileScreen({ navigation }: any) {
   const { user, logout, refresh } = useAuth();
 
   const [tab, setTab]           = useState<TabKey>('overview');
+  const [menuOpen, setMenuOpen] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
   const [allExps, setAllExps]   = useState<any[]>([]);
   const [loadingB, setLoadingB] = useState(true);
@@ -207,7 +208,19 @@ export default function ProfileScreen({ navigation }: any) {
       <LinearGradient colors={['#16000a', '#0e0e0e']} style={styles.header}>
         {/* top strip */}
         <View style={styles.headerTop}>
-          <Text style={styles.logo}>✦ ROAMERS</Text>
+          <View style={styles.headerTopLeft}>
+            <TouchableOpacity
+              style={styles.menuBtn}
+              onPress={() => setMenuOpen(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.burgerLine} />
+              <View style={styles.burgerLine} />
+              <View style={styles.burgerLine} />
+            </TouchableOpacity>
+            <Text style={styles.logo}>✦ ROAMERS</Text>
+          </View>
           <TouchableOpacity
             style={styles.logoutBtn}
             onPress={() => Alert.alert('Déconnexion', 'Êtes-vous sûr ?', [
@@ -266,25 +279,53 @@ export default function ProfileScreen({ navigation }: any) {
         )}
       </LinearGradient>
 
-      {/* ── Tab bar ── */}
-      <View style={styles.tabBarWrap}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabBarInner}>
-          {TABS.map((t) => {
-            const active = tab === t.key;
-            return (
-              <TouchableOpacity
-                key={t.key}
-                style={[s.tabItem, active && s.tabItemActive]}
-                onPress={() => setTab(t.key as TabKey)}
-                activeOpacity={0.7}
-              >
-                {t.icon(active ? COLORS.primary : COLORS.muted)}
-                <Text style={[s.tabLabel, active && s.tabLabelActive]}>{t.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+      {/* ── Current section bar (opens hamburger menu) ── */}
+      <TouchableOpacity style={styles.sectionBar} onPress={() => setMenuOpen(true)} activeOpacity={0.7}>
+        {TABS.find((t) => t.key === tab)?.icon(COLORS.primary)}
+        <Text style={styles.sectionBarTxt}>{TABS.find((t) => t.key === tab)?.label}</Text>
+        <Text style={styles.sectionBarChevron}>▾</Text>
+      </TouchableOpacity>
+
+      {/* ── Hamburger drawer ── */}
+      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+        <Pressable style={styles.drawerOverlay} onPress={() => setMenuOpen(false)}>
+          <Pressable style={[styles.drawer, { paddingTop: insets.top + 16 }]} onPress={() => {}}>
+            <Text style={styles.drawerTitle}>Mon espace</Text>
+            <Text style={styles.drawerSub} numberOfLines={1}>{user.fname} {user.lname}</Text>
+            <View style={styles.drawerDivider} />
+            {TABS.map((t) => {
+              const active = tab === t.key;
+              return (
+                <TouchableOpacity
+                  key={t.key}
+                  style={[styles.drawerItem, active && styles.drawerItemActive]}
+                  onPress={() => { setTab(t.key); setMenuOpen(false); }}
+                  activeOpacity={0.7}
+                >
+                  {t.icon(active ? COLORS.primary : COLORS.muted)}
+                  <Text style={[styles.drawerItemTxt, active && styles.drawerItemTxtActive]}>{t.label}</Text>
+                  {active && <View style={styles.drawerDot} />}
+                </TouchableOpacity>
+              );
+            })}
+            <View style={styles.drawerDivider} />
+            <TouchableOpacity
+              style={styles.drawerItem}
+              onPress={() => {
+                setMenuOpen(false);
+                Alert.alert('Déconnexion', 'Êtes-vous sûr ?', [
+                  { text: 'Annuler', style: 'cancel' },
+                  { text: 'Déconnecter', style: 'destructive', onPress: logout },
+                ]);
+              }}
+              activeOpacity={0.7}
+            >
+              <Icon.Logout size={17} color="#ef4444" />
+              <Text style={[styles.drawerItemTxt, { color: '#ef4444' }]}>Déconnexion</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── Content ── */}
       <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
@@ -774,7 +815,7 @@ function WishlistTab({ wishlist, allExps, loading, onRemove, navigation }: any) 
    Passport tab
    ══════════════════════════════════════════════════════════════════════════ */
 function PassportTab({ user, bookings, wishlist, totalSpent, earnedBadges, level }: any) {
-  const destinations = [...new Set(bookings.filter((b: any) => b.expLoc).map((b: any) => b.expLoc as string))];
+  const destinations: string[] = [...new Set<string>(bookings.filter((b: any) => b.expLoc).map((b: any) => String(b.expLoc)))];
   const SEGS = [
     { key: 'groupe', icon: '🧭', label: 'Voyage Groupe', color: '#3b82f6' },
     { key: 'weekend', icon: '🌙', label: 'Weekend', color: '#8b5cf6' },
@@ -1385,6 +1426,9 @@ const s = StyleSheet.create({
   /* ── Header ── */
   header: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  headerTopLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  menuBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', gap: 3.5 },
+  burgerLine: { width: 16, height: 2, borderRadius: 1, backgroundColor: COLORS.text },
   logo: { color: COLORS.primary, fontSize: 13, fontWeight: '900', letterSpacing: 3 },
   logoutBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
 
@@ -1411,13 +1455,20 @@ const s = StyleSheet.create({
   progressFill: { height: 4, borderRadius: 2 },
   progressLbl: { color: COLORS.muted, fontSize: 11 },
 
-  /* ── Tab bar ── */
-  tabBarWrap: { borderBottomWidth: 1, borderBottomColor: COLORS.border, backgroundColor: '#0b0b0b' },
-  tabBarInner: { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 6, gap: 2 },
-  tabItem: { alignItems: 'center', paddingHorizontal: 11, paddingVertical: 8, borderRadius: 14, minWidth: 62, gap: 4 },
-  tabItemActive: { backgroundColor: COLORS.primary + '18' },
-  tabLabel: { color: COLORS.muted, fontSize: 9, fontWeight: '600' },
-  tabLabelActive: { color: COLORS.primary, fontWeight: '800' },
+  /* ── Section bar + hamburger drawer ── */
+  sectionBar: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border, backgroundColor: '#0b0b0b' },
+  sectionBarTxt: { color: COLORS.text, fontSize: 14, fontWeight: '800', flex: 1 },
+  sectionBarChevron: { color: COLORS.muted, fontSize: 13, fontWeight: '900' },
+  drawerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', flexDirection: 'row' },
+  drawer: { width: '76%', maxWidth: 320, height: '100%', backgroundColor: '#121212', paddingHorizontal: 14, paddingBottom: 24, borderRightWidth: 1, borderRightColor: COLORS.border },
+  drawerTitle: { color: COLORS.primary, fontSize: 12, fontWeight: '900', letterSpacing: 2 },
+  drawerSub: { color: COLORS.text, fontSize: 16, fontWeight: '800', marginTop: 4 },
+  drawerDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: 12 },
+  drawerItem: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 13, paddingHorizontal: 10, borderRadius: 12 },
+  drawerItemActive: { backgroundColor: COLORS.primary + '14' },
+  drawerItemTxt: { color: COLORS.sub, fontSize: 15, fontWeight: '700', flex: 1 },
+  drawerItemTxtActive: { color: COLORS.primary, fontWeight: '800' },
+  drawerDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.primary },
 
   /* ── Sections ── */
   section: { padding: 16, gap: 16 },

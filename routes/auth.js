@@ -112,32 +112,28 @@ router.post('/register', async function(req, res) {
   var otp     = wa.generateOtp();
   var expiry  = new Date(Date.now() + OTP_TTL_MS).toISOString();
   var phone   = String(f.phone).trim();
+  var email   = f.email.toLowerCase().trim();
 
-  /* Create unverified user */
-  var user = db.users.insert({
+  /* Stage the account in `pending` — it is NOT written to `users` until the
+     OTP is confirmed (see /verify-otp). Drop any prior pending entry for the
+     same email so a re-submit overwrites it cleanly. */
+  db.pending.remove(function(p){ return p.email === email; });
+  var pendingRec = db.pending.insert({
     id:           uuidv4(),
     fname:        String(f.fname).trim(),
     lname:        String(f.lname).trim(),
-    email:        f.email.toLowerCase().trim(),
+    email:        email,
     password:     bcrypt.hashSync(f.password, BCRYPT_ROUNDS),
     phone:        phone,
     country:      f.country ? String(f.country).trim() : 'Morocco',
-    role:         'user',
-    bio:          '',
-    joined:       new Date().toISOString(),
-    wishlist:     [],
-    notifs:       [],
-    tokenVersion: 0,
-    loginFailCount:  0,
-    loginLockUntil:  null,
-    verified:     false,
+    createdAt:    new Date().toISOString(),
     otp:          otp,
     otpExpiry:    expiry,
     otpAttempts:  0,
   });
 
-  await db.users.flush();
-  auditMod.log('user:register:pending', user.id, ip);
+  await db.pending.flush();
+  auditMod.log('user:register:pending', pendingRec.id, ip);
 
   /* Send OTP via WhatsApp — non-blocking (failure doesn't abort registration) */
   var otpSent = false;
@@ -153,7 +149,7 @@ router.post('/register', async function(req, res) {
   res.status(201).json({
     requireVerification: true,
     phone:   maskPhone(phone),
-    email:   user.email,
+    email:   email,
     otpSent: otpSent,
     /* DEV: expose code in response when no WhatsApp provider is configured */
     ...(noProvider ? { devCode: otp } : {}),
@@ -169,25 +165,75 @@ router.post('/verify-otp', async function(req, res) {
     return res.status(400).json({ error: 'Email and code required' });
   }
 
-  var user = db.users.find(function(u){ return u.email.toLowerCase() === f.email.toLowerCase(); });
-  if (!user) return res.status(404).json({ error: 'Account not found' });
+  var email = f.email.toLowerCase();
 
-  /* Already verified */
-  if (user.verified) {
-    return res.json({ token: makeToken(user), user: sanitizeUser(user) });
+  /* Already a real (verified) account — idempotent success */
+  var existingUser = db.users.find(function(u){ return u.email.toLowerCase() === email; });
+  if (existingUser && existingUser.verified !== false) {
+    return res.json({ token: makeToken(existingUser), user: sanitizeUser(existingUser) });
   }
 
-  /* Too many attempts */
+  /* Primary path: pending registration awaiting OTP confirmation */
+  var pend = db.pending.find(function(p){ return p.email.toLowerCase() === email; });
+
+  if (pend) {
+    if ((pend.otpAttempts || 0) >= MAX_OTP_ATTEMPTS) {
+      return res.status(429).json({ error: 'Too many attempts. Please request a new code.' });
+    }
+    if (!pend.otpExpiry || new Date(pend.otpExpiry) < new Date()) {
+      return res.status(400).json({ error: 'Code expired. Please request a new one.' });
+    }
+    if (String(f.code).trim() !== String(pend.otp)) {
+      db.pending.update(function(p){ return p.id === pend.id; }, { otpAttempts: (pend.otpAttempts || 0) + 1 });
+      await db.pending.flush();
+      var rem = MAX_OTP_ATTEMPTS - ((pend.otpAttempts || 0) + 1);
+      return res.status(400).json({ error: 'Incorrect code' + (rem > 0 ? ' (' + rem + ' attempts left)' : '') });
+    }
+
+    /* Code correct — race guard: re-check the email isn't taken now */
+    if (db.users.find(function(u){ return u.email.toLowerCase() === email; })) {
+      db.pending.remove(function(p){ return p.id === pend.id; });
+      await db.pending.flush();
+      return res.status(409).json({ error: 'An account with this email already exists' });
+    }
+
+    /* Promote the pending record into a real verified user */
+    var newUser = db.users.insert({
+      id:           pend.id,
+      fname:        pend.fname,
+      lname:        pend.lname,
+      email:        pend.email,
+      password:     pend.password,
+      phone:        pend.phone,
+      country:      pend.country || 'Morocco',
+      role:         'user',
+      bio:          '',
+      joined:       new Date().toISOString(),
+      wishlist:     [],
+      notifs:       [],
+      tokenVersion: 0,
+      loginFailCount: 0,
+      loginLockUntil: null,
+      verified:     true,
+    });
+    await db.users.flush();
+    db.pending.remove(function(p){ return p.id === pend.id; });
+    await db.pending.flush();
+
+    auditMod.log('user:register:verified', newUser.id, ip);
+    return res.json({ token: makeToken(newUser), user: sanitizeUser(newUser) });
+  }
+
+  /* Fallback: legacy unverified user stored directly in `users` */
+  var user = existingUser;
+  if (!user) return res.status(404).json({ error: 'Account not found' });
+
   if ((user.otpAttempts || 0) >= MAX_OTP_ATTEMPTS) {
     return res.status(429).json({ error: 'Too many attempts. Please request a new code.' });
   }
-
-  /* Check expiry */
   if (!user.otpExpiry || new Date(user.otpExpiry) < new Date()) {
     return res.status(400).json({ error: 'Code expired. Please request a new one.' });
   }
-
-  /* Check code */
   if (String(f.code).trim() !== String(user.otp)) {
     db.users.update(function(u){ return u.id === user.id; }, { otpAttempts: (user.otpAttempts || 0) + 1 });
     await db.users.flush();
@@ -195,7 +241,6 @@ router.post('/verify-otp', async function(req, res) {
     return res.status(400).json({ error: 'Incorrect code' + (remaining > 0 ? ' (' + remaining + ' attempts left)' : '') });
   }
 
-  /* Code correct — mark verified, clear OTP */
   db.users.update(function(u){ return u.id === user.id; }, {
     verified:    true,
     otp:         null,
@@ -216,30 +261,43 @@ router.post('/resend-otp', async function(req, res) {
 
   if (!f.email) return res.status(400).json({ error: 'Email required' });
 
-  var user = db.users.find(function(u){ return u.email.toLowerCase() === f.email.toLowerCase(); });
-  if (!user) return res.status(404).json({ error: 'Account not found' });
-  if (user.verified) return res.status(400).json({ error: 'Account already verified' });
-
+  var email  = f.email.toLowerCase();
   var otp    = wa.generateOtp();
   var expiry = new Date(Date.now() + OTP_TTL_MS).toISOString();
 
+  /* Primary path: pending registration */
+  var pend = db.pending.find(function(p){ return p.email.toLowerCase() === email; });
+  if (pend) {
+    db.pending.update(function(p){ return p.id === pend.id; }, { otp: otp, otpExpiry: expiry, otpAttempts: 0 });
+    await db.pending.flush();
+    return _doResend(res, pend.phone, otp, pend.id, ip);
+  }
+
+  /* Fallback: legacy unverified user in `users` */
+  var user = db.users.find(function(u){ return u.email.toLowerCase() === email; });
+  if (!user) return res.status(404).json({ error: 'Account not found' });
+  if (user.verified) return res.status(400).json({ error: 'Account already verified' });
+
   db.users.update(function(u){ return u.id === user.id; }, { otp: otp, otpExpiry: expiry, otpAttempts: 0 });
   await db.users.flush();
+  return _doResend(res, user.phone, otp, user.id, ip);
+});
 
+async function _doResend(res, phone, otp, id, ip) {
   var noProvider = !process.env.WHATSAPP_PROVIDER;
   try {
-    await wa.sendOtp(user.phone, otp);
-    auditMod.log('user:otp:resent', user.id, ip);
+    await wa.sendOtp(phone, otp);
+    auditMod.log('user:otp:resent', id, ip);
     res.json({
       sent:  true,
-      phone: maskPhone(user.phone),
+      phone: maskPhone(phone),
       ...(noProvider ? { devCode: otp } : {}),
     });
   } catch (err) {
     console.error('[OTP resend error]', err.message);
     res.status(500).json({ error: 'Failed to send code. Please try again.' });
   }
-});
+}
 
 /* ── LOGIN ───────────────────────────────────────────────────── */
 router.post('/login', function(req, res) {
@@ -251,6 +309,25 @@ router.post('/login', function(req, res) {
   }
 
   var user = db.users.find(function(u){ return u.email.toLowerCase() === f.email.toLowerCase(); });
+
+  /* Pending registration (OTP not yet confirmed) — never written to `users`.
+     Verify the password, then route back to OTP verification. */
+  if (!user) {
+    var pend = db.pending.find(function(p){ return p.email.toLowerCase() === f.email.toLowerCase(); });
+    if (pend && bcrypt.compareSync(String(f.password), pend.password)) {
+      var pOtp    = wa.generateOtp();
+      var pExpiry = new Date(Date.now() + OTP_TTL_MS).toISOString();
+      db.pending.update(function(p){ return p.id === pend.id; }, { otp: pOtp, otpExpiry: pExpiry, otpAttempts: 0 });
+      db.pending.flush().catch(function(){});
+      wa.sendOtp(pend.phone, pOtp).catch(function(e){ console.error('[OTP auto-resend]', e.message); });
+      return res.status(403).json({
+        error: 'Account not verified',
+        requireVerification: true,
+        email: pend.email,
+        phone: maskPhone(pend.phone),
+      });
+    }
+  }
 
   /* Timing-safe: always run bcrypt even when user not found */
   var hash  = user ? user.password : _DUMMY_HASH;

@@ -9,6 +9,7 @@
 var router  = require('express').Router();
 var db      = require('../database');
 var authMw  = require('../middleware/auth');
+var notify  = require('../utils/notify');
 
 var optionalAuth = authMw.optionalAuth;
 
@@ -99,6 +100,19 @@ router.post(
         );
         await db.bookings.flush();
         console.log('[payments] booking paid:', bookingId);
+
+        /* Payment confirmation — push + WhatsApp from ROAMERS COMMUNITY */
+        var paid = db.bookings.find(function(b) { return b.id === bookingId; });
+        if (paid) {
+          var payVars = {
+            name:      paid.name,
+            tripTitle: paid.expTitle,
+            amount:    Number(paid.total).toLocaleString('fr-MA'),
+            total:     Number(paid.total).toLocaleString('fr-MA')
+          };
+          notify.notifyByEmail(paid.email, 'payment_completed', payVars).catch(function(){});
+          notify.notifyWhatsApp(paid.phone, 'payment_completed', payVars).catch(function(){});
+        }
       }
     }
 

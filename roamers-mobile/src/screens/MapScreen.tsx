@@ -231,7 +231,8 @@ export default function MapScreen({ navigation, route }: any) {
         setPlanStats({ distKm: data.distanceKm ?? null, durH: data.durationH ?? null });
       } else if (data.type === 'ADD_WAYPOINT') {
         setWaypoints((prev) => {
-          if (prev.find((w) => w.name === data.name && w.lat === data.lat)) return prev;
+          const nm = String(data.name || '').trim().toLowerCase();
+          if (prev.find((w) => w.name.trim().toLowerCase() === nm)) return prev;
           return [...prev, { name: data.name, lat: data.lat, lng: data.lng }];
         });
       } else if (!selectForPlan) {
@@ -298,7 +299,11 @@ export default function MapScreen({ navigation, route }: any) {
   }
 
   function addWaypoint(city: { name: string; lat: number; lng: number }) {
-    setWaypoints((prev) => [...prev, city]);
+    setWaypoints((prev) => {
+      const nm = city.name.trim().toLowerCase();
+      if (prev.find((w) => w.name.trim().toLowerCase() === nm)) return prev;
+      return [...prev, city];
+    });
     setCityModal(false);
     setCitySearch('');
   }
@@ -332,7 +337,10 @@ export default function MapScreen({ navigation, route }: any) {
 
   function selectLocResult(r: { name: string; lat: number; lng: number }) {
     Keyboard.dismiss();
-    setWaypoints((prev) => prev.find((w) => w.lat === r.lat) ? prev : [...prev, r]);
+    setWaypoints((prev) => {
+      const nm = r.name.trim().toLowerCase();
+      return prev.find((w) => w.name.trim().toLowerCase() === nm) ? prev : [...prev, r];
+    });
     webViewRef.current?.injectJavaScript(`map.flyTo([${r.lat},${r.lng}],11,{animate:true,duration:1.2});true;`);
     setLocSearch('');
     setLocResults([]);
@@ -601,7 +609,7 @@ export default function MapScreen({ navigation, route }: any) {
 
             <ScrollView style={styles.planWpList} showsVerticalScrollIndicator={false}>
               {waypoints.length === 0 ? (
-                <Text style={styles.planEmpty}>Ajoutez au moins 2 villes pour tracer votre itinéraire</Text>
+                <Text style={styles.planEmpty}>{selectForPlan ? 'Sélectionnez une destination (ou plusieurs étapes)' : 'Ajoutez au moins 2 villes pour tracer votre itinéraire'}</Text>
               ) : (
                 waypoints.map((wp, idx) => (
                   <View key={idx} style={styles.planWpRow}>
@@ -657,7 +665,7 @@ export default function MapScreen({ navigation, route }: any) {
               </View>
             )}
 
-            {waypoints.length >= 2 && selectForPlan && (
+            {waypoints.length >= 1 && selectForPlan && (
               <TouchableOpacity
                 style={styles.planConfirmBtn}
                 onPress={() => {
@@ -666,7 +674,9 @@ export default function MapScreen({ navigation, route }: any) {
                 }}
                 activeOpacity={0.85}
               >
-                <Text style={styles.planConfirmBtnTxt}>Confirmer l'itinéraire →</Text>
+                <Text style={styles.planConfirmBtnTxt}>
+                  {waypoints.length === 1 ? 'Confirmer cette destination →' : "Confirmer l'itinéraire →"}
+                </Text>
               </TouchableOpacity>
             )}
             {waypoints.length >= 2 && !planSaved && !selectForPlan && (
