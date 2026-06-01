@@ -43,6 +43,21 @@ router.post('/', optionalAuth, audit.audit('booking:create'), async function(req
   var adults   = Math.max(1, parseInt(f.adults) || 1);
   var children = Math.max(0, parseInt(f.children) || 0);
 
+  /* Sanitise co-travellers (name + phone of each extra person, age for kids) */
+  var companions = [];
+  if (Array.isArray(f.companions)) {
+    companions = f.companions.slice(0, 40).map(function(c) {
+      c = c || {};
+      var out = {
+        type:  c.type === 'child' ? 'child' : 'adult',
+        name:  String(c.name  || '').trim().slice(0, 120),
+        phone: String(c.phone || '').trim().slice(0, 40)
+      };
+      if (out.type === 'child') out.age = String(c.age || '').trim().slice(0, 6);
+      return out;
+    }).filter(function(c){ return c.name || c.phone; });
+  }
+
   /* ── Per-date capacity check ── */
   var selectedDate = String(f.date).trim();
   if (exp.maxP) {
@@ -94,6 +109,7 @@ router.post('/', optionalAuth, audit.audit('booking:create'), async function(req
     date:     String(f.date).trim(),
     adults:   adults,
     children: children,
+    companions: companions,   /* names + contacts of the other participants */
     addons:   {},             /* addons validated and recalculated server-side if used */
     notes:    f.notes ? String(f.notes).trim().slice(0, 2000) : '',
     /* Minimal PII — only what's needed to process the booking */

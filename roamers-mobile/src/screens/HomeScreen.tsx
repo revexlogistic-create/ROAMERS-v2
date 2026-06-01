@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Dimensions, RefreshControl, Image, ActivityIndicator,
+  Dimensions, RefreshControl, Image, ActivityIndicator, Share,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getExperiences, getSiteConfig, toggleWishlist } from '../services/api';
 import ExperienceCard from '../components/ExperienceCard';
 import ErrorState from '../components/ErrorState';
-import { COLORS, RADIUS } from '../constants/theme';
+import { COLORS, RADIUS, API_BASE } from '../constants/theme';
 import Icon from '../components/Icons';
 import { useAuth } from '../context/AuthContext';
 
@@ -48,6 +48,19 @@ export default function HomeScreen({ navigation }: any) {
     if (!user) { navigation.navigate('Profile'); return; }
     try { await toggleWishlist(expId); await refresh(); } catch (_) {}
   }, [user, refresh, navigation]);
+
+  /* Share the Android app — sends the direct APK download link */
+  const shareApp = useCallback(async () => {
+    const apkUrl = `${API_BASE}/downloads/roamers.apk`;
+    try {
+      await Share.share({
+        title: 'Roamers Community',
+        message:
+          `🌍 Découvre Roamers Community — voyages, activités et expériences sur mesure au Maroc !\n\n` +
+          `📲 Télécharge l'application Android ici :\n${apkUrl}`,
+      });
+    } catch (_) {}
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -187,6 +200,22 @@ export default function HomeScreen({ navigation }: any) {
         ))}
       </View>
 
+      {/* ── SHARE THE APP ── */}
+      <TouchableOpacity activeOpacity={0.9} onPress={shareApp} style={{ marginHorizontal: 16, marginTop: 36 }}>
+        <LinearGradient colors={['#d4173a', '#8f1122']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.shareCard}>
+          <View style={styles.shareIconCircle}>
+            <Icon.Share size={24} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.shareTitle}>Partagez Roamers</Text>
+            <Text style={styles.shareDesc}>Invitez vos amis à télécharger l'application et à explorer le Maroc avec vous.</Text>
+          </View>
+          <View style={styles.shareBtn}>
+            <Text style={styles.shareBtnTxt}>Partager</Text>
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
+
       {/* ── TESTIMONIALS ── */}
       <Text style={styles.sectionTitle2}>Ce qu'ils disent</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8 }}>
@@ -258,6 +287,12 @@ const styles = StyleSheet.create({
   quickCard:    { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: 18, width: (width - 44) / 2, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
   quickIcon:    { fontSize: 28, marginBottom: 8 },
   quickLabel:   { color: COLORS.text, fontSize: 13, fontWeight: '700', textAlign: 'center' },
+  shareCard:    { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.lg, padding: 18, gap: 14 },
+  shareIconCircle:{ width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  shareTitle:   { color: '#fff', fontSize: 16, fontWeight: '900', marginBottom: 4 },
+  shareDesc:    { color: 'rgba(255,255,255,0.85)', fontSize: 12, lineHeight: 17 },
+  shareBtn:     { backgroundColor: '#fff', borderRadius: RADIUS.pill, paddingHorizontal: 14, paddingVertical: 8 },
+  shareBtnTxt:  { color: '#8f1122', fontSize: 12, fontWeight: '800' },
   testCard:     { backgroundColor: COLORS.card, borderRadius: RADIUS.lg, padding: 18, width: width * 0.78, marginRight: 12, borderWidth: 1, borderColor: COLORS.border },
   testStars:    { fontSize: 14, marginBottom: 8 },
   testText:     { color: COLORS.sub, fontSize: 14, lineHeight: 21, fontStyle: 'italic', marginBottom: 12 },

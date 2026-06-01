@@ -43,15 +43,6 @@ const SEGMENTS = [
 
 const DEST_QUICK = ['Marrakech', 'Atlas & Toubkal', 'Sahara / Merzouga', 'Côte Atlantique', 'Chefchaouen', 'Fes'];
 
-const GROUP_SIZES = [
-  { key: '1',     label: 'Solo',         sub: '1 pers.',   icon: '🧍' },
-  { key: '2',     label: 'En couple',    sub: '2 pers.',    icon: '👫' },
-  { key: '3-6',   label: 'Petit groupe', sub: '3–6 pers.', icon: '👥' },
-  { key: '7-15',  label: 'Groupe moyen', sub: '7–15 pers.',icon: '🧑‍🤝‍🧑' },
-  { key: '16-50', label: 'Grand groupe', sub: '16–50',      icon: '🎪' },
-  { key: '50+',   label: 'Corporate',    sub: '50+ pers.',  icon: '🏢' },
-];
-
 const DURATIONS = [
   { key: 'demi',  label: 'Demi-journée' },
   { key: '1j',    label: '1 journée' },
@@ -293,7 +284,6 @@ export default function PlanScreen({ navigation, route }: any) {
       return null;
     }
     if (s === 2) {
-      if (!form.groupSize) return 'Indiquez la taille du groupe.';
       if (!form.duration)  return 'Choisissez une durée.';
       if (!form.flexDate && !form.dateFrom) return 'Sélectionnez une date de départ (ou cochez « dates flexibles »).';
       return null;
@@ -492,28 +482,8 @@ export default function PlanScreen({ navigation, route }: any) {
           {/* ══ STEP 2 ═══════════════════════════════════════════════════ */}
           {step === 2 && (<>
 
-            {/* Group size */}
-            <Text style={styles.qTitle}>👤 Taille du groupe</Text>
-            <View style={styles.grid2}>
-              {GROUP_SIZES.map((g) => {
-                const active = form.groupSize === g.key;
-                return (
-                  <TouchableOpacity
-                    key={g.key}
-                    style={[styles.infoCard, active && styles.infoCardActive]}
-                    onPress={() => set('groupSize')(form.groupSize === g.key ? '' : g.key)}
-                    activeOpacity={0.82}
-                  >
-                    <Text style={styles.infoIcon}>{g.icon}</Text>
-                    <Text style={[styles.infoLabel, active && styles.infoLabelActive]}>{g.label}</Text>
-                    <Text style={styles.infoSub}>{g.sub}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
             {/* Duration */}
-            <Text style={[styles.qTitle, { marginTop: 28 }]}>⏱ Durée du voyage</Text>
+            <Text style={styles.qTitle}>⏱ Durée du voyage</Text>
             <View style={styles.pillWrap}>
               {availableDurations.map((d) => {
                 const active = form.duration === d.key;
@@ -644,7 +614,7 @@ export default function PlanScreen({ navigation, route }: any) {
             />
 
             {/* Recap */}
-            {(waypoints.length > 0 || form.moods.length > 0 || form.segment || form.groupSize) && (
+            {(waypoints.length > 0 || form.moods.length > 0 || form.segment || form.who) && (
               <View style={styles.recap}>
                 <Text style={styles.recapTitle}>✦ Récapitulatif</Text>
                 {waypoints.length > 0 && <Text style={styles.recapRow}>🛤 {waypoints.map((w) => w.name).join(' → ')}</Text>}
@@ -652,7 +622,6 @@ export default function PlanScreen({ navigation, route }: any) {
                 {form.who        && <Text style={styles.recapRow}>👥 {WHO.find((w) => w.key === form.who)?.label}</Text>}
                 {form.segment    && <Text style={styles.recapRow}>🗺️ {SEGMENTS.find((s) => s.key === form.segment)?.label}</Text>}
                 {form.destination&& <Text style={styles.recapRow}>📍 {form.destination}</Text>}
-                {form.groupSize  && <Text style={styles.recapRow}>👤 {GROUP_SIZES.find((g) => g.key === form.groupSize)?.label}</Text>}
                 {form.duration   && <Text style={styles.recapRow}>⏱ {DURATIONS.find((d) => d.key === form.duration)?.label}</Text>}
                 {form.budget     && <Text style={styles.recapRow}>💰 {BUDGETS.find((b) => b.key === form.budget)?.label} / pers.</Text>}
               </View>

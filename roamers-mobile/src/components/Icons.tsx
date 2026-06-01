@@ -438,11 +438,29 @@ export function Heart({ size = 22, color = '#fff', filled = false, style }: HP) 
   );
 }
 
+/* ── Share (three nodes joined by two links) ──────────────────────── */
+export function Share({ size = 22, color = '#fff', style }: P) {
+  const dot = Math.max(5, size * 0.28);
+  const r   = dot / 2;
+  const t   = Math.max(1.5, size * 0.09);
+  return (
+    <View style={[{ width: size, height: size }, style]}>
+      {/* nodes */}
+      <View style={{ position: 'absolute', right: 0, top: 0, width: dot, height: dot, borderRadius: r, backgroundColor: color }} />
+      <View style={{ position: 'absolute', left: 0, top: (size - dot) / 2, width: dot, height: dot, borderRadius: r, backgroundColor: color }} />
+      <View style={{ position: 'absolute', right: 0, bottom: 0, width: dot, height: dot, borderRadius: r, backgroundColor: color }} />
+      {/* links */}
+      <View style={{ position: 'absolute', left: size * 0.28, top: size * 0.3, width: size * 0.5, height: t, backgroundColor: color, borderRadius: t / 2, transform: [{ rotate: '-30deg' }] }} />
+      <View style={{ position: 'absolute', left: size * 0.28, bottom: size * 0.3, width: size * 0.5, height: t, backgroundColor: color, borderRadius: t / 2, transform: [{ rotate: '30deg' }] }} />
+    </View>
+  );
+}
+
 /* ── named export object for convenience ──────────────────────────── */
 const Icon = {
   Mountain, Pin, Compass, Person, Grid, Tent,
   Route, Bookmark, Globe, Sliders, Sun, Group,
   Shield, Leaf, Trophy, Calendar, Logout, Star, RoamersR,
-  Search, Close, Flash, Heart,
+  Search, Close, Flash, Heart, Share,
 };
 export default Icon;

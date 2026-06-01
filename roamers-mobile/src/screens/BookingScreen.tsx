@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   TextInput, ActivityIndicator, Alert, Image, Linking,
@@ -79,6 +79,33 @@ export default function BookingScreen({ route, navigation }: any) {
   const [country, setCountry] = useState(user?.country || 'Maroc');
   const [notes,   setNotes]   = useState('');
 
+  /* Co-travellers — the lead contact above counts as 1 adult; collect the
+     name + phone of every ADDITIONAL adult, and name + phone + age of each child. */
+  const [extraAdults, setExtraAdults] = useState<Array<{ name: string; phone: string }>>([]);
+  const [kids,        setKids]        = useState<Array<{ name: string; phone: string; age: string }>>([]);
+
+  useEffect(() => {
+    setExtraAdults((prev) => {
+      const n = Math.max(0, adults - 1);
+      const next = prev.slice(0, n);
+      while (next.length < n) next.push({ name: '', phone: '' });
+      return next;
+    });
+  }, [adults]);
+
+  useEffect(() => {
+    setKids((prev) => {
+      const next = prev.slice(0, children);
+      while (next.length < children) next.push({ name: '', phone: '', age: '' });
+      return next;
+    });
+  }, [children]);
+
+  const setExtraAdult = (i: number, k: 'name' | 'phone') => (v: string) =>
+    setExtraAdults((prev) => prev.map((p, idx) => (idx === i ? { ...p, [k]: v } : p)));
+  const setKid = (i: number, k: 'name' | 'phone' | 'age') => (v: string) =>
+    setKids((prev) => prev.map((p, idx) => (idx === i ? { ...p, [k]: v } : p)));
+
   /* Step 4 – Payment */
   const [payMethod, setPayMethod] = useState<'virement' | 'carte'>('virement');
   const [loading,   setLoading]   = useState(false);
@@ -123,6 +150,16 @@ export default function BookingScreen({ route, navigation }: any) {
       if (!name.trim())  { Alert.alert('Nom requis', 'Veuillez entrer votre nom complet.'); return; }
       if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) { Alert.alert('Email invalide', 'Entrez un email valide.'); return; }
       if (!phone.trim()) { Alert.alert('Téléphone requis', 'Votre numéro WhatsApp / téléphone.'); return; }
+      for (let i = 0; i < extraAdults.length; i++) {
+        if (!extraAdults[i].name.trim() || !extraAdults[i].phone.trim()) {
+          Alert.alert('Participant incomplet', `Renseignez le nom et le téléphone de l'adulte n°${i + 2}.`); return;
+        }
+      }
+      for (let i = 0; i < kids.length; i++) {
+        if (!kids[i].name.trim() || !kids[i].phone.trim() || !kids[i].age.trim()) {
+          Alert.alert('Participant incomplet', `Renseignez le nom, le téléphone et l'âge de l'enfant n°${i + 1}.`); return;
+        }
+      }
     }
     setStep((s) => s + 1);
   }
@@ -140,6 +177,10 @@ export default function BookingScreen({ route, navigation }: any) {
         phone:    phone.trim(),
         country,
         notes:    `[${payMethod === 'virement' ? 'Virement bancaire' : 'Carte bancaire'}] ${notes.trim()}`.trim(),
+        companions: [
+          ...extraAdults.map((a) => ({ type: 'adult', name: a.name.trim(), phone: a.phone.trim() })),
+          ...kids.map((k) => ({ type: 'child', name: k.name.trim(), phone: k.phone.trim(), age: k.age.trim() })),
+        ],
         ...(promoApplied ? { promoCode: promoApplied.code } : {}),
       });
       navigation.replace('BookingSuccess', { ref: res.booking?.id || res.ref, exp });
@@ -370,6 +411,33 @@ export default function BookingScreen({ route, navigation }: any) {
               placeholder="Demandes spéciales, allergies, régimes…"
               multiline
             />
+
+            {/* ── Other participants (when booking for more than one) ── */}
+            {(extraAdults.length > 0 || kids.length > 0) && (
+              <View style={styles.companionsWrap}>
+                <Text style={styles.companionsTitle}>👥 Autres participants</Text>
+                <Text style={styles.companionsSub}>
+                  Renseignez le nom et les coordonnées de chaque personne qui voyage avec vous.
+                </Text>
+
+                {extraAdults.map((a, i) => (
+                  <View key={`a${i}`} style={styles.companionCard}>
+                    <Text style={styles.companionTag}>Adulte n°{i + 2}</Text>
+                    <Field label="Nom complet" value={a.name} onChange={setExtraAdult(i, 'name')} placeholder="Prénom et nom" />
+                    <Field label="Téléphone / WhatsApp" value={a.phone} onChange={setExtraAdult(i, 'phone')} placeholder="+212 6 XX XX XX XX" keyboardType="phone-pad" />
+                  </View>
+                ))}
+
+                {kids.map((k, i) => (
+                  <View key={`k${i}`} style={styles.companionCard}>
+                    <Text style={styles.companionTag}>Enfant n°{i + 1}</Text>
+                    <Field label="Nom complet" value={k.name} onChange={setKid(i, 'name')} placeholder="Prénom et nom" />
+                    <Field label="Téléphone / WhatsApp" value={k.phone} onChange={setKid(i, 'phone')} placeholder="Tél. d'un parent / responsable" keyboardType="phone-pad" />
+                    <Field label="Âge" value={k.age} onChange={setKid(i, 'age')} placeholder="ex : 8" keyboardType="number-pad" />
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -401,6 +469,18 @@ export default function BookingScreen({ route, navigation }: any) {
               <Text style={styles.recapSub}>{email}</Text>
               <Text style={styles.recapSub}>{phone} · {country}</Text>
             </View>
+
+            {(extraAdults.length > 0 || kids.length > 0) && (
+              <View style={styles.recapSection}>
+                <Text style={styles.recapHeader}>👥 Autres participants</Text>
+                {extraAdults.map((a, i) => (
+                  <Text key={`ra${i}`} style={styles.recapSub}>• {a.name} — {a.phone}</Text>
+                ))}
+                {kids.map((k, i) => (
+                  <Text key={`rk${i}`} style={styles.recapSub}>• {k.name} ({k.age} ans) — {k.phone}</Text>
+                ))}
+              </View>
+            )}
 
             {notes ? (
               <View style={styles.recapSection}>
@@ -659,6 +739,13 @@ const styles = StyleSheet.create({
   /* country chips */
   countryChip:    { paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: COLORS.border, backgroundColor: '#1a1a1a' },
   countryChipTxt: { color: COLORS.sub, fontSize: 13, fontWeight: '600' },
+
+  /* co-travellers */
+  companionsWrap:  { marginTop: 6, marginBottom: 8 },
+  companionsTitle: { color: COLORS.text, fontSize: 15, fontWeight: '800', marginBottom: 4 },
+  companionsSub:   { color: COLORS.sub, fontSize: 12, lineHeight: 17, marginBottom: 14 },
+  companionCard:   { backgroundColor: '#141414', borderRadius: RADIUS.lg, padding: 14, borderWidth: 1, borderColor: COLORS.border, marginBottom: 12 },
+  companionTag:    { color: COLORS.primary, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
 
   /* recap */
   recapSection: { backgroundColor: '#1a1a1a', borderRadius: RADIUS.lg, padding: 16, borderWidth: 1, borderColor: COLORS.border, marginBottom: 12 },
