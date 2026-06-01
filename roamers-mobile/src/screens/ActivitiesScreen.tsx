@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { getActivities } from '../services/api';
 import { COLORS, RADIUS, SHADOW } from '../constants/theme';
 import Icon from '../components/Icons';
+import AppBottomBar from '../components/AppBottomBar';
 
 const { width } = Dimensions.get('window');
 const FEAT_W = Math.round(width * 0.52);
@@ -147,6 +148,7 @@ export default function ActivitiesScreen({ navigation }: any) {
         </View>
       </ScrollView>
 
+      <View style={{ flex: 1 }}>
       {loading ? (
         <ActivityIndicator color={COLORS.primary} size="large" style={{ marginTop: 40 }} />
       ) : (
@@ -322,6 +324,10 @@ export default function ActivitiesScreen({ navigation }: any) {
           </View>
         </ScrollView>
       )}
+      </View>
+
+      {/* Persistent bottom nav so Activities feels like a main section */}
+      <AppBottomBar navigation={navigation} />
     </View>
   );
 }
