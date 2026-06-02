@@ -42,6 +42,12 @@ var PORT   = process.env.PORT || 3000;
 var PUBLIC = path.join(__dirname, 'public');
 var isProd = process.env.NODE_ENV === 'production';
 
+/* Referral codes ("code de parrainage") — must match makeRefCode in the mobile app */
+var REFERRAL_DISCOUNT_PCT = 5;
+function makeRefCode(userId) {
+  return String(userId || '').replace(/-/g, '').toUpperCase().slice(0, 8);
+}
+
 app.set('trust proxy', 1);
 
 /* ── SECURITY HEADERS (Helmet + CSP) ───────────────────────── */
@@ -379,11 +385,18 @@ app.get('/api/promos/validate', function(req, res) {
   var code = (req.query.code || '').toUpperCase().trim();
   if (!code) return res.status(400).json({ error: 'Code requis' });
   var promo = db.promos.find(function(p){ return p.code === code && p.active; });
-  if (!promo) return res.status(404).json({ error: 'Code invalide ou expiré' });
-  if (promo.maxUses && promo.usedCount >= promo.maxUses) {
-    return res.status(400).json({ error: 'Code épuisé' });
+  if (promo) {
+    if (promo.maxUses && promo.usedCount >= promo.maxUses) {
+      return res.status(400).json({ error: 'Code épuisé' });
+    }
+    return res.json({ promo: { code: promo.code, discountPct: promo.discountPct, label: promo.label || ('−' + promo.discountPct + '%') } });
   }
-  res.json({ promo: { code: promo.code, discountPct: promo.discountPct, label: promo.label || ('−' + promo.discountPct + '%') } });
+  /* Referral codes (code de parrainage): derived from a user id, worth 5% off */
+  var referrer = db.users.find(function(u){ return makeRefCode(u.id) === code; });
+  if (referrer) {
+    return res.json({ promo: { code: code, discountPct: REFERRAL_DISCOUNT_PCT, label: 'Parrainage −' + REFERRAL_DISCOUNT_PCT + '%' } });
+  }
+  return res.status(404).json({ error: 'Code invalide ou expiré' });
 });
 
 /* ── STATIC FILES ────────────────────────────────────────────── */

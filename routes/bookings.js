@@ -89,6 +89,16 @@ router.post('/', optionalAuth, audit.audit('booking:create'), async function(req
       promoCode   = code;
       serverTotal = Math.round(serverTotal * (1 - discountPct / 100));
       if (db.promos) db.promos.update(function(p){ return p.code === code; }, { usedCount: (promo.usedCount || 0) + 1 });
+    } else if (!promo) {
+      /* Referral codes ("code de parrainage") — derived from a user id, worth 5% off */
+      var referrer = db.users ? db.users.find(function(u){
+        return String(u.id || '').replace(/-/g, '').toUpperCase().slice(0, 8) === code;
+      }) : null;
+      if (referrer) {
+        discountPct = 5;
+        promoCode   = code;
+        serverTotal = Math.round(serverTotal * (1 - discountPct / 100));
+      }
     }
   }
 
