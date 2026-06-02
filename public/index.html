@@ -1787,7 +1787,7 @@ function go(pg,param){
   window.scrollTo({top:0,behavior:'smooth'});
   syncNav();
   syncAppShell(pg);
-  setTimeout(function(){initReveal();initDetailSlider();if(pg==='home')initHeroCanvas();if(pg==='exp-detail'&&ST.param){loadExpReviews(ST.param);loadExpGallery(ST.param);}},80);
+  setTimeout(function(){initReveal();initDetailSlider();if(pg==='home'){initHeroCanvas();initAppVersion();}if(pg==='exp-detail'&&ST.param){loadExpReviews(ST.param);loadExpGallery(ST.param);}},80);
   /* Close mobile drawer if open */
   var mob2=document.getElementById('mob');
   if(mob2 && mob2.classList.contains('open')){mob2.classList.remove('open');document.body.style.overflow='';}
@@ -2382,6 +2382,11 @@ function chgCnt(f,d){
 
 function togAO(id){ST.bk.addons[id]=!ST.bk.addons[id];renderBk();}
 
+/* Email check mirrors the server regex (middleware/validate.js) so an address
+   that would be rejected at booking creation is caught at the Details step
+   instead of silently blocking the add-ons → payment transition. */
+function bkValidEmail(s){return /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,63}$/.test(String(s||'').trim());}
+
 function confirmBk(){
   var b=ST.bk,p=calcP();
   /* Disable button while working */
@@ -2511,7 +2516,7 @@ function renderBk(){
   if(b.step===1){
     body='<div class="mm"><div class="fg"><label class="fl">Departure Date *</label><input type="date" class="fi" id="bkDt" min="'+today+'" value="'+b.date+'" onchange="ST.bk.date=this.value;(function(v){var _d=ST.bk.exp&&ST.bk.exp.dates&&ST.bk.exp.dates.find(function(x){return x.raw===v;});ST.bk.datePrice=_d&&_d.price!=null?_d.price:null;})(this.value);var p=calcP();var pb=document.getElementById(\'pbd\');if(pb)pb.innerHTML=pRows(p,ST.bk)"></div><div class="fr"><div class="fg"><label class="fl">Adults (16+)</label><div class="cc"><button class="cb" onclick="chgCnt(\'a\',-1)">-</button><span class="cv" id="acnt">'+b.adults+'</span><button class="cb" onclick="chgCnt(\'a\',1)">+</button></div></div><div class="fg"><label class="fl">Children '+(b.exp.pChild?'':'<small style="color:var(--mut)">(N/A)</small>')+'</label><div class="cc" style="'+(b.exp.pChild?'':'opacity:.4;pointer-events:none')+'"><button class="cb" onclick="chgCnt(\'c\',-1)">-</button><span class="cv" id="ccnt">'+b.children+'</span><button class="cb" onclick="chgCnt(\'c\',1)">+</button></div></div></div><div class="pb" id="pbd">'+pRows(p,b)+'</div><p style="font-size:12px;color:var(--mut);text-align:center">Max '+b.exp.maxP+' · Min '+b.exp.minP+' people</p></div><div class="mf"><button class="btn btn-s" onclick="closeBk()">Cancel</button><button class="btn btn-r btn-lg" onclick="if(!ST.bk.date){toast(\'Please select a date\',\'warn\');return;}if(ST.bk.adults+ST.bk.children>ST.bk.exp.maxP){toast(\'Maximum \'+ST.bk.exp.maxP+\' people for this trip\',\'warn\');return;}ST.bk.step=2;renderBk()">Next: Your Details</button></div>';
   } else if(b.step===2){
-    body='<div class="mm"><div class="fr"><div class="fg"><label class="fl">First Name *</label><input type="text" class="fi" id="bFn" value="'+b.name+'" oninput="ST.bk.name=this.value"></div><div class="fg"><label class="fl">Last Name *</label><input type="text" class="fi" id="bLn" value="'+b.last+'" oninput="ST.bk.last=this.value"></div></div><div class="fg"><label class="fl">Email *</label><input type="email" class="fi" id="bEm" value="'+b.email+'" oninput="ST.bk.email=this.value"></div><div class="fr"><div class="fg"><label class="fl">Phone / WhatsApp *</label><input type="tel" class="fi" id="bPh" value="'+b.phone+'" oninput="ST.bk.phone=this.value"></div><div class="fg"><label class="fl">Country</label><select class="fi" onchange="ST.bk.country=this.value">'+['Morocco','France','China','Japan','USA','UK','Germany','UAE','Canada','Other'].map(function(c){return '<option'+(b.country===c?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div></div><div class="fg"><label class="fl">Special Requests</label><textarea class="fi" rows="3" placeholder="Dietary requirements, special occasions..." oninput="ST.bk.notes=this.value">'+b.notes+'</textarea></div></div><div class="mf"><button class="btn btn-s" onclick="ST.bk.step=1;renderBk()">Back</button><button class="btn btn-r btn-lg" onclick="var fn=document.getElementById(\'bFn\');var em=document.getElementById(\'bEm\');var ph=document.getElementById(\'bPh\');if(!fn||!fn.value.trim()){toast(\'Enter your first name\',\'warn\');return;}if(!em||!em.value.includes(\'@\')){toast(\'Enter a valid email\',\'warn\');return;}if(!ph||ph.value.trim().length<8){toast(\'Enter a valid phone number\',\'warn\');return;}ST.bk.step=3;renderBk()">Next: Add-ons</button></div>';
+    body='<div class="mm"><div class="fr"><div class="fg"><label class="fl">First Name *</label><input type="text" class="fi" id="bFn" value="'+b.name+'" oninput="ST.bk.name=this.value"></div><div class="fg"><label class="fl">Last Name *</label><input type="text" class="fi" id="bLn" value="'+b.last+'" oninput="ST.bk.last=this.value"></div></div><div class="fg"><label class="fl">Email *</label><input type="email" class="fi" id="bEm" value="'+b.email+'" oninput="ST.bk.email=this.value"></div><div class="fr"><div class="fg"><label class="fl">Phone / WhatsApp *</label><input type="tel" class="fi" id="bPh" value="'+b.phone+'" oninput="ST.bk.phone=this.value"></div><div class="fg"><label class="fl">Country</label><select class="fi" onchange="ST.bk.country=this.value">'+['Morocco','France','China','Japan','USA','UK','Germany','UAE','Canada','Other'].map(function(c){return '<option'+(b.country===c?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div></div><div class="fg"><label class="fl">Special Requests</label><textarea class="fi" rows="3" placeholder="Dietary requirements, special occasions..." oninput="ST.bk.notes=this.value">'+b.notes+'</textarea></div></div><div class="mf"><button class="btn btn-s" onclick="ST.bk.step=1;renderBk()">Back</button><button class="btn btn-r btn-lg" onclick="var fn=document.getElementById(\'bFn\');var em=document.getElementById(\'bEm\');var ph=document.getElementById(\'bPh\');if(!fn||!fn.value.trim()){toast(\'Enter your first name\',\'warn\');return;}if(!em||!bkValidEmail(em.value)){toast(\'Enter a valid email\',\'warn\');return;}if(!ph||ph.value.trim().length<8){toast(\'Enter a valid phone number\',\'warn\');return;}ST.bk.step=3;renderBk()">Next: Add-ons</button></div>';
   } else if(b.step===3){
     body='<div class="mm"><p style="font-size:13px;color:var(--mut);margin-bottom:14px">Enhance your experience with optional add-ons:</p>'+ADDONS.map(function(ao){return '<div class="ao"><div style="flex:1;margin-right:12px"><div style="font-size:14px;font-weight:600;margin-bottom:2px">'+ao.label+'</div><div style="font-size:12px;color:var(--mut)">'+ao.desc+' <strong style="color:var(--red)">+'+ao.price+' MAD'+ao.unit+'</strong></div></div><div class="at'+(b.addons[ao.id]?' on':'')+'" onclick="togAO(\''+ao.id+'\')"></div></div>';}).join('')+'<div class="pb" style="margin-top:16px">'+pRows(p,b)+'</div>'
     +(function(){
@@ -2794,7 +2799,7 @@ function pgHome(){
             +'<span style="color:#334155">·</span>'
             +'<span style="color:#e2e8f0;font-size:13px"><b>Gratuit</b></span>'
             +'<span style="color:#334155">·</span>'
-            +'<span style="color:#e2e8f0;font-size:13px"><b>56 MB</b></span>'
+            +'<span style="color:#e2e8f0;font-size:13px"><b id="dlSizeStat">80 MB</b></span>'
             +'<span style="color:#334155">·</span>'
             +'<span style="color:#e2e8f0;font-size:13px"><b>Android 8+</b></span>'
           +'</div>'
@@ -2810,9 +2815,16 @@ function pgHome(){
               +'Télécharger l\'APK Android'
             +'</a>'
             +'<div style="margin-top:12px;display:flex;flex-direction:column;gap:5px">'
-              +'<span style="color:#64748b;font-size:.8rem">v1.1.0 &nbsp;·&nbsp; 56 MB &nbsp;·&nbsp; Gratuit &nbsp;·&nbsp; Android 8+</span>'
+              +'<span style="color:#64748b;font-size:.8rem"><b id="dlVer" style="color:#94a3b8">v1.0.8</b> &nbsp;·&nbsp; <span id="dlSizeCta">80 MB</span> &nbsp;·&nbsp; Gratuit &nbsp;·&nbsp; Android 8+</span>'
               +'<span style="color:#475569;font-size:.75rem;max-width:360px;line-height:1.55">ℹ️ Activez <em>Sources inconnues</em> dans Paramètres → Sécurité avant l\'installation.</span>'
             +'</div>'
+          +'</div>'
+          +'<div id="dlNotes" style="margin-top:24px;background:rgba(255,255,255,.03);border:1px solid rgba(251,191,36,.15);border-radius:14px;padding:15px 18px;max-width:440px;text-align:left">'
+            +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+              +'<span style="font-size:14px">✨</span>'
+              +'<span style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#fbbf24">Nouveautés · <span id="dlNotesVer">v1.0.8</span></span>'
+            +'</div>'
+            +'<p id="dlNotesText" style="color:#cbd5e1;font-size:13px;line-height:1.65;margin:0">Téléchargez la dernière version pour profiter des améliorations les plus récentes.</p>'
           +'</div>'
         +'</div>'
 
@@ -6626,6 +6638,24 @@ function loadSiteConfig(){
     var waBtn = document.getElementById('floatingWA');
     if(waBtn) waBtn.href = waUrl('Bonjour Roamers Community!');
   }).catch(function(){/* keep defaults */});
+}
+
+/* Fill the home APK-download card from /api/app-version so version, size and
+   release notes stay in sync with the actual build instead of hard-coded HTML. */
+var _appVer=null;
+function _applyAppVer(d){
+  var ver = 'v' + (d.versionName || '1.0.8');
+  var size = (d.sizeMB ? d.sizeMB : 80) + ' MB';
+  var set = function(id, txt){ var el=document.getElementById(id); if(el) el.textContent=txt; };
+  set('dlVer', ver); set('dlNotesVer', ver);
+  set('dlSizeStat', size); set('dlSizeCta', size);
+  if(d.releaseNotes) set('dlNotesText', d.releaseNotes);
+}
+function initAppVersion(){
+  if(_appVer){ _applyAppVer(_appVer); return; }
+  fetch('/api/app-version').then(function(r){ return r.json(); }).then(function(d){
+    _appVer = d; _applyAppVer(d);
+  }).catch(function(){/* keep static fallback values already in the markup */});
 }
 
 /* Load live catalog from the API — always replaces EXP (even when empty). */

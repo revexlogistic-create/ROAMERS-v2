@@ -225,9 +225,14 @@ app.get('/api/health', function(req, res) {
 
 /* ── APP VERSION (mobile update check) ──────────────────────── */
 app.get('/api/app-version', function(req, res) {
+  var sizeMB = 80;
+  try {
+    sizeMB = Math.round(require('fs').statSync(path.join(PUBLIC, 'downloads', 'roamers.apk')).size / 1048576);
+  } catch (e) { /* APK missing — keep fallback so the page still renders */ }
   res.json({
     versionCode: 38,
     versionName: '1.0.8',
+    sizeMB: sizeMB,
     downloadUrl: '/downloads/roamers.apk',
     releaseNotes: 'Formulaire sur mesure simplifié (plus de double question sur le groupe), ajout des coordonnées de chaque participant lors des réservations à plusieurs, bouton pour partager l\'application avec vos amis, et détection automatique des mises à jour dans votre profil.'
   });
