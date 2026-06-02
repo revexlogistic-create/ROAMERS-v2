@@ -360,7 +360,11 @@ app.post('/api/push-token', express.json({ limit: '10kb' }), async function(req,
 app.get('/api/activities', function(req, res) {
   var acts = db.activities.all()
     .filter(function(a){ return a.status === 'active'; })
-    .sort(function(a, b){ return new Date(a.created) - new Date(b.created); });
+    .sort(function(a, b){
+      var so = (a.sortOrder||0) - (b.sortOrder||0);
+      if (so !== 0) return so;
+      return new Date(a.created) - new Date(b.created);
+    });
   res.json({ activities: acts });
 });
 

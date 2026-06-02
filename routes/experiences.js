@@ -202,6 +202,23 @@ router.post('/', adminOnly, async function(req, res) {
   res.status(201).json({ experience: doc });
 });
 
+/* Reorder voyages: body { ids: [...] } → assign sortOrder by index.
+   Declared before '/:id' so 'reorder' isn't matched as an experience id. */
+router.put('/reorder', adminOnly, async function(req, res) {
+  const ids = Array.isArray(req.body && req.body.ids) ? req.body.ids : null;
+  if (!ids) return res.status(400).json({ error: 'ids array required' });
+  ids.forEach(function(id, i){
+    db.experiences.update(function(e){ return e.id === id; }, { sortOrder: i });
+  });
+  try {
+    await db.experiences.flush();
+  } catch(err) {
+    console.error('[experiences reorder] DB flush failed:', err.message);
+    return res.status(503).json({ error: 'Sauvegarde échouée — base de données temporairement indisponible. Réessayez dans quelques secondes.' });
+  }
+  res.json({ ok: true, count: ids.length });
+});
+
 router.put('/:id', adminOnly, async function(req, res) {
   const b = req.body || {};
   const existing = db.experiences.find(function(e){ return e.id === req.params.id; });

@@ -305,7 +305,23 @@ function cleanDate(v) {
 }
 
 router.get('/activities', function(req, res) {
-  res.json({ activities: db.activities.all().sort(function(a, b){ return new Date(a.created) - new Date(b.created); }) });
+  res.json({ activities: db.activities.all().sort(function(a, b){
+    var so = (a.sortOrder||0) - (b.sortOrder||0);
+    if (so !== 0) return so;
+    return new Date(a.created) - new Date(b.created);
+  }) });
+});
+
+/* Reorder activities: body { ids: [...] } → assign sortOrder by index.
+   Must be declared before '/activities/:id' so 'reorder' isn't read as an id. */
+router.put('/activities/reorder', auditMod.audit('admin:activity:reorder'), async function(req, res) {
+  var ids = Array.isArray(req.body && req.body.ids) ? req.body.ids : null;
+  if (!ids) return res.status(400).json({ error: 'ids array required' });
+  ids.forEach(function(id, i){
+    db.activities.update(function(a){ return a.id === id; }, { sortOrder: i });
+  });
+  await db.activities.flush();
+  res.json({ ok: true, count: ids.length });
 });
 
 function parseLines(v) {
@@ -320,8 +336,10 @@ router.post('/activities', auditMod.audit('admin:activity:create'), async functi
   if (f.category && !ACTIVITY_CATS.includes(f.category)) return res.status(400).json({ error: 'Invalid category' });
   if (f.status   && !ACTIVITY_STATUS.includes(f.status)) return res.status(400).json({ error: 'Invalid status' });
   var now = new Date().toISOString();
+  var maxSort = db.activities.all().reduce(function(m, r){ return Math.max(m, r.sortOrder||0); }, 0);
   var doc = db.activities.insert({
     id:         uuidv4(),
+    sortOrder:  maxSort + 1,
     title:      String(f.title).trim(),
     category:   ACTIVITY_CATS.includes(f.category) ? f.category : 'adventure',
     duration:   f.duration   ? String(f.duration).trim()   : '',
