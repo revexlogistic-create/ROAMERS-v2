@@ -23,8 +23,28 @@ var authMw   = require('../middleware/auth');
 var validate = require('../middleware/validate');
 var auditMod = require('../middleware/audit');
 var wa       = require('../utils/whatsapp');
+var mailer   = require('../mailer');
 
 var auth = authMw.auth;
+
+/**
+ * Deliver an OTP through BOTH WhatsApp and email. Neither channel aborts the
+ * other; the registration succeeds as long as at least one delivers. Returns
+ * { waOk, emailOk, sent } so callers can report the real outcome to the client.
+ */
+async function deliverOtp(phone, email, name, otp) {
+  var waOk = false, emailOk = false;
+  try { await wa.sendOtp(phone, otp); waOk = true; }
+  catch (err) { console.error('[OTP WhatsApp error]', err.message); }
+  try { emailOk = await mailer.sendOtpEmail(email, otp, name); }
+  catch (err) { console.error('[OTP email error]', err.message); }
+  return { waOk: waOk, emailOk: emailOk, sent: waOk || emailOk };
+}
+
+/** True only in pure dev: no WhatsApp provider AND no SMTP configured. */
+function noOtpChannel() {
+  return !process.env.WHATSAPP_PROVIDER && !mailer.isConfigured();
+}
 
 /* JWT helpers */
 var BCRYPT_ROUNDS = 12;
@@ -135,24 +155,19 @@ router.post('/register', async function(req, res) {
   await db.pending.flush();
   auditMod.log('user:register:pending', pendingRec.id, ip);
 
-  /* Send OTP via WhatsApp — non-blocking (failure doesn't abort registration) */
-  var otpSent = false;
-  try {
-    await wa.sendOtp(phone, otp);
-    otpSent = true;
-  } catch (err) {
-    console.error('[OTP send error]', err.message);
-  }
-
-  var noProvider = !process.env.WHATSAPP_PROVIDER;
+  /* Send OTP via WhatsApp + email — non-blocking, success if either delivers */
+  var delivery   = await deliverOtp(phone, email, String(f.fname).trim(), otp);
+  var noChannel  = noOtpChannel();
 
   res.status(201).json({
     requireVerification: true,
-    phone:   maskPhone(phone),
-    email:   email,
-    otpSent: otpSent,
-    /* DEV: expose code in response when no WhatsApp provider is configured */
-    ...(noProvider ? { devCode: otp } : {}),
+    phone:     maskPhone(phone),
+    email:     email,
+    otpSent:   delivery.sent,
+    waSent:    delivery.waOk,
+    emailSent: delivery.emailOk,
+    /* DEV: expose code in response only when no delivery channel is configured */
+    ...(noChannel ? { devCode: otp } : {}),
   });
 });
 
@@ -270,7 +285,7 @@ router.post('/resend-otp', async function(req, res) {
   if (pend) {
     db.pending.update(function(p){ return p.id === pend.id; }, { otp: otp, otpExpiry: expiry, otpAttempts: 0 });
     await db.pending.flush();
-    return _doResend(res, pend.phone, otp, pend.id, ip);
+    return _doResend(res, pend, otp, ip);
   }
 
   /* Fallback: legacy unverified user in `users` */
@@ -280,23 +295,27 @@ router.post('/resend-otp', async function(req, res) {
 
   db.users.update(function(u){ return u.id === user.id; }, { otp: otp, otpExpiry: expiry, otpAttempts: 0 });
   await db.users.flush();
-  return _doResend(res, user.phone, otp, user.id, ip);
+  return _doResend(res, user, otp, ip);
 });
 
-async function _doResend(res, phone, otp, id, ip) {
-  var noProvider = !process.env.WHATSAPP_PROVIDER;
-  try {
-    await wa.sendOtp(phone, otp);
-    auditMod.log('user:otp:resent', id, ip);
-    res.json({
-      sent:  true,
-      phone: maskPhone(phone),
-      ...(noProvider ? { devCode: otp } : {}),
-    });
-  } catch (err) {
-    console.error('[OTP resend error]', err.message);
-    res.status(500).json({ error: 'Failed to send code. Please try again.' });
+async function _doResend(res, rec, otp, ip) {
+  var delivery  = await deliverOtp(rec.phone, rec.email, rec.fname, otp);
+  var noChannel = noOtpChannel();
+
+  /* Both channels failed and at least one is configured → real send failure */
+  if (!delivery.sent && !noChannel) {
+    console.error('[OTP resend] both channels failed for', rec.email);
+    return res.status(500).json({ error: 'Failed to send code. Please try again.' });
   }
+
+  auditMod.log('user:otp:resent', rec.id, ip);
+  res.json({
+    sent:      delivery.sent,
+    phone:     maskPhone(rec.phone),
+    waSent:    delivery.waOk,
+    emailSent: delivery.emailOk,
+    ...(noChannel ? { devCode: otp } : {}),
+  });
 }
 
 /* ── LOGIN ───────────────────────────────────────────────────── */
@@ -319,7 +338,7 @@ router.post('/login', function(req, res) {
       var pExpiry = new Date(Date.now() + OTP_TTL_MS).toISOString();
       db.pending.update(function(p){ return p.id === pend.id; }, { otp: pOtp, otpExpiry: pExpiry, otpAttempts: 0 });
       db.pending.flush().catch(function(){});
-      wa.sendOtp(pend.phone, pOtp).catch(function(e){ console.error('[OTP auto-resend]', e.message); });
+      deliverOtp(pend.phone, pend.email, pend.fname, pOtp).catch(function(e){ console.error('[OTP auto-resend]', e.message); });
       return res.status(403).json({
         error: 'Account not verified',
         requireVerification: true,
@@ -351,7 +370,7 @@ router.post('/login', function(req, res) {
     var newExpiry = new Date(Date.now() + OTP_TTL_MS).toISOString();
     db.users.update(function(u){ return u.id === user.id; }, { otp: newOtp, otpExpiry: newExpiry, otpAttempts: 0 });
     db.users.flush().catch(function(){});
-    wa.sendOtp(user.phone, newOtp).catch(function(e){ console.error('[OTP auto-resend]', e.message); });
+    deliverOtp(user.phone, user.email, user.fname, newOtp).catch(function(e){ console.error('[OTP auto-resend]', e.message); });
     return res.status(403).json({
       error: 'Account not verified',
       requireVerification: true,

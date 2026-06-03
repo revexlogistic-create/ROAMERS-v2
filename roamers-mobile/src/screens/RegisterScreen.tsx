@@ -53,7 +53,8 @@ export default function RegisterScreen({ navigation, route }: any) {
   const [step, setStep]               = useState<'form' | 'otp'>(route?.params?.verifyEmail ? 'otp' : 'form');
   const [maskedPhone, setMaskedPhone] = useState<string>(route?.params?.verifyPhone || '');
   const [regEmail, setRegEmail]       = useState<string>(route?.params?.verifyEmail || '');
-  const [devCode, setDevCode]         = useState<string>('');   // code shown when WA provider not set
+  const [devCode, setDevCode]         = useState<string>('');   // code shown when no provider set
+  const [channels, setChannels]       = useState<{ wa: boolean; email: boolean }>({ wa: false, email: false });
 
   const [otp, setOtp]               = useState('');
   const [verifying, setVerifying]   = useState(false);
@@ -114,6 +115,7 @@ export default function RegisterScreen({ navigation, route }: any) {
       const data = await resendOtp(regEmail);
       setMaskedPhone(data.phone || maskedPhone);
       if (data.devCode) setDevCode(data.devCode);
+      setChannels({ wa: !!data.waSent, email: !!data.emailSent });
       setOtp('');
       setCountdown(RESEND_DELAY);
       if (timerRef.current) clearInterval(timerRef.current);
@@ -151,6 +153,7 @@ export default function RegisterScreen({ navigation, route }: any) {
         setMaskedPhone(data.phone || fullPhone);
         setRegEmail(data.email  || form.email.toLowerCase().trim());
         if (data.devCode) setDevCode(data.devCode);
+        setChannels({ wa: !!data.waSent, email: !!data.emailSent });
         setOtp('');
         setStep('otp');
       } else if (data.token) {
@@ -177,8 +180,15 @@ export default function RegisterScreen({ navigation, route }: any) {
             <Text style={styles.logo}>ROAMERS</Text>
             <Text style={styles.title}>Vérification</Text>
             <Text style={styles.sub}>
-              Code à 6 chiffres envoyé sur WhatsApp au{'\n'}
-              <Text style={{ color: COLORS.text, fontWeight: '700' }}>{maskedPhone}</Text>
+              {channels.wa && channels.email ? (
+                <>Code à 6 chiffres envoyé par WhatsApp et par email.{'\n'}WhatsApp&nbsp;: <Text style={{ color: COLORS.text, fontWeight: '700' }}>{maskedPhone}</Text></>
+              ) : channels.email && !channels.wa ? (
+                <>Code à 6 chiffres envoyé par email à{'\n'}<Text style={{ color: COLORS.text, fontWeight: '700' }}>{regEmail}</Text></>
+              ) : channels.wa && !channels.email ? (
+                <>Code à 6 chiffres envoyé sur WhatsApp au{'\n'}<Text style={{ color: COLORS.text, fontWeight: '700' }}>{maskedPhone}</Text></>
+              ) : (
+                <>Saisissez le code de vérification à 6 chiffres.</>
+              )}
             </Text>
 
             {/* DEV MODE banner — only shown when WhatsApp provider not configured */}

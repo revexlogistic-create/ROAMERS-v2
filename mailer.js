@@ -35,6 +35,51 @@ async function send(to, subject, html) {
   await transporter.sendMail({ from: FROM, to, subject, html });
 }
 
+/** True when an SMTP transporter is configured (used to gate dev devCode). */
+function isConfigured() { return !!transporter; }
+
+/**
+ * Send a verification (OTP) code by email.
+ * Returns true ONLY if the mail was actually accepted by the SMTP server,
+ * false otherwise (transporter missing or send failed) — callers rely on this
+ * boolean to decide whether the customer really received a code.
+ */
+async function sendOtpEmail(to, code, name) {
+  if (!transporter) {
+    console.log('[MAIL — not configured] OTP for', to, '=', code);
+    return false;
+  }
+  var safeName = e(name || '');
+  var safeCode = e(String(code));
+  var html = `
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0e0e0e;border-radius:14px;overflow:hidden">
+      <div style="background:#B8172E;padding:26px;text-align:center">
+        <h1 style="color:#fff;font-size:22px;margin:0;letter-spacing:2px">ROAMERS COMMUNITY</h1>
+      </div>
+      <div style="padding:28px;background:#fff">
+        <p style="color:#111;font-size:15px">Bonjour ${safeName || ''},</p>
+        <p style="color:#444;font-size:14px;line-height:21px">Voici votre code de vérification pour activer votre compte&nbsp;:</p>
+        <div style="text-align:center;margin:22px 0">
+          <span style="display:inline-block;background:#f6f6f6;border:2px solid #B8172E;border-radius:12px;padding:14px 26px;font-size:32px;font-weight:800;letter-spacing:10px;color:#B8172E">${safeCode}</span>
+        </div>
+        <p style="color:#666;font-size:13px;line-height:19px">Ce code est valable <strong>15 minutes</strong>. Ne le partagez avec personne.</p>
+        <p style="color:#999;font-size:12px;margin-top:22px">Si vous n'avez pas demandé ce code, ignorez simplement cet email.</p>
+      </div>
+    </div>`;
+  try {
+    await transporter.sendMail({
+      from: FROM,
+      to: to,
+      subject: 'Votre code de vérification Roamers : ' + String(code),
+      html: html,
+    });
+    return true;
+  } catch (err) {
+    console.error('[OTP email error]', err.message);
+    return false;
+  }
+}
+
 /* ── EMAIL TEMPLATES (all user values HTML-escaped) ───────────── */
 
 async function sendBookingConfirmation(b) {
@@ -109,4 +154,4 @@ async function sendTeamRequest(r) {
   await send(ADMIN_EMAIL, '[Team Building] ' + r.id + ' — ' + r.company, html);
 }
 
-module.exports = { sendBookingConfirmation, sendContactNotification, sendPlanRequest, sendTeamRequest };
+module.exports = { sendBookingConfirmation, sendContactNotification, sendPlanRequest, sendTeamRequest, sendOtpEmail, isConfigured };
