@@ -79,6 +79,9 @@ app.use(helmet({
     }
   },
   crossOriginEmbedderPolicy:  false,   // kept off — third-party Unsplash images
+  /* Allow popups (Google Sign-In opens an accounts.google.com popup that must
+     communicate back to the opener). 'same-origin' breaks it → blank popup. */
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
