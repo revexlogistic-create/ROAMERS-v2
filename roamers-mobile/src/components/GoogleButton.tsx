@@ -1,22 +1,35 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, Alert, View } from 'react-native';
-import {
-  GoogleSignin,
-  statusCodes,
-} from '@react-native-google-signin/google-signin';
 import { useAuth } from '../context/AuthContext';
 import { googleLogin } from '../services/api';
 import { RADIUS } from '../constants/theme';
 import { GOOGLE_WEB_CLIENT_ID, GOOGLE_CONFIGURED } from '../constants/google';
 
-/* Configure once at module load. webClientId is what mints the ID token the
-   backend verifies; the Android OAuth client (package + SHA-1) is matched
-   automatically by Google Play Services — no redirect URIs involved. */
-if (GOOGLE_CONFIGURED) {
-  GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+/* Load the native module defensively. If anything is off with the native side,
+   we capture it here instead of letting it crash the whole app at startup. */
+let GoogleSignin: any = null;
+let statusCodes: any = {};
+try {
+  const mod = require('@react-native-google-signin/google-signin');
+  GoogleSignin = mod.GoogleSignin;
+  statusCodes = mod.statusCodes || {};
+} catch (e) {
+  GoogleSignin = null;
 }
 
-/** Pull the ID token out of whatever shape this SDK version returns. */
+let _configured = false;
+function ensureConfigured(): boolean {
+  if (!GoogleSignin || !GOOGLE_CONFIGURED) return false;
+  if (_configured) return true;
+  try {
+    GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+    _configured = true;
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 function extractIdToken(res: any): string | null {
   return res?.data?.idToken || res?.idToken || res?.data?.user?.idToken || null;
 }
@@ -26,13 +39,16 @@ export default function GoogleButton({ onDone }: { onDone?: () => void }) {
   const [busy, setBusy] = useState(false);
 
   async function handlePress() {
+    if (!ensureConfigured()) {
+      Alert.alert('Indisponible', 'La connexion Google n\'est pas disponible sur cet appareil.');
+      return;
+    }
     setBusy(true);
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       const res: any = await GoogleSignin.signIn();
       const idToken = extractIdToken(res);
       if (!idToken) {
-        /* type === 'cancelled' has no token */
         if (res?.type === 'cancelled') return;
         throw new Error('Aucun jeton Google reçu.');
       }
@@ -52,7 +68,9 @@ export default function GoogleButton({ onDone }: { onDone?: () => void }) {
     }
   }
 
-  if (!GOOGLE_CONFIGURED) return null;
+  /* Render nothing if the native module is missing or config isn't set —
+     never block or crash the screen. */
+  if (!GoogleSignin || !GOOGLE_CONFIGURED) return null;
 
   return (
     <View style={styles.wrap}>
