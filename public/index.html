@@ -1787,7 +1787,7 @@ function go(pg,param){
   window.scrollTo({top:0,behavior:'smooth'});
   syncNav();
   syncAppShell(pg);
-  setTimeout(function(){initReveal();initDetailSlider();if(pg==='home'){initHeroCanvas();initAppVersion();}if(pg==='exp-detail'&&ST.param){loadExpReviews(ST.param);loadExpGallery(ST.param);}},80);
+  setTimeout(function(){initReveal();initDetailSlider();if(pg==='home'){initHeroCanvas();initAppVersion();}if(pg==='login'){initGoogleAuth();}if(pg==='exp-detail'&&ST.param){loadExpReviews(ST.param);loadExpGallery(ST.param);}},80);
   /* Close mobile drawer if open */
   var mob2=document.getElementById('mob');
   if(mob2 && mob2.classList.contains('open')){mob2.classList.remove('open');document.body.style.overflow='';}
@@ -2054,6 +2054,43 @@ function doLogout(){
   syncNav();
   go('home');
   toast('Vous avez été déconnecté.');
+}
+
+/* ── Google Sign-In (web) ─────────────────────────────────────────
+   Loads Google Identity Services, renders the official button, and on
+   success posts the returned ID token to the SAME backend endpoint the
+   mobile app uses (/api/auth/google). */
+var GWEB_CLIENT_ID = '1012258210508-m4q5q3io2v8g3tcjdkp40vi9ihnjhrsb.apps.googleusercontent.com';
+function initGoogleAuth(){
+  if(window.google && window.google.accounts && window.google.accounts.id){ _renderGBtn(); return; }
+  if(window.__gsiLoading) return;
+  window.__gsiLoading = true;
+  var s=document.createElement('script');
+  s.src='https://accounts.google.com/gsi/client'; s.async=true; s.defer=true;
+  s.onload=function(){ _renderGBtn(); };
+  document.head.appendChild(s);
+}
+function _renderGBtn(){
+  try{
+    if(!(window.google&&google.accounts&&google.accounts.id)) return;
+    var el=document.getElementById('gBtnLogin'); if(!el) return;
+    el.innerHTML='';
+    google.accounts.id.initialize({ client_id: GWEB_CLIENT_ID, callback: gAuthCallback });
+    google.accounts.id.renderButton(el, { type:'standard', theme:'filled_blue', size:'large', text:'continue_with', shape:'pill', logo_alignment:'center', width:300 });
+  }catch(e){ /* origin not authorised yet — button just won't render */ }
+}
+function gAuthCallback(resp){
+  if(!resp || !resp.credential){ return; }
+  apiPost('/auth/google',{ idToken: resp.credential })
+    .then(function(d){
+      localStorage.setItem('rc_token',d.token);
+      localStorage.setItem('rc_user',JSON.stringify(d.user));
+      ST.user=d.user; syncNav();
+      if(d.user.role==='admin'){ sessionStorage.setItem('rc_admin_auth','true'); window.location.href='admin.html'; return; }
+      go('dashboard','overview');
+      toast('Bienvenue, '+d.user.fname+' !');
+    })
+    .catch(function(err){ toast(err.message||'Connexion Google échouée','warn'); });
 }
 
 function saveProfile(){
@@ -5626,10 +5663,7 @@ function pgLogin(){
   +'<div style="text-align:right;margin:-4px 0 20px"><button onclick="switchToForgot()" style="background:none;border:none;font-size:12px;color:var(--red);cursor:pointer;font-family:inherit;font-weight:600">Forgot password?</button></div>'
   +'<button class="btn btn-r btn-full btn-lg" style="border-radius:12px;font-size:15px;padding:16px" onclick="doLogin()">Sign In to Roamers</button>'
   +'<div class="sdiv">or continue with</div>'
-  +'<div class="social-grid">'
-  +'<button class="social-btn" onclick="toast(\'Connect OAuth in production\',\'warn\')"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#EA4335" d="M5.27 9.77A7.24 7.24 0 0 1 12 4.75c1.74 0 3.32.63 4.55 1.65l3.38-3.38A11.95 11.95 0 0 0 12 .75C8.01.75 4.56 2.98 2.73 6.28l2.54 3.49z"/><path fill="#34A853" d="M12 23.25c3.23 0 5.94-1.07 7.92-2.9l-3.66-3A7.24 7.24 0 0 1 4.74 14.2l-3.49 2.55A11.95 11.95 0 0 0 12 23.25z"/><path fill="#4A90D9" d="M23.25 12c0-.82-.08-1.62-.22-2.39H12v4.52h6.34a5.4 5.4 0 0 1-2.34 3.54l3.66 3C21.91 18.56 23.25 15.5 23.25 12z"/><path fill="#FBBC05" d="M4.74 14.2A7.24 7.24 0 0 1 4.75 12c0-.77.11-1.52.32-2.23L2.53 6.28A11.95 11.95 0 0 0 .75 12c0 1.93.46 3.75 1.27 5.37l2.72-3.17z"/></svg>Google</button>'
-  +'<button class="social-btn" onclick="toast(\'Connect OAuth in production\',\'warn\')"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#1877F2" d="M24 12a12 12 0 1 0-13.875 11.85V15.47H7.08V12h3.045V9.356c0-3.007 1.79-4.668 4.532-4.668 1.313 0 2.686.234 2.686.234V7.875h-1.513c-1.491 0-1.956.926-1.956 1.875V12h3.328l-.532 3.47H13.875V23.85A12.005 12.005 0 0 0 24 12z"/></svg>Facebook</button>'
-  +'</div>'
+  +'<div id="gBtnLogin" style="display:flex;justify-content:center;min-height:44px"></div>'
   +'<p style="text-align:center;font-size:13px;color:var(--mut);margin-top:20px">No account yet? <button onclick="switchTab2(\'register\')" style="background:none;border:none;color:var(--red);font-weight:700;cursor:pointer;font-size:13px;font-family:inherit">Create one free &rarr;</button></p>'
   +'</div>'
 
