@@ -42,6 +42,9 @@
         "projectId": "06333419-b790-4476-9d61-2f6673870118"
       }
     },
-    "owner": "amineroamers"
+    "owner": "amineroamers",
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }
