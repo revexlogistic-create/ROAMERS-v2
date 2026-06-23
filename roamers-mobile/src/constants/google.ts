@@ -10,7 +10,7 @@
  * stays hidden until at least the web client ID is filled in.
  */
 export const GOOGLE_WEB_CLIENT_ID     = '1012258210508-m4q5q3io2v8g3tcjdkp40vi9ihnjhrsb.apps.googleusercontent.com';
-export const GOOGLE_ANDROID_CLIENT_ID = 'PASTE_ANDROID_CLIENT_ID.apps.googleusercontent.com';
+export const GOOGLE_ANDROID_CLIENT_ID = '1012258210508-rau4u8htc60hi6flm4a3hvjnn4ga068h.apps.googleusercontent.com';
 export const GOOGLE_IOS_CLIENT_ID     = 'PASTE_IOS_CLIENT_ID.apps.googleusercontent.com';
 
 /** True once BOTH the web and Android client IDs are configured. */
