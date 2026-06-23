@@ -53,7 +53,9 @@ async function verifyIdToken(idToken) {
   var jwk  = keys.filter(function(k){ return k.kid === decoded.header.kid; })[0];
   if (!jwk) throw new Error('no matching Google signing key for kid ' + decoded.header.kid);
 
-  var pubKey = crypto.createPublicKey({ key: jwk, format: 'jwk' });
+  var keyObj = crypto.createPublicKey({ key: jwk, format: 'jwk' });
+  /* Export to PEM for maximum compatibility with jsonwebtoken */
+  var pubKey = keyObj.export({ type: 'spki', format: 'pem' });
   /* jwt.verify checks signature + expiry + issuer; throws on any failure */
   return jwt.verify(raw, pubKey, {
     algorithms: ['RS256'],

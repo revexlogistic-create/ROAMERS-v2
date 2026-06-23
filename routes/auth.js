@@ -394,10 +394,11 @@ router.post('/google', async function(req, res) {
   var idToken = (req.body || {}).idToken;
   if (!idToken) return res.status(400).json({ error: 'Missing Google token' });
 
-  /* TEMP DIAGNOSTIC: what kind of token are we actually receiving? */
-  console.log('[Google auth] token diag — prefix:', String(idToken).slice(0, 16),
-              '| length:', String(idToken).length,
-              '| dots:', (String(idToken).match(/\./g) || []).length);
+  /* TEMP DIAGNOSTIC: segment lengths reveal whether the signature is truncated.
+     A complete RS256 signature segment is ~342 chars. */
+  var _segs = String(idToken).split('.').map(function(s){ return s.length; });
+  console.log('[Google auth] token diag — total:', String(idToken).length,
+              '| segs(h,p,sig):', _segs.join(','));
 
   var payload;
   try {
