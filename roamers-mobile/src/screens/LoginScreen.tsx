@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import RInput from '../components/RInput';
 import RButton from '../components/RButton';
+import GoogleButton from '../components/GoogleButton';
 import { COLORS, RADIUS } from '../constants/theme';
 
 export default function LoginScreen({ navigation }: any) {
@@ -53,6 +54,7 @@ export default function LoginScreen({ navigation }: any) {
             <RInput label="Email" value={email} onChangeText={setEmail} placeholder="email@exemple.com" keyboardType="email-address" autoCapitalize="none" />
             <RInput label="Mot de passe" value={password} onChangeText={setPassword} placeholder="••••••••" secureTextEntry />
             <RButton label="Se connecter" onPress={submit} loading={loading} style={{ marginTop: 8 }} />
+            <GoogleButton onDone={() => navigation.goBack()} />
           </View>
 
           <TouchableOpacity style={styles.registerLink} onPress={() => navigation.replace('Register')}>

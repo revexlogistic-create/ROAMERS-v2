@@ -24,6 +24,7 @@ var validate = require('../middleware/validate');
 var auditMod = require('../middleware/audit');
 var wa       = require('../utils/whatsapp');
 var mailer   = require('../mailer');
+var google   = require('../utils/google');
 
 var auth = authMw.auth;
 
@@ -381,6 +382,75 @@ router.post('/login', function(req, res) {
 
   clearFailedLogins(user.id);
   auditMod.log('user:login', user.id, ip);
+  res.json({ token: makeToken(user), user: sanitizeUser(user) });
+});
+
+/* ── GOOGLE SIGN-IN ──────────────────────────────────────────────
+   The mobile app obtains a Google ID token (via expo-auth-session) and posts
+   it here. We verify it with Google, then find-or-create a verified account —
+   no OTP needed because Google already proved ownership of the email. */
+router.post('/google', async function(req, res) {
+  var ip      = auditMod.getIp(req);
+  var idToken = (req.body || {}).idToken;
+  if (!idToken) return res.status(400).json({ error: 'Missing Google token' });
+
+  var payload;
+  try {
+    payload = await google.verifyIdToken(idToken);
+  } catch (err) {
+    console.error('[Google auth] verify failed:', err.message);
+    return res.status(401).json({ error: 'Google sign-in failed' });
+  }
+
+  /* Audience check: the token must be issued for one of our OAuth client IDs */
+  var allowed = (process.env.GOOGLE_CLIENT_IDS || '')
+    .split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+  if (allowed.length && allowed.indexOf(payload.aud) === -1) {
+    console.error('[Google auth] aud mismatch:', payload.aud);
+    return res.status(401).json({ error: 'Google sign-in failed' });
+  }
+
+  if (String(payload.email_verified) !== 'true' || !payload.email) {
+    return res.status(401).json({ error: 'Google account email not verified' });
+  }
+
+  var email = String(payload.email).toLowerCase().trim();
+  var user  = db.users.find(function(u){ return u.email.toLowerCase() === email; });
+
+  if (!user) {
+    /* Create a fresh, already-verified account from the Google profile */
+    user = db.users.insert({
+      id:           uuidv4(),
+      fname:        payload.given_name || payload.name || 'Roamer',
+      lname:        payload.family_name || '',
+      email:        email,
+      /* Random unusable password — Google is the auth method, not a password */
+      password:     bcrypt.hashSync(uuidv4() + Date.now(), BCRYPT_ROUNDS),
+      phone:        '',
+      country:      'Morocco',
+      role:         'user',
+      bio:          '',
+      joined:       new Date().toISOString(),
+      wishlist:     [],
+      notifs:       [],
+      tokenVersion: 0,
+      loginFailCount: 0,
+      loginLockUntil: null,
+      verified:     true,
+      authProvider: 'google',
+    });
+    await db.users.flush();
+    /* Drop any half-finished OTP registration for the same email */
+    db.pending.remove(function(p){ return p.email.toLowerCase() === email; });
+    await db.pending.flush();
+    auditMod.log('user:register:google', user.id, ip);
+  } else {
+    if (checkLocked(user)) {
+      return res.status(429).json({ error: 'Account temporarily locked. Please try again later.' });
+    }
+    auditMod.log('user:login:google', user.id, ip);
+  }
+
   res.json({ token: makeToken(user), user: sanitizeUser(user) });
 });
 

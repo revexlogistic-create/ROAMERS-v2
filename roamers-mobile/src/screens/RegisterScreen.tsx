@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import RInput from '../components/RInput';
 import RButton from '../components/RButton';
+import GoogleButton from '../components/GoogleButton';
 import { COLORS, RADIUS } from '../constants/theme';
 import { verifyOtp, resendOtp } from '../services/api';
 
@@ -320,6 +321,7 @@ export default function RegisterScreen({ navigation, route }: any) {
             <RInput label="Mot de passe" value={form.password} onChangeText={set('password')} placeholder="Min. 8 caractères" secureTextEntry />
             <RInput label="Confirmer le mot de passe" value={form.confirm} onChangeText={set('confirm')} placeholder="Répéter le mot de passe" secureTextEntry />
             <RButton label="Créer mon compte" onPress={handleRegister} loading={submitting} style={{ marginTop: 8 }} />
+            <GoogleButton onDone={() => navigation.goBack()} />
           </View>
 
           <TouchableOpacity style={styles.loginLink} onPress={() => navigation.replace('Login')}>

@@ -34,6 +34,9 @@ export const login = (email: string, password: string) =>
 export const register = (data: object) =>
   api.post('/api/auth/register', data).then((r) => r.data);
 
+export const googleLogin = (idToken: string) =>
+  api.post('/api/auth/google', { idToken }).then((r) => r.data);
+
 export const verifyOtp = (email: string, code: string) =>
   api.post('/api/auth/verify-otp', { email, code }).then((r) => r.data);
 
