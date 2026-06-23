@@ -30,6 +30,9 @@ var LIMITS = {
 function getLimit(key) {
   if (!key) return LIMITS._default;
   var k = key.toLowerCase();
+  /* Auth tokens / JWTs are long (Google ID tokens ~1.1-1.5KB) — must NOT be
+     truncated or signature verification fails. */
+  if (/token|jwt|credential|idtoken/.test(k)) return 8000;
   if (/img|image|photo/.test(k)) return LIMITS.img;
   if (/video/.test(k))           return LIMITS.video;
   if (/message|msg/.test(k))     return LIMITS.message;
