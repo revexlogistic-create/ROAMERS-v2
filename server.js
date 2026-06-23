@@ -56,16 +56,20 @@ app.use(helmet({
     useDefaults: false,
     directives: {
       defaultSrc:  ["'self'"],
-      /* SPA uses inline scripts/styles — required for the SPA to function */
-      scriptSrc:   ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
+      /* SPA uses inline scripts/styles — required for the SPA to function.
+         accounts.google.com is required for Google Identity Services (login). */
+      scriptSrc:   ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net',
+                    'https://accounts.google.com'],
       styleSrc:    ["'self'", "'unsafe-inline'",
-                    'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'],
+                    'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net',
+                    'https://accounts.google.com'],
       fontSrc:     ["'self'", 'https://fonts.gstatic.com', 'data:'],
       /* Images: self, data: URIs (base64), and https CDNs (Unsplash, etc.) */
       imgSrc:      ["'self'", 'data:', 'blob:', 'https:'],
-      connectSrc:  ["'self'"],
+      connectSrc:  ["'self'", 'https://accounts.google.com'],
       mediaSrc:    ["'self'", 'data:', 'blob:'],
-      frameSrc:    ["'none'"],
+      /* Google Sign-In renders its button/prompt inside an accounts.google.com iframe */
+      frameSrc:    ['https://accounts.google.com'],
       objectSrc:   ["'none'"],
       baseUri:     ["'self'"],
       formAction:  ["'self'"],
