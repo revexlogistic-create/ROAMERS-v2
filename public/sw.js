@@ -1,92 +1,22 @@
-/* Roamers Community — Service Worker v1.1 */
-var CACHE = 'roamers-v2';
-var ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/ROAMERS_LOGO.png'
-];
-
-/* Install — cache core assets */
-self.addEventListener('install', function(e){
-  e.waitUntil(
-    caches.open(CACHE).then(function(cache){
-      return cache.addAll(ASSETS);
-    }).then(function(){
-      return self.skipWaiting();
-    })
-  );
+/* Roamers Community — Service Worker (self-retiring recovery build)
+ *
+ * A previous service worker cached broken pages during a backend outage and
+ * kept serving them. This build deletes ALL caches, unregisters itself, and
+ * reloads open pages so every device returns to the live site. It has NO fetch
+ * handler, so nothing is cached — all requests go straight to the network.
+ */
+self.addEventListener('install', function(){
+  self.skipWaiting();
 });
 
-/* Activate — clean old caches */
 self.addEventListener('activate', function(e){
   e.waitUntil(
-    caches.keys().then(function(keys){
-      return Promise.all(
-        keys.filter(function(k){ return k !== CACHE; })
-            .map(function(k){ return caches.delete(k); })
-      );
-    }).then(function(){
-      return self.clients.claim();
-    })
+    caches.keys()
+      .then(function(keys){ return Promise.all(keys.map(function(k){ return caches.delete(k); })); })
+      .then(function(){ return self.registration.unregister(); })
+      .then(function(){ return self.clients.matchAll({ type: 'window' }); })
+      .then(function(clients){
+        clients.forEach(function(c){ try { c.navigate(c.url); } catch(err){} });
+      })
   );
-});
-
-/* Fetch — network first, fall back to cache */
-self.addEventListener('fetch', function(e){
-  /* Only handle GET requests for same origin or Unsplash images */
-  if(e.request.method !== 'GET') return;
-
-  var url = new URL(e.request.url);
-
-  /* For Unsplash images — cache first (they don't change) */
-  if(url.hostname === 'images.unsplash.com'){
-    e.respondWith(
-      caches.match(e.request).then(function(cached){
-        if(cached) return cached;
-        return fetch(e.request).then(function(res){
-          var clone = res.clone();
-          caches.open(CACHE).then(function(cache){ cache.put(e.request, clone); });
-          return res;
-        }).catch(function(){
-          return new Response('', { status: 408 });
-        });
-      })
-    );
-    return;
-  }
-
-  /* For Google Fonts — cache first */
-  if(url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')){
-    e.respondWith(
-      caches.match(e.request).then(function(cached){
-        if(cached) return cached;
-        return fetch(e.request).then(function(res){
-          var clone = res.clone();
-          caches.open(CACHE).then(function(cache){ cache.put(e.request, clone); });
-          return res;
-        });
-      })
-    );
-    return;
-  }
-
-  /* For app shell (same origin) — network first, cache fallback */
-  if(url.origin === self.location.origin){
-    e.respondWith(
-      fetch(e.request).then(function(res){
-        /* Only cache successful, non-redirect responses — never poison the
-           cache with error pages (404/5xx) or auth redirects. */
-        if(res && res.ok && res.type === 'basic'){
-          var clone = res.clone();
-          caches.open(CACHE).then(function(cache){ cache.put(e.request, clone); });
-        }
-        return res;
-      }).catch(function(){
-        return caches.match(e.request).then(function(cached){
-          return cached || caches.match('/index.html');
-        });
-      })
-    );
-  }
 });
