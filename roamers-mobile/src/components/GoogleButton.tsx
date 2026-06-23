@@ -1,54 +1,52 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, Alert, View } from 'react-native';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
+import {
+  GoogleSignin,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import { useAuth } from '../context/AuthContext';
 import { googleLogin } from '../services/api';
 import { RADIUS } from '../constants/theme';
-import {
-  GOOGLE_WEB_CLIENT_ID,
-  GOOGLE_ANDROID_CLIENT_ID,
-  GOOGLE_IOS_CLIENT_ID,
-  GOOGLE_CONFIGURED,
-} from '../constants/google';
+import { GOOGLE_WEB_CLIENT_ID, GOOGLE_CONFIGURED } from '../constants/google';
 
-/* Required so the auth popup can close itself and return to the app */
-WebBrowser.maybeCompleteAuthSession();
+/* Configure once at module load. webClientId is what mints the ID token the
+   backend verifies; the Android OAuth client (package + SHA-1) is matched
+   automatically by Google Play Services — no redirect URIs involved. */
+if (GOOGLE_CONFIGURED) {
+  GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+}
 
-/**
- * "Continuer avec Google" button. Renders nothing until the Google client IDs
- * are configured (see src/constants/google.ts), so the build is safe to ship
- * before Google Cloud setup is finished.
- */
+/** Pull the ID token out of whatever shape this SDK version returns. */
+function extractIdToken(res: any): string | null {
+  return res?.data?.idToken || res?.idToken || res?.data?.user?.idToken || null;
+}
+
 export default function GoogleButton({ onDone }: { onDone?: () => void }) {
   const { loginWithToken } = useAuth();
   const [busy, setBusy] = useState(false);
 
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
-    iosClientId: GOOGLE_IOS_CLIENT_ID,
-  });
-
-  useEffect(() => {
-    if (!response) return;
-    if (response.type === 'success') {
-      const idToken = (response.params as any)?.id_token;
-      if (idToken) { handleToken(idToken); return; }
-      setBusy(false);
-    } else {
-      /* error / dismiss / cancel */
-      setBusy(false);
-    }
-  }, [response]);
-
-  async function handleToken(idToken: string) {
+  async function handlePress() {
+    setBusy(true);
     try {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const res: any = await GoogleSignin.signIn();
+      const idToken = extractIdToken(res);
+      if (!idToken) {
+        /* type === 'cancelled' has no token */
+        if (res?.type === 'cancelled') return;
+        throw new Error('Aucun jeton Google reçu.');
+      }
       const data = await googleLogin(idToken);
       await loginWithToken(data.token, data.user);
       onDone?.();
     } catch (e: any) {
-      Alert.alert('Connexion Google échouée', e?.message || 'Veuillez réessayer.');
+      if (e?.code === statusCodes.SIGN_IN_CANCELLED || e?.code === statusCodes.IN_PROGRESS) {
+        /* user cancelled / already in progress — stay silent */
+      } else if (e?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Google Play requis', 'Les services Google Play ne sont pas disponibles sur cet appareil.');
+      } else {
+        Alert.alert('Connexion Google échouée', e?.message || 'Veuillez réessayer.');
+      }
     } finally {
       setBusy(false);
     }
@@ -63,12 +61,7 @@ export default function GoogleButton({ onDone }: { onDone?: () => void }) {
         <Text style={styles.or}>ou</Text>
         <View style={styles.line} />
       </View>
-      <TouchableOpacity
-        style={styles.btn}
-        activeOpacity={0.85}
-        disabled={!request || busy}
-        onPress={() => { setBusy(true); promptAsync(); }}
-      >
+      <TouchableOpacity style={styles.btn} activeOpacity={0.85} disabled={busy} onPress={handlePress}>
         {busy ? (
           <ActivityIndicator color="#3c4043" />
         ) : (

@@ -230,8 +230,8 @@ app.get('/api/app-version', function(req, res) {
     sizeMB = Math.round(require('fs').statSync(path.join(PUBLIC, 'downloads', 'roamers.apk')).size / 1048576);
   } catch (e) { /* APK missing — keep fallback so the page still renders */ }
   res.json({
-    versionCode: 39,
-    versionName: '1.0.9',
+    versionCode: 40,
+    versionName: '1.0.10',
     sizeMB: sizeMB,
     downloadUrl: '/downloads/roamers.apk',
     releaseNotes: 'Connexion avec Google : créez votre compte ou connectez-vous en un seul geste, sans code de vérification. Plus rapide et plus simple.'

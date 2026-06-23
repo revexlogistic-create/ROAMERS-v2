@@ -2,7 +2,7 @@
   "expo": {
     "name": "Roamers Community",
     "slug": "roamers-community",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "orientation": "portrait",
     "scheme": "roamers",
     "icon": "./assets/icon.png",
@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "ma.roamerscommunity.app",
-      "versionCode": 39,
+      "versionCode": 40,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
@@ -44,7 +44,8 @@
     },
     "owner": "amineroamers",
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin"
     ]
   }
 }
