@@ -230,11 +230,11 @@ app.get('/api/app-version', function(req, res) {
     sizeMB = Math.round(require('fs').statSync(path.join(PUBLIC, 'downloads', 'roamers.apk')).size / 1048576);
   } catch (e) { /* APK missing — keep fallback so the page still renders */ }
   res.json({
-    versionCode: 38,
-    versionName: '1.0.8',
+    versionCode: 39,
+    versionName: '1.0.9',
     sizeMB: sizeMB,
     downloadUrl: '/downloads/roamers.apk',
-    releaseNotes: 'Formulaire sur mesure simplifié (plus de double question sur le groupe), ajout des coordonnées de chaque participant lors des réservations à plusieurs, bouton pour partager l\'application avec vos amis, et détection automatique des mises à jour dans votre profil.'
+    releaseNotes: 'Connexion avec Google : créez votre compte ou connectez-vous en un seul geste, sans code de vérification. Plus rapide et plus simple.'
   });
 });
 
