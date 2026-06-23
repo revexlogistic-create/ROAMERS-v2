@@ -1,5 +1,5 @@
-/* Roamers Community — Service Worker v1.0 */
-var CACHE = 'roamers-v1';
+/* Roamers Community — Service Worker v1.1 */
+var CACHE = 'roamers-v2';
 var ASSETS = [
   '/',
   '/index.html',
@@ -75,8 +75,12 @@ self.addEventListener('fetch', function(e){
   if(url.origin === self.location.origin){
     e.respondWith(
       fetch(e.request).then(function(res){
-        var clone = res.clone();
-        caches.open(CACHE).then(function(cache){ cache.put(e.request, clone); });
+        /* Only cache successful, non-redirect responses — never poison the
+           cache with error pages (404/5xx) or auth redirects. */
+        if(res && res.ok && res.type === 'basic'){
+          var clone = res.clone();
+          caches.open(CACHE).then(function(cache){ cache.put(e.request, clone); });
+        }
         return res;
       }).catch(function(){
         return caches.match(e.request).then(function(cached){
