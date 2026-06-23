@@ -394,6 +394,11 @@ router.post('/google', async function(req, res) {
   var idToken = (req.body || {}).idToken;
   if (!idToken) return res.status(400).json({ error: 'Missing Google token' });
 
+  /* TEMP DIAGNOSTIC: what kind of token are we actually receiving? */
+  console.log('[Google auth] token diag — prefix:', String(idToken).slice(0, 16),
+              '| length:', String(idToken).length,
+              '| dots:', (String(idToken).match(/\./g) || []).length);
+
   var payload;
   try {
     payload = await google.verifyIdToken(idToken);
