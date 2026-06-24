@@ -140,7 +140,7 @@ var stdUrle   = express.urlencoded({ extended: true, limit: '2mb' });
 /* Auth & public forms: 100 KB */
 app.use('/api/auth',     sizeGuard(100 * 1024), smallJson, smallUrle);
 app.use('/api/forms',    sizeGuard(200 * 1024), smallJson, smallUrle);
-app.use('/api/bookings', sizeGuard(200 * 1024), smallJson, smallUrle);
+app.use('/api/bookings', sizeGuard(1024 * 1024), stdJson, stdUrle);
 
 /* Admin settings endpoint: 25 MB (for base64 image uploads) */
 app.use('/api/admin/settings', largeJson, largeUrle);

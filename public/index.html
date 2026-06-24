@@ -2430,7 +2430,9 @@ function confirmBk(){
   var btn=document.querySelector('.mf .btn-r');
   if(btn){btn.disabled=true;btn.textContent='⏳ En cours…';}
   apiPost('/bookings',{
-    expId:b.exp.id, expTitle:b.exp.title, expImg:b.exp.img||'', expLoc:b.exp.loc||'',
+    /* Don't ship base64 images in the booking — the server resolves the
+       experience by expId. Only forward a real URL if there is one. */
+    expId:b.exp.id, expTitle:b.exp.title, expImg:(/^data:/.test(b.exp.img||'')?'':(b.exp.img||'')), expLoc:b.exp.loc||'',
     duration:b.exp.dur||'', segment:b.exp.segment||'', type:b.exp.type||'',
     date:b.date, adults:b.adults, children:b.children,
     addons:b.addons, notes:b.notes,
