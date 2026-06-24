@@ -1947,7 +1947,7 @@ var _otpEmail = '';
 function showOtpPanel(maskedPhone, devCode) {
   switchTab2('otp');
   var ph = document.getElementById('otpPhone');
-  if (ph) ph.textContent = maskedPhone || 'votre WhatsApp';
+  if (ph) ph.textContent = _otpEmail || 'votre email';
   var devNote = document.getElementById('otpDevNote');
   if (devNote) devNote.style.display = devCode ? 'block' : 'none';
   var codeEl = document.getElementById('otpDevCodeText');
@@ -1958,7 +1958,7 @@ function showOtpPanel(maskedPhone, devCode) {
 
 function doVerifyOtp() {
   var code = v('otpCode').replace(/\s/g,'');
-  if (!code || code.length < 4) { showErr('otpErr','Entrez le code reçu sur WhatsApp.'); return; }
+  if (!code || code.length < 4) { showErr('otpErr','Entrez le code reçu par email.'); return; }
   var btn = document.getElementById('otpVerifyBtn');
   if (btn) { btn.disabled=true; btn.textContent='⏳ Vérification…'; }
   apiPost('/auth/verify-otp',{ email:_otpEmail, code:code })
@@ -1981,7 +1981,7 @@ function doResendOtp() {
   if (btn) { btn.disabled=true; btn.textContent='Envoi…'; }
   apiPost('/auth/resend-otp',{ email:_otpEmail })
     .then(function(d){
-      toast('✓ Nouveau code envoyé sur '+(d.phone||'votre WhatsApp'));
+      toast('✓ Nouveau code envoyé par email');
       var devNote = document.getElementById('otpDevNote');
       var codeEl  = document.getElementById('otpDevCodeText');
       if (d.devCode) { if(devNote) devNote.style.display='block'; if(codeEl) codeEl.textContent=d.devCode; }
@@ -1999,7 +1999,7 @@ function doRegister(){
   var co=document.getElementById('rCo');
   if(!fn||!ln){showErr('regErr','Veuillez entrer votre nom complet.');return;}
   if(!em||!em.includes('@')){showErr('regErr','Email invalide.');return;}
-  if(!ph||ph.trim().length<8){showErr('regErr','Numéro de téléphone requis (WhatsApp) pour la vérification.');return;}
+  if(!ph||ph.trim().length<8){showErr('regErr','Numéro de téléphone requis.');return;}
   if(pw.length<8){showErr('regErr','Le mot de passe doit comporter au moins 8 caractères.');return;}
   if(pw!==pw2){showErr('regErr','Les mots de passe ne correspondent pas.');return;}
   if(tc&&!tc.checked){showErr('regErr','Veuillez accepter les conditions d\'utilisation.');return;}
@@ -2008,7 +2008,7 @@ function doRegister(){
       if(d.requireVerification){
         _otpEmail = d.email || em;
         showOtpPanel(d.phone, d.devCode);
-        if(!d.otpSent) toast('WhatsApp non configuré — utilisez le code affiché ci-dessous.','warn');
+        if(!d.otpSent) toast('Email non configuré — utilisez le code affiché ci-dessous.','warn');
         return;
       }
       /* Fallback (shouldn't happen) */
@@ -2038,7 +2038,7 @@ function doLogin(){
       if(err.data && err.data.requireVerification){
         _otpEmail = err.data.email || em;
         showOtpPanel(err.data.phone||'', null);
-        showErr('otpErr','Votre compte n\'est pas encore vérifié. Un nouveau code a été envoyé sur votre WhatsApp.');
+        showErr('otpErr','Votre compte n\'est pas encore vérifié. Un nouveau code a été envoyé par email.');
         if(btn){btn.textContent='Se connecter';btn.disabled=false;}
         return;
       }
@@ -5695,7 +5695,7 @@ function pgLogin(){
   +'<div style="text-align:center;margin-bottom:22px">'
     +'<div style="width:64px;height:64px;background:rgba(37,211,102,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 14px">💬</div>'
     +'<h3 style="font-size:20px;font-weight:700;margin-bottom:7px">Vérifiez votre WhatsApp</h3>'
-    +'<p style="font-size:13px;color:var(--mut);line-height:1.6">Nous avons envoyé un code à 6 chiffres au<br><strong id="otpPhone" style="color:var(--txt)"></strong></p>'
+    +'<p style="font-size:13px;color:var(--mut);line-height:1.6">Nous avons envoyé un code à 6 chiffres à<br><strong id="otpPhone" style="color:var(--txt)"></strong></p>'
   +'</div>'
   +'<div id="otpDevNote" style="display:none;background:rgba(217,184,122,.1);border:1px solid rgba(217,184,122,.3);border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:14px;text-align:center">'
     +'⚠️ Mode dev — WhatsApp non configuré. Code : <strong id="otpDevCodeText" style="font-family:monospace;font-size:16px;letter-spacing:.15em;color:var(--red)"></strong>'
@@ -5756,7 +5756,7 @@ function switchTab2(tab){
   if(of)of.style.display=tab==='otp'?'block':'none';
   if(lt)lt.classList.toggle('sel',tab==='login');
   if(rt)rt.classList.toggle('sel',tab==='register');
-  var headlines={login:'Welcome back',register:'Join the community',forgot:'Reset password',otp:'Vérification WhatsApp'};
+  var headlines={login:'Welcome back',register:'Join the community',forgot:'Reset password',otp:'Vérification email'};
   var sublines={login:'Sign in to manage your adventures, wishlist, and bookings.',register:'Create your free account and start exploring Morocco adventures.',forgot:'Enter your email and we will send you a reset link.',otp:'Entrez le code envoyé sur votre WhatsApp pour activer votre compte.'};
   if(hl)hl.textContent=headlines[tab]||'Roamers Community';
   if(sl)sl.textContent=sublines[tab]||'';

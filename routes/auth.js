@@ -29,17 +29,21 @@ var google   = require('../utils/google');
 var auth = authMw.auth;
 
 /**
- * Deliver an OTP through BOTH WhatsApp and email. Neither channel aborts the
- * other; the registration succeeds as long as at least one delivers. Returns
- * { waOk, emailOk, sent } so callers can report the real outcome to the client.
+ * Deliver an OTP. EMAIL is the primary channel; WhatsApp is only used as a
+ * fallback if the email could not be sent. Returns { waOk, emailOk, sent } so
+ * callers can report the real outcome to the client.
  */
 async function deliverOtp(phone, email, name, otp) {
   var waOk = false, emailOk = false;
-  try { await wa.sendOtp(phone, otp); waOk = true; }
-  catch (err) { console.error('[OTP WhatsApp error]', err.message); }
+  /* Primary channel: email */
   try { emailOk = await mailer.sendOtpEmail(email, otp, name); }
   catch (err) { console.error('[OTP email error]', err.message); }
-  return { waOk: waOk, emailOk: emailOk, sent: waOk || emailOk };
+  /* Fallback: WhatsApp, only if the email did not go out */
+  if (!emailOk) {
+    try { await wa.sendOtp(phone, otp); waOk = true; }
+    catch (err) { console.error('[OTP WhatsApp error]', err.message); }
+  }
+  return { waOk: waOk, emailOk: emailOk, sent: emailOk || waOk };
 }
 
 /** True only in pure dev: no WhatsApp provider AND no SMTP configured. */
