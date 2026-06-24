@@ -216,6 +216,18 @@ app.use(function(req, res, next) {
   });
 });
 
+/* ── DB FRESHNESS ────────────────────────────────────────────────
+   Converge each serverless instance's cache with MongoDB so the website and the
+   app always see the same data. User-facing collections refresh every few
+   seconds; large admin-managed content refreshes less often. Never blocks a
+   request if a refresh hiccups. */
+app.use('/api', function(req, res, next) {
+  db._refresh(['users','bookings','pending','plans','teams','reviews','itineraries','notifications','pushTokens'], 4000)
+    .then(function(){ return db._refresh(['experiences','activities','partners','promos','settings','contacts'], 30000); })
+    .then(function(){ next(); })
+    .catch(function(){ next(); });
+});
+
 /* ── ROUTES ─────────────────────────────────────────────────── */
 app.use('/api/', apiLim);
 app.use('/api/auth',        authLim,  require('./routes/auth'));

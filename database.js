@@ -32,7 +32,7 @@ function adminUUID(email) {
 ══════════════════════════════════════════════════════════ */
 if (process.env.MONGODB_URI) {
 
-  const { MongoClient } = require('mongodb');
+  const { MongoClient, ObjectId } = require('mongodb');
 
   let _client = null;
   let _mdb    = null;
@@ -53,58 +53,84 @@ if (process.env.MONGODB_URI) {
   }
 
   const TABLES = ['users','pending','bookings','plans','teams','contacts','experiences','activities','partners','settings','itineraries','reviews','pushTokens','notifications','promos'];
-  const _caches = {};
-  TABLES.forEach(function(t){ _caches[t] = []; });
-
-  /*
-   * Serialised per-collection flush to avoid races.
-   *
-   * Two chains per collection:
-   *   _flushChain  — sequencing only; always resolves so future flushes still run
-   *   _lastFlush   — exposed via flush(); rejects if the MongoDB write failed
-   *
-   * Route handlers should `await db.X.flush()` inside a try/catch and return 503
-   * if it rejects, so the client knows the save did NOT reach the database.
-   */
+  const _caches   = {};
+  const _loadedAt = {};   /* when this instance last loaded each collection */
+  const _pending  = {};   /* queued per-document bulkWrite ops per collection */
   const _flushChain = {};
   const _lastFlush  = {};
   TABLES.forEach(function(t){
+    _caches[t]     = [];
+    _loadedAt[t]   = 0;
+    _pending[t]    = [];
     _flushChain[t] = Promise.resolve();
     _lastFlush[t]  = Promise.resolve();
   });
 
-  function scheduleFlush(name) {
-    /* The actual work — may reject if MongoDB write fails */
-    var work = _flushChain[name]
-      .catch(function(){})           /* recover from any previous chain error */
-      .then(async function() {
-        const mdb  = await getMongoDb();
-        const col  = mdb.collection(name);
-        const docs = (_caches[name] || []).map(function(d){
-          const x = Object.assign({}, d); delete x._id; return x;
-        });
-        await col.deleteMany({});
-        if (docs.length) await col.insertMany(docs);
-      });
+  /* Load a collection's documents into the in-memory cache (keeps Mongo _id). */
+  async function loadCollection(name) {
+    const mdb = await getMongoDb();
+    _caches[name]   = await mdb.collection(name).find({}).toArray();
+    _loadedAt[name] = Date.now();
+  }
 
-    /* Sequencing chain: always resolves so the next flush still queues */
+  /* Remove the internal Mongo _id before handing a document to callers, so it
+     never leaks into API responses or gets echoed back into an update. */
+  function stripId(d){ if (!d) return d; const x = Object.assign({}, d); delete x._id; return x; }
+
+  /*
+   * Flush queued PER-DOCUMENT operations (insert/update/delete of only the
+   * changed records). Critically, this never rewrites the whole collection, so
+   * a stale serverless instance can no longer overwrite another instance's data.
+   * Exposed _lastFlush[name] rejects on write failure so callers can return 503.
+   */
+  function scheduleFlush(name) {
+    if (!_pending[name].length) return;
+    const ops = _pending[name];
+    _pending[name] = [];
+    const work = _flushChain[name]
+      .catch(function(){})
+      .then(async function() {
+        if (!ops.length) return;
+        const mdb = await getMongoDb();
+        await mdb.collection(name).bulkWrite(ops, { ordered: false });
+      });
     _flushChain[name] = work.catch(function(err){
       console.error('[DB] flush error ('+name+'):', err.message);
     });
-
-    /* Exposed to callers — rejects on MongoDB write failure */
     _lastFlush[name] = work;
   }
 
   function makeTable(name) {
     return {
-      all:    function(fn)    { const c=_caches[name]; return fn?c.filter(fn):c.slice(); },
-      find:   function(fn)    { return _caches[name].find(fn)||null; },
+      all:    function(fn)    { const c=_caches[name]; return (fn?c.filter(fn):c.slice()).map(stripId); },
+      find:   function(fn)    { const r=_caches[name].find(fn); return r?stripId(r):null; },
       count:  function(fn)    { const c=_caches[name]; return fn?c.filter(fn).length:c.length; },
       sum:    function(key,fn){ const c=_caches[name]; return (fn?c.filter(fn):c).reduce(function(s,r){return s+(Number(r[key])||0);},0); },
-      insert: function(doc)   { _caches[name].push(doc); scheduleFlush(name); return doc; },
-      update: function(fn,ch) { _caches[name].forEach(function(r,i){ if(fn(r)) _caches[name][i]=Object.assign({},r,ch); }); scheduleFlush(name); },
-      remove: function(fn)    { _caches[name]=_caches[name].filter(function(r){return !fn(r);}); scheduleFlush(name); },
+      insert: function(doc)   {
+        const rec = Object.assign({}, doc, { _id: new ObjectId() });
+        _caches[name].push(rec);
+        _pending[name].push({ insertOne: { document: rec } });
+        scheduleFlush(name);
+        return stripId(rec);
+      },
+      update: function(fn,ch) {
+        _caches[name].forEach(function(r,i){
+          if (fn(r)) {
+            _caches[name][i] = Object.assign({}, r, ch);            /* preserves _id */
+            _pending[name].push({ updateOne: { filter: { _id: r._id }, update: { $set: ch } } });
+          }
+        });
+        scheduleFlush(name);
+      },
+      remove: function(fn)    {
+        const kept = [];
+        _caches[name].forEach(function(r){
+          if (fn(r)) _pending[name].push({ deleteOne: { filter: { _id: r._id } } });
+          else kept.push(r);
+        });
+        _caches[name] = kept;
+        scheduleFlush(name);
+      },
       /* Await the pending MongoDB write — may reject on DB failure */
       flush:  function()      { return _lastFlush[name] || Promise.resolve(); }
     };
@@ -130,24 +156,37 @@ if (process.env.MONGODB_URI) {
 
   /* Called once by server.js before accepting requests */
   db._init = async function() {
-    const mdb = await getMongoDb();
-    await Promise.all(TABLES.map(async function(name) {
-      const docs = await mdb.collection(name).find({}, {projection:{_id:0}}).toArray();
-      _caches[name] = docs;
-    }));
+    await Promise.all(TABLES.map(function(name){ return loadCollection(name); }));
     /* One-time migration: wipe demo seed data so Roamers can populate real content */
     if (!db.settings.find(function(s){ return s.key === 'v3_seed_cleared'; })) {
-      _caches['activities']  = [];
-      _caches['experiences'] = [];
-      /* Await the direct MongoDB deletes so the data is gone before we set the flag */
+      const mdb = await getMongoDb();
       await mdb.collection('activities').deleteMany({});
       await mdb.collection('experiences').deleteMany({});
+      _caches['activities']  = [];
+      _caches['experiences'] = [];
       db.settings.insert({ key: 'v3_seed_cleared', value: true, ts: new Date().toISOString() });
       await db.settings.flush();
       console.log('  ✓ Demo seed data cleared from MongoDB');
     }
     _seedAdmin(db);
-    console.log('  ✓ DB ready (MongoDB)');
+    await db.users.flush();
+    console.log('  ✓ DB ready (MongoDB, per-document writes)');
+  };
+
+  /* Reload collections whose cache is older than maxAgeMs so reads converge
+     across serverless instances. Awaits pending writes first so a just-saved
+     record is never dropped from the cache. Called from a per-request middleware. */
+  db._refresh = async function(names, maxAgeMs) {
+    maxAgeMs = (maxAgeMs == null) ? 4000 : maxAgeMs;
+    const now  = Date.now();
+    const list = (names && names.length) ? names : TABLES;
+    await Promise.all(list.map(async function(name){
+      if (now - (_loadedAt[name] || 0) < maxAgeMs) return;
+      _loadedAt[name] = now;   /* claim the slot up-front to avoid a reload stampede */
+      try { await (_lastFlush[name] || Promise.resolve()); } catch(e){}
+      try { await loadCollection(name); }
+      catch(e){ console.error('[DB] refresh error ('+name+'):', e.message); }
+    }));
   };
 
   module.exports = db;
@@ -207,7 +246,8 @@ if (process.env.MONGODB_URI) {
     promos:        createTable('promos')
   };
 
-  db._init = async function(){ /* no-op for file mode */ };
+  db._init    = async function(){ /* no-op for file mode */ };
+  db._refresh = async function(){ /* no-op for file mode — single process */ };
 
   _seedAdmin(db);
 
