@@ -565,6 +565,10 @@ main#app{padding-top:72px}
 .d-sep{height:1px;background:rgba(255,255,255,.06);margin:8px 22px}
 .d-lbl{padding:7px 22px 3px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.2)}
 .dash-main{background:var(--warm);padding:32px 38px;overflow-y:auto}
+/* Dashboard = clean full-height app: hide marketing navbar, sidebar sticks from top */
+body.is-dashboard #nav{display:none !important}
+body.is-dashboard .dash-layout{min-height:100vh}
+body.is-dashboard .dash-sb{top:0;height:100vh}
 .d-hdr{margin-bottom:24px}
 .d-title{font-size:28px;font-weight:600;color:var(--txt);margin-bottom:4px;font-family:'Cormorant Garamond',serif}
 .d-sub{font-size:14px;color:var(--mut)}
@@ -1873,6 +1877,9 @@ function syncAppShell(pg){
   var tabs = document.getElementById('appTabs');
   if (tabs) tabs.style.display = '';
   document.body.classList.remove('is-login');
+  /* On the dashboard, hide the marketing navbar — the dashboard has its own
+     sidebar, so showing both is redundant clutter. */
+  document.body.classList.toggle('is-dashboard', pg==='dashboard');
 }
 
 function appBack(){
