@@ -93,18 +93,20 @@ app.use(function(req, res, next) {
 });
 
 /* ── CORS ───────────────────────────────────────────────────── */
-var ALLOWED_ORIGIN = process.env.FRONTEND_URL || null;
-
-if (isProd && !ALLOWED_ORIGIN) {
-  console.warn('\n  WARNING: FRONTEND_URL is not set in production.\n' +
-               '  CORS will block cross-origin requests. Set FRONTEND_URL in your .env.\n');
-}
+/* Allowlist: the production domain(s) + any extra FRONTEND_URL from env.
+   Native mobile requests send no Origin header and are allowed below. */
+var ALLOWED_ORIGINS = [
+  process.env.FRONTEND_URL,
+  'https://roamerscommunity.com',
+  'https://www.roamerscommunity.com',
+  'https://roamers-v2.vercel.app'
+].filter(Boolean);
 
 app.use(cors({
   origin: function(origin, cb) {
-    if (!origin) return cb(null, true);        // same-origin / server-to-server
+    if (!origin) return cb(null, true);        // same-origin / native app / server-to-server
     if (!isProd) return cb(null, true);        // dev: allow all origins
-    if (ALLOWED_ORIGIN && origin === ALLOWED_ORIGIN) return cb(null, true);
+    if (ALLOWED_ORIGINS.indexOf(origin) !== -1) return cb(null, true);
     return cb(new Error('Not allowed by CORS'));
   },
   credentials:    true,
