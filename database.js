@@ -168,6 +168,32 @@ if (process.env.MONGODB_URI) {
       await db.settings.flush();
       console.log('  ✓ Demo seed data cleared from MongoDB');
     }
+    /* One-time cleanup: remove duplicate records that share the same `id`
+       (the previous whole-collection-overwrite layer created duplicate admin
+       rows across serverless instances). Real users have unique ids and are
+       never touched — only same-id duplicates are removed, keeping the first. */
+    if (!db.settings.find(function(s){ return s.key === 'users_deduped_v1'; })) {
+      const mdb2 = await getMongoDb();
+      const seenIds = {};
+      const dupMongoIds = [];
+      _caches['users'].forEach(function(u){
+        if (!u.id) return;
+        if (seenIds[u.id]) dupMongoIds.push(u._id);
+        else seenIds[u.id] = true;
+      });
+      if (dupMongoIds.length) {
+        await mdb2.collection('users').deleteMany({ _id: { $in: dupMongoIds } });
+        const kept = {};
+        _caches['users'] = _caches['users'].filter(function(u){
+          if (!u.id) return true;
+          if (kept[u.id]) return false;
+          kept[u.id] = true; return true;
+        });
+      }
+      db.settings.insert({ key: 'users_deduped_v1', value: true, removed: dupMongoIds.length, ts: new Date().toISOString() });
+      await db.settings.flush();
+      console.log('  ✓ Deduped users — removed ' + dupMongoIds.length + ' duplicate record(s)');
+    }
     _seedAdmin(db);
     await db.users.flush();
     console.log('  ✓ DB ready (MongoDB, per-document writes)');
