@@ -47,4 +47,4 @@ export const SHADOW = {
   },
 };
 
-export const API_BASE = 'https://roamers-v2.vercel.app';
+export const API_BASE = 'https://roamerscommunity.com';

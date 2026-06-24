@@ -2,7 +2,7 @@
   "expo": {
     "name": "Roamers Community",
     "slug": "roamers-community",
-    "version": "1.0.11",
+    "version": "1.0.13",
     "orientation": "portrait",
     "scheme": "roamers",
     "icon": "./assets/icon.png",
@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "ma.roamerscommunity.app",
-      "versionCode": 41,
+      "versionCode": 43,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
@@ -37,7 +37,7 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiBase": "https://roamers-v2.vercel.app",
+      "apiBase": "https://roamerscommunity.com",
       "eas": {
         "projectId": "06333419-b790-4476-9d61-2f6673870118"
       }

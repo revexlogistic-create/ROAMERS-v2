@@ -74,7 +74,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 };
 const COUNTRIES = ['Maroc', 'France', 'Chine', 'Japon', 'USA', 'UK', 'Allemagne', 'EAU', 'Canada', 'Autre'];
 
-const REFERRAL_BASE = 'https://roamers-v2.vercel.app';
+const REFERRAL_BASE = 'https://roamerscommunity.com';
 
 /** Derive a short, deterministic referral code from user ID */
 function makeRefCode(userId: string): string {
