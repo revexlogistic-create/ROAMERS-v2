@@ -254,11 +254,11 @@ app.get('/api/app-version', function(req, res) {
     sizeMB = Math.round(require('fs').statSync(path.join(PUBLIC, 'downloads', 'roamers.apk')).size / 1048576);
   } catch (e) { /* APK missing — keep fallback so the page still renders */ }
   res.json({
-    versionCode: 43,
-    versionName: '1.0.13',
+    versionCode: 44,
+    versionName: '1.0.14',
     sizeMB: sizeMB,
     downloadUrl: '/downloads/roamers.apk',
-    releaseNotes: 'Connexion avec Google et améliorations de fiabilité.'
+    releaseNotes: 'Nouvel onglet Events : rencontres, ateliers et célébrations de la communauté Roamers.'
   });
 });
 
