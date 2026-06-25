@@ -332,9 +332,9 @@ app.get('/api/site-config', function(req, res) {
     /* Testimonials — only genuine, admin-published reviews; never fabricated endorsements */
     cmsTestimonials: tst.length ? tst : [],
     /* SEO */
-    seoTitle:       seo.title       || 'Roamers Community — Morocco Adventure Booking',
-    seoDescription: seo.description || 'Morocco\'s premier experiential travel platform. Book desert treks, mountain adventures, and cultural tours.',
-    seoKeywords:    seo.keywords    || 'morocco travel,sahara trek,atlas mountains,marrakech tour,team building morocco',
+    seoTitle:       seo.title       || 'Roamers Community — Agence de Voyage & Tourisme au Maroc',
+    seoDescription: seo.description || 'Roamers Community, votre agence de voyage au Maroc : voyages sur mesure, trips d\'aventure, tourisme et team building — Sahara, Atlas et villes impériales.',
+    seoKeywords:    seo.keywords    || 'Roamers Community,voyage,trip,agence de voyage,agence de voyage Maroc,tourisme,tourisme Maroc,voyage Maroc,Maroc,Sahara,Atlas,team building Maroc',
     /* Stripe publishable key — safe to expose in frontend */
     stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
     /* Bank transfer / Virement bancaire */
