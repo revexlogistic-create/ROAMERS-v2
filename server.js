@@ -452,7 +452,9 @@ app.get('/api/promos/validate', function(req, res) {
 app.use(express.static(PUBLIC, {
   maxAge: isProd ? '1d' : 0,
   setHeaders: function(res, fp) {
-    if (fp.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+    // never cache HTML or the service worker, so browsers always pick up the
+    // self-retiring sw.js and the latest index.html immediately
+    if (fp.endsWith('.html') || fp.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-cache');
   }
 }));
 
