@@ -52,7 +52,7 @@ if (process.env.MONGODB_URI) {
     return _mdb;
   }
 
-  const TABLES = ['users','pending','bookings','plans','teams','contacts','experiences','activities','partners','settings','itineraries','reviews','pushTokens','notifications','promos'];
+  const TABLES = ['users','pending','bookings','plans','teams','contacts','experiences','activities','events','partners','settings','itineraries','reviews','pushTokens','notifications','promos'];
   const _caches   = {};
   const _loadedAt = {};   /* when this instance last loaded each collection */
   const _pending  = {};   /* queued per-document bulkWrite ops per collection */
@@ -145,6 +145,7 @@ if (process.env.MONGODB_URI) {
     contacts:      makeTable('contacts'),
     experiences:   makeTable('experiences'),
     activities:    makeTable('activities'),
+    events:        makeTable('events'),
     partners:      makeTable('partners'),
     settings:      makeTable('settings'),
     itineraries:   makeTable('itineraries'),
@@ -263,6 +264,7 @@ if (process.env.MONGODB_URI) {
     contacts:      createTable('contacts'),
     experiences:   createTable('experiences'),
     activities:    createTable('activities'),
+    events:        createTable('events'),
     partners:      createTable('partners'),
     settings:      createTable('settings'),
     itineraries:   createTable('itineraries'),

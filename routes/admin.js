@@ -427,6 +427,75 @@ router.delete('/activities/:id', auditMod.audit('admin:activity:delete'), async 
   res.json({ message: 'Activity deleted', id: req.params.id });
 });
 
+/* ── EVENTS ──────────────────────────────────────────────────── */
+var EVENT_STATUS = ['active','draft','archived'];
+
+router.get('/events', function(req, res) {
+  res.json({ events: db.events.all().sort(function(a, b){
+    var da = a.date ? new Date(a.date) : null, dbb = b.date ? new Date(b.date) : null;
+    if (da && dbb && da - dbb !== 0) return da - dbb;
+    return (a.sortOrder||0) - (b.sortOrder||0);
+  }) });
+});
+
+router.post('/events', auditMod.audit('admin:event:create'), async function(req, res) {
+  var f = req.body || {};
+  if (!f.title || !String(f.title).trim()) return res.status(400).json({ error: 'Title required' });
+  if (f.status && !EVENT_STATUS.includes(f.status)) return res.status(400).json({ error: 'Invalid status' });
+  var now = new Date().toISOString();
+  var maxSort = db.events.all().reduce(function(m, r){ return Math.max(m, r.sortOrder||0); }, 0);
+  var doc = db.events.insert({
+    id:        uuidv4(),
+    sortOrder: maxSort + 1,
+    title:     String(f.title).trim(),
+    date:      cleanDate(f.date),
+    time:      f.time     ? String(f.time).trim()     : '',
+    location:  f.location ? String(f.location).trim() : '',
+    desc:      f.desc     ? String(f.desc).trim()     : '',
+    sub:       f.sub      ? String(f.sub).trim()      : '',
+    badge:     f.badge    ? String(f.badge).trim()    : '',
+    img:       f.img      ? String(f.img).trim()      : '',
+    price:     Math.max(0, parseInt(f.price) || 0),
+    capacity:  f.capacity ? Math.max(0, parseInt(f.capacity) || 0) : null,
+    status:    EVENT_STATUS.includes(f.status) ? f.status : 'active',
+    created:   now, updated: now
+  });
+  await db.events.flush();
+  res.status(201).json({ event: doc });
+});
+
+router.put('/events/:id', auditMod.audit('admin:event:update'), async function(req, res) {
+  var existing = db.events.find(function(e){ return e.id === req.params.id; });
+  if (!existing) return res.status(404).json({ error: 'Event not found' });
+  var f = req.body || {};
+  var changes = { updated: new Date().toISOString() };
+  if (f.title    !== undefined) changes.title    = String(f.title || '').trim();
+  if (f.date     !== undefined) changes.date     = cleanDate(f.date);
+  if (f.time     !== undefined) changes.time     = String(f.time || '').trim();
+  if (f.location !== undefined) changes.location = String(f.location || '').trim();
+  if (f.desc     !== undefined) changes.desc     = String(f.desc || '').trim();
+  if (f.sub      !== undefined) changes.sub      = String(f.sub || '').trim();
+  if (f.badge    !== undefined) changes.badge    = String(f.badge || '').trim();
+  if (f.img      !== undefined) changes.img      = String(f.img || '').trim();
+  if (f.price    !== undefined) changes.price    = Math.max(0, parseInt(f.price) || 0);
+  if (f.capacity !== undefined) changes.capacity = f.capacity === '' ? null : Math.max(0, parseInt(f.capacity) || 0);
+  if (f.status !== undefined) {
+    if (!EVENT_STATUS.includes(f.status)) return res.status(400).json({ error: 'Invalid status' });
+    changes.status = f.status;
+  }
+  db.events.update(function(e){ return e.id === req.params.id; }, changes);
+  await db.events.flush();
+  res.json({ event: db.events.find(function(e){ return e.id === req.params.id; }) });
+});
+
+router.delete('/events/:id', auditMod.audit('admin:event:delete'), async function(req, res) {
+  var e = db.events.find(function(x){ return x.id === req.params.id; });
+  if (!e) return res.status(404).json({ error: 'Event not found' });
+  db.events.remove(function(x){ return x.id === req.params.id; });
+  await db.events.flush();
+  res.json({ message: 'Event deleted', id: req.params.id });
+});
+
 /* ── PARTNERS ────────────────────────────────────────────────── */
 var PARTNER_TYPES   = ['Tour Operator','Hotel','Transport','Activity','Other'];
 var PARTNER_STATUS  = ['active','inactive','suspended'];

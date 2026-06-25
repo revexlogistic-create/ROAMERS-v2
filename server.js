@@ -148,6 +148,9 @@ app.use('/api/admin/settings', largeJson, largeUrle);
 /* Admin activities endpoint: 10 MB (for base64 cover photo uploads) */
 app.use('/api/admin/activities', sizeGuard(10 * 1024 * 1024), express.json({ limit: '10mb' }), express.urlencoded({ extended: true, limit: '10mb' }));
 
+/* Admin events endpoint: 10 MB (for base64 cover photo uploads) */
+app.use('/api/admin/events', sizeGuard(10 * 1024 * 1024), express.json({ limit: '10mb' }), express.urlencoded({ extended: true, limit: '10mb' }));
+
 /* Experiences endpoint: 10 MB (voyage photos stored as base64 in body) */
 app.use('/api/experiences', sizeGuard(10 * 1024 * 1024), express.json({ limit: '10mb' }), express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -223,7 +226,7 @@ app.use(function(req, res, next) {
    request if a refresh hiccups. */
 app.use('/api', function(req, res, next) {
   db._refresh(['users','bookings','pending','plans','teams','reviews','itineraries','notifications','pushTokens'], 4000)
-    .then(function(){ return db._refresh(['experiences','activities','partners','promos','settings','contacts'], 30000); })
+    .then(function(){ return db._refresh(['experiences','activities','events','partners','promos','settings','contacts'], 30000); })
     .then(function(){ next(); })
     .catch(function(){ next(); });
 });
@@ -404,6 +407,26 @@ app.get('/api/activities/:id', function(req, res) {
   var act = db.activities.find(function(a){ return a.id === req.params.id; });
   if (!act || act.status !== 'active') return res.status(404).json({ error: 'Activity not found' });
   res.json({ activity: act });
+});
+
+/* ── PUBLIC EVENTS ───────────────────────────────────────────── */
+app.get('/api/events', function(req, res) {
+  var evs = db.events.all()
+    .filter(function(e){ return e.status === 'active'; })
+    .sort(function(a, b){
+      /* upcoming first by date, then by sortOrder */
+      var da = a.date ? new Date(a.date) : null;
+      var dbb = b.date ? new Date(b.date) : null;
+      if (da && dbb && da - dbb !== 0) return da - dbb;
+      return (a.sortOrder||0) - (b.sortOrder||0);
+    });
+  res.json({ events: evs });
+});
+
+app.get('/api/events/:id', function(req, res) {
+  var ev = db.events.find(function(e){ return e.id === req.params.id; });
+  if (!ev || ev.status !== 'active') return res.status(404).json({ error: 'Event not found' });
+  res.json({ event: ev });
 });
 
 /* ── PROMO CODES (public validate) ──────────────────────────── */
