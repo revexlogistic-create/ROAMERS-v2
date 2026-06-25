@@ -661,6 +661,7 @@ function OverviewTab({ user, bookings, loading, confirmed, totalSpent, wishlist,
         {[
           { icon: (c: string) => <Icon.Mountain size={19} color={c} />, label: 'Voyages',    sub: 'Groupes & week-ends',   screen: 'Explorer',   color: '#2563eb' },
           { icon: (c: string) => <Icon.Star     size={19} color={c} />, label: 'Activités',  sub: 'Express & culture',     screen: 'Activities', color: '#7c3aed' },
+          { icon: (c: string) => <Icon.Calendar size={19} color={c} />, label: 'Events',     sub: 'Rencontres & ateliers',  screen: 'Events',     color: '#b8172e' },
           { icon: (c: string) => <Icon.Route    size={19} color={c} />, label: 'Sur Mesure', sub: 'Mon itinéraire',        screen: 'Plan',       color: '#d97706' },
           { icon: (c: string) => <Icon.Pin      size={19} color={c} />, label: 'Carte',      sub: 'Toutes destinations',   screen: 'Map',        color: '#059669' },
         ].map((a) => (

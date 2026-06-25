@@ -110,6 +110,10 @@ export const getActivities = () =>
 export const getActivity = (id: string) =>
   api.get(`/api/activities/${id}`).then((r) => r.data.activity);
 
+/* Events */
+export const getEvents = () =>
+  api.get('/api/events').then((r) => r.data.events as any[]);
+
 /* Promos */
 export const validatePromo = (code: string) =>
   api.get('/api/promos/validate', { params: { code } }).then(

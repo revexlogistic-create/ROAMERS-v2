@@ -17,6 +17,7 @@ import ExplorerScreen         from '../screens/ExplorerScreen';
 import MapScreen              from '../screens/MapScreen';
 import PlanScreen             from '../screens/PlanScreen';
 import ActivitiesScreen       from '../screens/ActivitiesScreen';
+import EventsScreen           from '../screens/EventsScreen';
 import ExperienceDetailScreen from '../screens/ExperienceDetailScreen';
 import ActivityDetailScreen   from '../screens/ActivityDetailScreen';
 import BookingScreen          from '../screens/BookingScreen';
@@ -194,6 +195,7 @@ export default function AppNavigator() {
         <Stack.Screen name="BookingSuccess"   component={BookingSuccessScreen}   options={{ presentation: 'modal', gestureEnabled: false }} />
         <Stack.Screen name="MyBookings"       component={MyBookingsScreen}       options={{ presentation: 'card' }} />
         <Stack.Screen name="Activities"       component={ActivitiesScreen}       options={{ presentation: 'card' }} />
+        <Stack.Screen name="Events"           component={EventsScreen}           options={{ presentation: 'card' }} />
         <Stack.Screen name="ActivityDetail"   component={ActivityDetailScreen}   options={{ presentation: 'card' }} />
         <Stack.Screen name="Team"             component={TeamScreen}             options={{ presentation: 'card' }} />
         <Stack.Screen name="Contact"          component={ContactScreen}          options={{ presentation: 'card' }} />

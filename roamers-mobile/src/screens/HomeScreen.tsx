@@ -213,6 +213,7 @@ export default function HomeScreen({ navigation }: any) {
       <View style={styles.quickGrid}>
         {[
           { icon: <Icon.Mountain size={26} color={COLORS.primary} />, label: 'Activités Express', screen: 'Activities' },
+          { icon: <Icon.Calendar size={26} color={COLORS.primary} />, label: 'Events',            screen: 'Events' },
           { icon: <Icon.Route    size={26} color={COLORS.primary} />, label: 'Voyage Sur Mesure', screen: 'Plan' },
           { icon: <Icon.Group    size={26} color={COLORS.primary} />, label: 'Team Building',     screen: 'Team' },
           { icon: <Icon.Pin      size={26} color={COLORS.primary} />, label: 'Nous contacter',    screen: 'Contact' },

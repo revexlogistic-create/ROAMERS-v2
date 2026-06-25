@@ -107,6 +107,9 @@ export default function ActivitiesScreen({ navigation }: any) {
             <View style={[styles.toggleOpt, styles.toggleOptActive]}>
               <Text style={[styles.toggleTxt, styles.toggleTxtActive]}>Activités</Text>
             </View>
+            <TouchableOpacity style={styles.toggleOpt} onPress={() => navigation.navigate('Events')} activeOpacity={0.75}>
+              <Text style={styles.toggleTxt}>Events</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </LinearGradient>
@@ -346,9 +349,9 @@ const styles = StyleSheet.create({
 
   /* Toggle */
   toggle:          { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 22, padding: 3, borderWidth: 1, borderColor: '#333', marginTop: 4 },
-  toggleOpt:       { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 19 },
+  toggleOpt:       { paddingHorizontal: 11, paddingVertical: 7, borderRadius: 19 },
   toggleOptActive: { backgroundColor: COLORS.primary },
-  toggleTxt:       { color: '#777', fontSize: 12, fontWeight: '700', includeFontPadding: false },
+  toggleTxt:       { color: '#777', fontSize: 11, fontWeight: '700', includeFontPadding: false },
   toggleTxtActive: { color: '#fff' },
 
   /* Search */
