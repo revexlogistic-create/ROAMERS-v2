@@ -390,6 +390,7 @@ label.fl{display:block;font-size:11px;font-weight:600;letter-spacing:.05em;text-
   <div class="sb-item" onclick="goPage('bookings')" id="nav-bookings"><div class="si">📋</div><span>Bookings</span><span class="badge" id="pendingBadge">0</span></div>
   <div class="sb-item" onclick="goPage('trips')" id="nav-trips"><div class="si">🗺️</div><span>Trips (Voyages)</span></div>
   <div class="sb-item" onclick="goPage('activities')" id="nav-activities"><div class="si">🏔️</div><span>Activities</span></div>
+  <div class="sb-item" onclick="goPage('events')" id="nav-events"><div class="si">📅</div><span>Gérer Events</span></div>
   <div class="sb-item" onclick="goPage('customers')" id="nav-customers"><div class="si">👥</div><span>Customers</span></div>
 
   <div class="sb-section-label">Content</div>
@@ -549,7 +550,7 @@ function mapBk(b) {
   });
 }
 function loadAll(cb) {
-  var left = 13;
+  var left = 14;
   function done(){ if(--left===0) cb(); }
   api('GET','/experiences?includeDrafts=1').then(function(d){
     if(d.experiences) DB.trips = d.experiences.map(mapExp);
@@ -612,6 +613,9 @@ function loadAll(cb) {
   api('GET','/admin/activities').then(function(d){
     if(d.activities) DB.activities = d.activities;
   }).catch(function(){}).then(done);
+  api('GET','/admin/events').then(function(d){
+    if(d.events) DB.events = d.events;
+  }).catch(function(){}).then(done);
   api('GET','/admin/partners').then(function(d){
     if(d.partners) DB.partners = d.partners;
   }).catch(function(){}).then(done);
@@ -654,6 +658,7 @@ var DB = {
   plans: [],
   teams: [],
   activities: [],
+  events: [],
   partners: [],
   promos: [],
   messages: [],
@@ -728,11 +733,11 @@ function goPage(page) {
   document.querySelectorAll('.sb-item').forEach(function(el){ el.classList.remove('active'); });
   var navEl = document.getElementById('nav-'+page);
   if (navEl) navEl.classList.add('active');
-  var titles = {overview:'Overview',bookings:'Bookings',trips:'Trips (Voyages)',activities:'Activities & Experiences',customers:'Customers',media:'Media Library',cms:'Website Content (CMS)',partners:'Partnerships & Programs',promos:'Promo Codes & Remises',analytics:'Analytics',users:'Users & Roles',settings:'Settings',plans:'Plan Requests',teams:'Team Building Requests',messages:'Messages',itineraries:'Itinéraires App',notifications:'Notifications Push'};
+  var titles = {overview:'Overview',bookings:'Bookings',trips:'Trips (Voyages)',activities:'Activities & Experiences',events:'Gérer Events',customers:'Customers',media:'Media Library',cms:'Website Content (CMS)',partners:'Partnerships & Programs',promos:'Promo Codes & Remises',analytics:'Analytics',users:'Users & Roles',settings:'Settings',plans:'Plan Requests',teams:'Team Building Requests',messages:'Messages',itineraries:'Itinéraires App',notifications:'Notifications Push'};
   document.getElementById('pageTitle').textContent = titles[page] || page;
   Object.values(APP.chartInstances).forEach(function(c){ if(c) c.destroy(); });
   APP.chartInstances = {};
-  var renders = {overview:renderOverview,bookings:renderBookings,trips:renderTrips,activities:renderActivities,customers:renderCustomers,media:renderMedia,cms:renderCMS,partners:renderPartners,promos:renderPromos,analytics:renderAnalytics,users:renderUsers,settings:renderSettings,plans:renderPlanRequests,teams:renderTeamRequests,messages:renderMessages,itineraries:renderItineraries,notifications:renderNotifications};
+  var renders = {overview:renderOverview,bookings:renderBookings,trips:renderTrips,activities:renderActivities,events:renderEvents,customers:renderCustomers,media:renderMedia,cms:renderCMS,partners:renderPartners,promos:renderPromos,analytics:renderAnalytics,users:renderUsers,settings:renderSettings,plans:renderPlanRequests,teams:renderTeamRequests,messages:renderMessages,itineraries:renderItineraries,notifications:renderNotifications};
   document.getElementById('content').innerHTML = (renders[page] || renderOverview)();
   if (page === 'overview') initOverviewCharts();
   if (page === 'analytics') initAnalyticsCharts();
@@ -3296,6 +3301,80 @@ function saveActivity(actId) {
   }
 }
 
+function renderEvents() {
+  var rows = DB.events.map(function(e){
+    var st = e.status||'active';
+    var stColor = st==='active'?'#16a34a':(st==='draft'?'#a16207':'#6b7280');
+    return '<tr style="border-bottom:1px solid var(--bdr,#eee)">'
+      +'<td style="padding:12px 10px"><div style="display:flex;align-items:center;gap:10px">'+(e.img?'<img src="'+e.img+'" style="width:44px;height:44px;border-radius:8px;object-fit:cover">':'<div style="width:44px;height:44px;border-radius:8px;background:#eee;display:flex;align-items:center;justify-content:center">📅</div>')+'<div><div style="font-weight:600">'+_esc(e.title||'')+'</div>'+(e.sub?'<div style="font-size:12px;color:#888">'+_esc(e.sub)+'</div>':'')+'</div></div></td>'
+      +'<td style="padding:12px 10px;white-space:nowrap">'+(e.date?fmtDate(e.date):'—')+(e.time?'<br><span style="font-size:12px;color:#888">'+_esc(e.time)+'</span>':'')+'</td>'
+      +'<td style="padding:12px 10px">'+_esc(e.location||'—')+'</td>'
+      +'<td style="padding:12px 10px;white-space:nowrap">'+(e.price?e.price+' MAD':'Gratuit')+'</td>'
+      +'<td style="padding:12px 10px"><span style="font-size:11px;font-weight:700;color:'+stColor+';background:'+stColor+'18;padding:3px 9px;border-radius:100px;text-transform:capitalize">'+st+'</span></td>'
+      +'<td style="padding:12px 10px;text-align:right;white-space:nowrap"><button class="btn btn-sm" onclick="openEventModal(\''+e.id+'\')" title="Modifier">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteItem(\'events\',\''+e.id+'\')" title="Supprimer">🗑</button></td>'
+    +'</tr>';
+  }).join('');
+  return '<div class="page-header"><div><h1>Gérer Events 📅</h1><p>Créez et gérez les événements de la communauté Roamers</p></div><div class="ph-actions"><button class="btn btn-primary" onclick="openEventModal()">+ Nouvel événement</button></div></div>'
+    +'<div class="card" style="padding:0;overflow:hidden">'
+    +(DB.events.length
+      ? '<table style="width:100%;border-collapse:collapse"><thead><tr style="text-align:left;font-size:12px;color:#888;border-bottom:1px solid var(--bdr,#eee)"><th style="padding:12px 10px">Événement</th><th style="padding:12px 10px">Date</th><th style="padding:12px 10px">Lieu</th><th style="padding:12px 10px">Prix</th><th style="padding:12px 10px">Statut</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+      : '<div style="text-align:center;padding:60px 20px;color:#888"><div style="font-size:44px;margin-bottom:12px">📅</div><div style="font-size:16px;font-weight:600;color:#444;margin-bottom:6px">Aucun événement</div><div style="font-size:14px">Cliquez sur « + Nouvel événement » pour en créer un.</div></div>')
+    +'</div>';
+}
+
+function openEventModal(evId) {
+  var e = evId ? DB.events.find(function(x){return x.id===evId;}) : null;
+  function statOpt(v,l){ var sel = e ? (e.status===v) : (v==='active'); return '<option value="'+v+'"'+(sel?' selected':'')+'>'+l+'</option>'; }
+  openModal('<div class="modal-header"><h3>'+(e?'Modifier':'Nouvel')+' événement</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
+    +'<div class="modal-body">'
+    +'<div class="fg"><label class="fl">Photo de couverture</label>'+_upZone('evCover', e&&e.img?e.img:'', 1200, '16/9', 'Photo', 'Cliquer ou glisser une image')+'</div>'
+    +'<div class="fg"><label class="fl">Titre *</label><input class="fi" id="evTitle" placeholder="ex : Soirée communautaire Roamers" value="'+(e?_esc(e.title):'')+'"></div>'
+    +'<div class="fg"><label class="fl">Sous-titre / accroche</label><input class="fi" id="evSub" placeholder="ex : Rencontre des voyageurs à Marrakech" value="'+(e&&e.sub?_esc(e.sub):'')+'"></div>'
+    +'<div class="fg-row"><div class="fg"><label class="fl">Date</label><input class="fi" id="evDate" type="date" value="'+(e&&e.date?_esc((e.date||'').split('T')[0]):'')+'"></div>'
+    +'<div class="fg"><label class="fl">Heure</label><input class="fi" id="evTime" placeholder="ex : 18:00" value="'+(e&&e.time?_esc(e.time):'')+'"></div></div>'
+    +'<div class="fg"><label class="fl">Lieu</label><input class="fi" id="evLoc" placeholder="ex : Marrakech, Café des Épices" value="'+(e&&e.location?_esc(e.location):'')+'"></div>'
+    +'<div class="fg-row"><div class="fg"><label class="fl">Prix (MAD, 0 = gratuit)</label><input class="fi" id="evPrice" type="number" placeholder="0" value="'+(e&&e.price!=null?e.price:'')+'"></div>'
+    +'<div class="fg"><label class="fl">Capacité (places)</label><input class="fi" id="evCap" type="number" placeholder="ex : 50" value="'+(e&&e.capacity!=null?e.capacity:'')+'"></div></div>'
+    +'<div class="fg-row"><div class="fg"><label class="fl">Badge</label><input class="fi" id="evBadge" placeholder="ex : Gratuit, Complet" value="'+(e&&e.badge?_esc(e.badge):'')+'"></div>'
+    +'<div class="fg"><label class="fl">Statut</label><select class="fi fi-select" id="evStatus">'+statOpt('active','Actif (visible)')+statOpt('draft','Brouillon')+statOpt('archived','Archivé')+'</select></div></div>'
+    +'<div class="fg"><label class="fl">Description</label><textarea class="fi" id="evDesc" rows="4" placeholder="Décrivez l\'événement...">'+(e&&e.desc?_esc(e.desc):'')+'</textarea></div>'
+    +'</div>'
+    +'<div class="modal-footer"><button class="btn" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="saveEvent('+(e?'\''+e.id+'\'':'null')+')">'+(e?'Enregistrer':'Créer l\'événement')+'</button></div>');
+}
+
+function saveEvent(evId) {
+  var title = document.getElementById('evTitle').value;
+  if (!title) { showToast('Titre requis','error'); return; }
+  var capVal = document.getElementById('evCap').value;
+  var body = {
+    title:    title,
+    sub:      document.getElementById('evSub').value,
+    date:     document.getElementById('evDate').value,
+    time:     document.getElementById('evTime').value,
+    location: document.getElementById('evLoc').value,
+    price:    parseInt(document.getElementById('evPrice').value)||0,
+    capacity: capVal !== '' ? parseInt(capVal)||0 : null,
+    badge:    document.getElementById('evBadge').value,
+    status:   document.getElementById('evStatus').value,
+    img:      document.getElementById('evCover').value,
+    desc:     document.getElementById('evDesc').value
+  };
+  if (evId && evId !== 'null') {
+    api('PUT','/admin/events/'+evId,body).then(function(d){
+      if(d.error){showToast(d.error,'error');return;}
+      var idx=DB.events.findIndex(function(x){return x.id===evId;});
+      if(idx>-1) DB.events[idx]=d.event;
+      closeModal(); goPage('events'); showToast('Événement modifié','success');
+    }).catch(function(){showToast('Erreur réseau','error');});
+  } else {
+    api('POST','/admin/events',body).then(function(d){
+      if(d.error){showToast(d.error,'error');return;}
+      DB.events.unshift(d.event);
+      closeModal(); goPage('events'); showToast('Événement créé','success');
+    }).catch(function(){showToast('Erreur réseau','error');});
+  }
+}
+
 function openCustomerModal() {
   openModal('<div class="modal-header"><h3>Add Customer</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
     + '<div class="modal-body">'
@@ -3530,6 +3609,14 @@ function deleteItem(collection, id) {
       if(d.error){showToast(d.error,'error');return;}
       DB.activities=DB.activities.filter(function(x){return x.id!==id;});
       goPage(APP.page); showToast('Activité supprimée','success');
+    }).catch(function(){showToast('Erreur réseau','error');});
+    return;
+  }
+  if (collection === 'events') {
+    api('DELETE','/admin/events/'+id).then(function(d){
+      if(d.error){showToast(d.error,'error');return;}
+      DB.events=DB.events.filter(function(x){return x.id!==id;});
+      goPage(APP.page); showToast('Événement supprimé','success');
     }).catch(function(){showToast('Erreur réseau','error');});
     return;
   }
