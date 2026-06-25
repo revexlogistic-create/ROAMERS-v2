@@ -576,6 +576,14 @@ body.is-dashboard #nav{display:none !important}
 body.is-dashboard #app{padding-top:0 !important}
 body.is-dashboard .dash-layout{min-height:100vh}
 body.is-dashboard .dash-sb{top:0;height:100vh}
+/* Desktop: lock the dashboard to the viewport so the sidebar stays put and only
+   the main panel scrolls. (html/body have overflow-x:hidden, which makes the body
+   the sticky scroll-container but it never scrolls — so position:sticky fails.) */
+@media(min-width:901px){
+  body.is-dashboard .dash-layout{height:100vh;overflow:hidden}
+  body.is-dashboard .dash-sb{position:static;top:auto;height:100vh;overflow-y:auto}
+  body.is-dashboard .dash-main{height:100vh;overflow-y:auto}
+}
 .d-hdr{margin-bottom:24px}
 .d-title{font-size:28px;font-weight:600;color:var(--txt);margin-bottom:4px;font-family:'Cormorant Garamond',serif}
 .d-sub{font-size:14px;color:var(--mut)}
@@ -836,6 +844,9 @@ img,video{max-width:100%;height:auto}
   }
   @keyframes pageIn{from{opacity:.4}to{opacity:1}}
   body.is-login main#app{padding-top:0;padding-bottom:0}
+  /* On mobile the dashboard must still clear the fixed top bar + bottom tab bar.
+     (the global is-dashboard padding-top:0 is only correct on desktop) */
+  body.is-dashboard main#app{padding-top:calc(var(--topbar-h) + var(--safe-top)) !important;padding-bottom:calc(var(--tab-h) + var(--safe-bottom) + 8px) !important}
 
   /* Hero takes the screen but not way more */
   .hero{
