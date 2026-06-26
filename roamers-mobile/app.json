@@ -2,7 +2,7 @@
   "expo": {
     "name": "Roamers Community",
     "slug": "roamers-community",
-    "version": "1.0.15",
+    "version": "1.0.16",
     "orientation": "portrait",
     "scheme": "roamers",
     "icon": "./assets/icon.png",
@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "ma.roamerscommunity.app",
-      "versionCode": 45,
+      "versionCode": 46,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"

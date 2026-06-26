@@ -254,11 +254,11 @@ app.get('/api/app-version', function(req, res) {
     sizeMB = Math.round(require('fs').statSync(path.join(PUBLIC, 'downloads', 'roamers.apk')).size / 1048576);
   } catch (e) { /* APK missing — keep fallback so the page still renders */ }
   res.json({
-    versionCode: 45,
-    versionName: '1.0.15',
+    versionCode: 46,
+    versionName: '1.0.16',
     sizeMB: sizeMB,
     downloadUrl: '/downloads/roamers.apk',
-    releaseNotes: 'Coordonnées bancaires (virement) synchronisées avec les paramètres et corrections diverses.'
+    releaseNotes: 'Détails des événements : touchez une carte pour voir tous les détails et vous inscrire.'
   });
 });
 
