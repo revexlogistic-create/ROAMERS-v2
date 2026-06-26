@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { createBooking, validatePromo } from '../services/api';
+import { createBooking, validatePromo, getSiteConfig } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { COLORS, RADIUS, SHADOW } from '../constants/theme';
 
@@ -109,6 +109,10 @@ export default function BookingScreen({ route, navigation }: any) {
   /* Step 4 – Payment */
   const [payMethod, setPayMethod] = useState<'virement' | 'carte'>('virement');
   const [loading,   setLoading]   = useState(false);
+
+  /* Bank-transfer details + WhatsApp come from admin settings (site-config) */
+  const [cfg, setCfg] = useState<any>(null);
+  useEffect(() => { getSiteConfig().then(setCfg).catch(() => {}); }, []);
 
   /* Promo code */
   const [promoInput,    setPromoInput]    = useState('');
@@ -603,20 +607,34 @@ export default function BookingScreen({ route, navigation }: any) {
             {payMethod === 'virement' && (
               <View style={styles.bankDetails}>
                 <Text style={styles.bankTitle}>Coordonnées bancaires Roamers</Text>
-                {[
-                  ['Banque', 'Attijariwafa Bank'],
-                  ['Titulaire', 'ROAMERS SARL'],
-                  ['RIB', '007 780 0021456300001 23'],
-                  ['Montant', `${acompte.toLocaleString('fr-MA')} MAD (acompte 30%)`],
-                  ['Référence', `REF-${name.replace(/\s/g,'').toUpperCase().slice(0,6)}`],
-                ].map(([k, v]) => (
-                  <View key={k} style={styles.bankRow}>
-                    <Text style={styles.bankKey}>{k}</Text>
-                    <Text style={styles.bankVal}>{v}</Text>
-                  </View>
-                ))}
+                {(() => {
+                  const rows: [string, string][] = [];
+                  if (cfg?.bankName)  rows.push(['Banque', cfg.bankName]);
+                  if (cfg?.bankBenef) rows.push(['Titulaire', cfg.bankBenef]);
+                  if (cfg?.bankRib)   rows.push(['RIB', cfg.bankRib]);
+                  if (cfg?.bankIban)  rows.push(['IBAN', cfg.bankIban]);
+                  if (cfg?.bankSwift) rows.push(['SWIFT', cfg.bankSwift]);
+                  const hasBank = rows.length > 0;
+                  rows.push(['Montant', `${acompte.toLocaleString('fr-MA')} MAD (acompte 30%)`]);
+                  rows.push(['Référence', `REF-${name.replace(/\s/g, '').toUpperCase().slice(0, 6)}`]);
+                  return (
+                    <>
+                      {!hasBank && (
+                        <Text style={styles.bankNote}>
+                          Les coordonnées bancaires complètes vous seront communiquées par WhatsApp après confirmation.
+                        </Text>
+                      )}
+                      {rows.map(([k, v]) => (
+                        <View key={k} style={styles.bankRow}>
+                          <Text style={styles.bankKey}>{k}</Text>
+                          <Text style={styles.bankVal}>{v}</Text>
+                        </View>
+                      ))}
+                    </>
+                  );
+                })()}
                 <Text style={styles.bankNote}>
-                  ⚠️ Indiquez votre nom complet en référence et envoyez le justificatif par WhatsApp au +212 6 XX XX XX XX
+                  ⚠️ Indiquez votre nom complet en référence{cfg?.whatsapp ? ` et envoyez le justificatif par WhatsApp au +${String(cfg.whatsapp).replace(/[^0-9]/g, '')}` : ' et envoyez le justificatif par WhatsApp'}.
                 </Text>
               </View>
             )}
