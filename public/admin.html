@@ -3302,7 +3302,7 @@ function saveActivity(actId) {
 }
 
 function renderEvents() {
-  var rows = DB.events.map(function(e){
+  var rows = DB.events.map(function(e, i){
     var st = e.status||'active';
     var stColor = st==='active'?'#16a34a':(st==='draft'?'#a16207':'#6b7280');
     return '<tr style="border-bottom:1px solid var(--bdr,#eee)">'
@@ -3311,7 +3311,12 @@ function renderEvents() {
       +'<td style="padding:12px 10px">'+_esc(e.location||'—')+'</td>'
       +'<td style="padding:12px 10px;white-space:nowrap">'+(e.price?e.price+' MAD':'Gratuit')+'</td>'
       +'<td style="padding:12px 10px"><span style="font-size:11px;font-weight:700;color:'+stColor+';background:'+stColor+'18;padding:3px 9px;border-radius:100px;text-transform:capitalize">'+st+'</span></td>'
-      +'<td style="padding:12px 10px;text-align:right;white-space:nowrap"><button class="btn btn-sm" onclick="openEventModal(\''+e.id+'\')" title="Modifier">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteItem(\'events\',\''+e.id+'\')" title="Supprimer">🗑</button></td>'
+      +'<td style="padding:12px 10px;text-align:right;white-space:nowrap">'
+        +'<button class="btn btn-sm" onclick="moveEvent(\''+e.id+'\',-1)" title="Monter"'+(i===0?' disabled style="opacity:.3"':'')+'>↑</button> '
+        +'<button class="btn btn-sm" onclick="moveEvent(\''+e.id+'\',1)" title="Descendre"'+(i===DB.events.length-1?' disabled style="opacity:.3"':'')+'>↓</button> '
+        +'<button class="btn btn-sm" onclick="openEventModal(\''+e.id+'\')" title="Modifier">✏️</button> '
+        +'<button class="btn btn-danger btn-sm" onclick="deleteItem(\'events\',\''+e.id+'\')" title="Supprimer">🗑</button>'
+      +'</td>'
     +'</tr>';
   }).join('');
   return '<div class="page-header"><div><h1>Gérer Events 📅</h1><p>Créez et gérez les événements de la communauté Roamers</p></div><div class="ph-actions"><button class="btn btn-primary" onclick="openEventModal()">+ Nouvel événement</button></div></div>'
@@ -3320,6 +3325,17 @@ function renderEvents() {
       ? '<table style="width:100%;border-collapse:collapse"><thead><tr style="text-align:left;font-size:12px;color:#888;border-bottom:1px solid var(--bdr,#eee)"><th style="padding:12px 10px">Événement</th><th style="padding:12px 10px">Date</th><th style="padding:12px 10px">Lieu</th><th style="padding:12px 10px">Prix</th><th style="padding:12px 10px">Statut</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
       : '<div style="text-align:center;padding:60px 20px;color:#888"><div style="font-size:44px;margin-bottom:12px">📅</div><div style="font-size:16px;font-weight:600;color:#444;margin-bottom:6px">Aucun événement</div><div style="font-size:14px">Cliquez sur « + Nouvel événement » pour en créer un.</div></div>')
     +'</div>';
+}
+
+function moveEvent(id, dir){
+  var pos = DB.events.findIndex(function(e){ return e.id===id; });
+  var np = pos + dir;
+  if(pos<0 || np<0 || np>=DB.events.length) return;
+  var tmp = DB.events[pos]; DB.events[pos] = DB.events[np]; DB.events[np] = tmp;
+  goPage('events');
+  api('PUT','/admin/events/reorder',{ids:DB.events.map(function(e){return e.id;})})
+    .then(function(d){ if(d&&d.error){showToast(d.error,'error');} })
+    .catch(function(){ showToast('Erreur réseau — ordre non sauvegardé','error'); });
 }
 
 function openEventModal(evId) {

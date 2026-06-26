@@ -432,10 +432,22 @@ var EVENT_STATUS = ['active','draft','archived'];
 
 router.get('/events', function(req, res) {
   res.json({ events: db.events.all().sort(function(a, b){
+    var so = (a.sortOrder||0) - (b.sortOrder||0);
+    if (so !== 0) return so;
     var da = a.date ? new Date(a.date) : null, dbb = b.date ? new Date(b.date) : null;
-    if (da && dbb && da - dbb !== 0) return da - dbb;
-    return (a.sortOrder||0) - (b.sortOrder||0);
+    if (da && dbb) return da - dbb;
+    return 0;
   }) });
+});
+
+router.put('/events/reorder', auditMod.audit('admin:event:reorder'), async function(req, res) {
+  var ids = Array.isArray(req.body && req.body.ids) ? req.body.ids : null;
+  if (!ids) return res.status(400).json({ error: 'ids array required' });
+  ids.forEach(function(id, i){
+    db.events.update(function(e){ return e.id === id; }, { sortOrder: i });
+  });
+  await db.events.flush();
+  res.json({ ok: true, count: ids.length });
 });
 
 router.post('/events', auditMod.audit('admin:event:create'), async function(req, res) {

@@ -414,11 +414,13 @@ app.get('/api/events', function(req, res) {
   var evs = db.events.all()
     .filter(function(e){ return e.status === 'active'; })
     .sort(function(a, b){
-      /* upcoming first by date, then by sortOrder */
+      /* admin-controlled display order first, then upcoming by date */
+      var so = (a.sortOrder||0) - (b.sortOrder||0);
+      if (so !== 0) return so;
       var da = a.date ? new Date(a.date) : null;
       var dbb = b.date ? new Date(b.date) : null;
-      if (da && dbb && da - dbb !== 0) return da - dbb;
-      return (a.sortOrder||0) - (b.sortOrder||0);
+      if (da && dbb) return da - dbb;
+      return 0;
     });
   res.json({ events: evs });
 });

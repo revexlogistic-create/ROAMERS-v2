@@ -1857,6 +1857,7 @@ function render(){
   if(ST.pg==='exp-detail')   return pgExpDetail(ST.param);
   if(ST.pg==='activities')   return pgActivities();
   if(ST.pg==='events')       return pgEvents();
+  if(ST.pg==='event-detail') return pgEventDetail(ST.param);
   if(ST.pg==='act-detail')   return pgActDetail(ST.param);
   if(ST.pg==='destinations') return pgDests();
   if(ST.pg==='team')         return pgTeam();
@@ -1874,7 +1875,7 @@ function render(){
 function syncAppShell(pg){
   var titles = {
     home:'Roamers', experiences:'Voyages', 'exp-detail':'Détails du voyage',
-    activities:'Activités', 'act-detail':'Détails activité', events:'Events',
+    activities:'Activités', 'act-detail':'Détails activité', events:'Events', 'event-detail':'Détails événement',
     destinations:'Destinations', team:'Team Building', about:'À propos',
     blog:'Magazine', post:'Article', contact:'Contact', plan:'Planifier',
     login:'Connexion', dashboard:'Mon compte', admin:'Admin'
@@ -3679,7 +3680,7 @@ function pgEvents(){
     var d = e.date ? new Date(e.date) : null;
     var dd = d ? d.getDate() : '';
     var mm = d ? d.toLocaleDateString('fr-FR',{month:'short'}).replace('.','') : '';
-    return '<div class="ev-card reveal" style="background:#fff;border:1px solid var(--bdr);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--sh1)">'
+    return '<div class="ev-card reveal" onclick="go(\'event-detail\',\''+e.id+'\')" style="background:#fff;border:1px solid var(--bdr);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--sh1);cursor:pointer;transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform=\'translateY(-3px)\';this.style.boxShadow=\'var(--sh2)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'var(--sh1)\'">'
       +(e.img?'<div style="aspect-ratio:16/9;overflow:hidden;position:relative;background:#161616"><img src="'+e.img+'" loading="lazy" style="width:100%;height:100%;object-fit:cover">'
         +(d?'<div style="position:absolute;top:12px;left:12px;background:#fff;border-radius:12px;padding:6px 11px;text-align:center;box-shadow:var(--sh2);min-width:46px"><div style="font-family:\'Bebas Neue\',cursive;font-size:23px;color:var(--red);line-height:1">'+dd+'</div><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--mut);letter-spacing:.04em">'+mm+'</div></div>':'')
         +(e.badge?'<div style="position:absolute;top:12px;right:12px;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:4px 11px;border-radius:100px">'+e.badge+'</div>':'')
@@ -3694,7 +3695,7 @@ function pgEvents(){
         +(e.desc?'<p style="font-size:13.5px;color:var(--txt2);line-height:1.6;margin-bottom:16px">'+(e.desc.length>150?e.desc.slice(0,150)+'…':e.desc)+'</p>':'')
         +'<div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:6px">'
           +'<div style="font-size:16px;font-weight:700;color:var(--red)">'+priceStr+'</div>'
-          +'<a href="'+waUrl('Bonjour, je veux participer à l\'événement : '+(e.title||''))+'" target="_blank" class="btn btn-r btn-sm">S\'inscrire →</a>'
+          +'<a href="'+waUrl('Bonjour, je veux participer à l\'événement : '+(e.title||''))+'" target="_blank" onclick="event.stopPropagation()" class="btn btn-r btn-sm">S\'inscrire →</a>'
         +'</div>'
       +'</div>'
     +'</div>';
@@ -3888,6 +3889,37 @@ function renderActCards(list){
 }
 
 /* PAGE: ACTIVITY DETAIL */
+function pgEventDetail(id){
+  var e=(typeof EVENTS!=='undefined'?EVENTS:[]).find(function(x){return x.id===id;});
+  if(!e) return '<div style="padding:140px 5%;text-align:center"><h2>Événement introuvable</h2><button class="btn btn-r" onclick="go(\'events\')" style="margin-top:18px">← Tous les événements</button></div>'+foot();
+  var dateStr=e.date?fmtDt(e.date):'';
+  var priceStr=(e.price&&e.price>0)?e.price.toLocaleString()+' MAD':'Gratuit';
+  return ''
+  +'<div style="position:relative;height:50vh;min-height:320px;overflow:hidden;background:#161616">'
+    +(e.img?'<img src="'+e.img+'" alt="'+(e.title||'')+'" style="width:100%;height:100%;object-fit:cover">':'')
+    +'<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15),rgba(8,8,8,.8))"></div>'
+    +'<div style="position:absolute;left:5%;right:5%;bottom:24px;max-width:760px;margin:0 auto">'
+      +'<button onclick="go(\'events\')" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:100px;padding:6px 13px;font-size:12px;color:#fff;cursor:pointer;margin-bottom:12px;font-family:inherit;backdrop-filter:blur(6px)">← Tous les événements</button>'
+      +(e.badge?'<span style="display:inline-block;background:var(--red);color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:100px;margin-left:8px;vertical-align:middle">'+e.badge+'</span>':'')
+      +'<h1 style="font-family:\'Cormorant Garamond\',serif;font-size:clamp(26px,5vw,48px);color:#fff;line-height:1.05">'+(e.title||'')+'</h1>'
+      +(e.sub?'<p style="color:rgba(255,255,255,.85);font-size:15px;margin-top:6px">'+e.sub+'</p>':'')
+    +'</div>'
+  +'</div>'
+  +'<div style="max-width:760px;margin:0 auto;padding:30px 5% 10px">'
+    +'<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px">'
+      +(dateStr?'<div style="display:inline-flex;align-items:center;gap:7px;background:var(--cream);border:1px solid var(--bdr);border-radius:12px;padding:9px 14px;font-size:13.5px;font-weight:600;color:var(--txt)">📅 '+dateStr+(e.time?' · '+e.time:'')+'</div>':'')
+      +(e.location?'<div style="display:inline-flex;align-items:center;gap:7px;background:var(--cream);border:1px solid var(--bdr);border-radius:12px;padding:9px 14px;font-size:13.5px;font-weight:600;color:var(--txt)">📍 '+e.location+'</div>':'')
+      +(e.capacity?'<div style="display:inline-flex;align-items:center;gap:7px;background:var(--cream);border:1px solid var(--bdr);border-radius:12px;padding:9px 14px;font-size:13.5px;font-weight:600;color:var(--txt)">👥 '+e.capacity+' places</div>':'')
+    +'</div>'
+    +(e.desc?'<h2 style="font-family:\'Cormorant Garamond\',serif;font-size:25px;font-weight:600;margin-bottom:12px">À propos</h2><p style="font-size:15px;line-height:1.85;color:var(--mut);white-space:pre-line;margin-bottom:28px">'+e.desc+'</p>':'')
+    +'<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:#fff;border:1px solid var(--bdr);border-radius:18px;padding:18px 22px;box-shadow:var(--sh1);position:sticky;bottom:16px">'
+      +'<div><div style="font-size:12px;color:var(--mut)">Participation</div><div style="font-size:24px;font-weight:700;color:var(--red)">'+priceStr+'</div></div>'
+      +'<a href="'+waUrl('Bonjour, je veux participer à l\'événement : '+(e.title||''))+'" target="_blank" class="btn btn-r" style="padding:12px 26px">S\'inscrire →</a>'
+    +'</div>'
+  +'</div>'
+  +foot();
+}
+
 function pgActDetail(id){
   var a=ACTS.find(function(x){return x.id===id;});
   if(!a) return '<div style="padding:140px 5%;text-align:center"><h2>Activity not found</h2><button class="btn btn-r" onclick="go(\'activities\')" style="margin-top:18px">← All Activities</button></div>'+foot();
