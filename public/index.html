@@ -259,6 +259,51 @@ em.s{color:var(--sand);font-style:italic}
 .hero-sub{font-size:clamp(14px,1.55vw,17px);color:rgba(255,255,255,.65);max-width:500px;line-height:1.75;font-weight:300;margin:18px 0 34px}
 .hero-acts{display:flex;gap:12px;flex-wrap:wrap}
 .hero-stats{position:absolute;bottom:3vh;right:5%;display:flex;gap:20px;z-index:2}
+/* ── ROAMER AI CHAT (hero) ── */
+@media(min-width:901px){
+  .hero .hero-c{display:flex;gap:22px;align-items:stretch}
+  .hero .hero-c > .hero-glass{flex:1 1 auto;min-width:0}
+  #ramiCard{flex:0 0 clamp(330px,33vw,400px)}
+}
+#ramiCard{display:flex;flex-direction:column;height:100%;box-sizing:border-box;background:rgba(10,8,8,.62);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(217,184,122,.22);border-radius:22px;box-shadow:0 8px 32px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.1);overflow:hidden;z-index:4}
+#ramiCard .rami-head{display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(135deg,rgba(184,23,46,.22),rgba(217,184,122,.06))}
+#ramiCard .rami-ava{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--red-d));display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:700;font-size:20px;color:#fff;flex-shrink:0;box-shadow:0 0 0 2px rgba(217,184,122,.35)}
+#ramiCard .rami-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:#fff;line-height:1.1}
+#ramiCard .rami-status{font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px;margin-top:1px}
+#ramiCard .rami-dot{width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 6px #34d399}
+#ramiCard .rami-x{margin-left:auto;background:none;border:none;color:rgba(255,255,255,.55);font-size:15px;cursor:pointer;padding:4px;display:none}
+#ramiCard .rami-body{flex:1 1 auto;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin}
+#ramiCard .rami-body::-webkit-scrollbar{width:5px}
+#ramiCard .rami-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:4px}
+#ramiCard .rami-msg{display:flex;max-width:88%}
+#ramiCard .rami-user{align-self:flex-end;justify-content:flex-end}
+#ramiCard .rami-bot{align-self:flex-start}
+#ramiCard .rami-bubble{padding:9px 13px;border-radius:15px;font-size:13.5px;line-height:1.5;font-family:'DM Sans',sans-serif;word-wrap:break-word}
+#ramiCard .rami-bot .rami-bubble{background:rgba(255,255,255,.09);color:#f3efe9;border:1px solid rgba(255,255,255,.07);border-bottom-left-radius:5px}
+#ramiCard .rami-user .rami-bubble{background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;border-bottom-right-radius:5px}
+#ramiCard .rami-typing{display:inline-flex;gap:4px;align-items:center}
+#ramiCard .rami-typing span{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.55);animation:ramiBounce 1.2s infinite ease-in-out}
+#ramiCard .rami-typing span:nth-child(2){animation-delay:.18s}
+#ramiCard .rami-typing span:nth-child(3){animation-delay:.36s}
+@keyframes ramiBounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}
+#ramiCard .rami-chips{display:flex;flex-wrap:wrap;gap:7px;padding:0 14px 10px}
+#ramiCard .rami-chip{background:rgba(217,184,122,.13);border:1px solid rgba(217,184,122,.3);color:var(--sand);font-size:12px;font-weight:600;padding:7px 12px;border-radius:100px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s}
+#ramiCard .rami-chip:hover{background:var(--sand);color:#1a0d10}
+#ramiCard .rami-input{display:flex;align-items:flex-end;gap:8px;padding:12px 14px;border-top:1px solid rgba(255,255,255,.08)}
+#ramiCard .rami-input textarea{flex:1;resize:none;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:14px;color:#fff;font-size:13.5px;font-family:'DM Sans',sans-serif;padding:10px 12px;outline:none;max-height:110px;line-height:1.4}
+#ramiCard .rami-input textarea::placeholder{color:rgba(255,255,255,.4)}
+#ramiCard .rami-input textarea:focus{border-color:rgba(217,184,122,.5)}
+#ramiCard .rami-send{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--red-d));border:none;color:#fff;font-size:15px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:transform .15s}
+#ramiCard .rami-send:hover{transform:scale(1.06)}
+#ramiFab{display:none}
+@media(max-width:900px){
+  #ramiCard{display:none}
+  #ramiFab{display:inline-flex;align-items:center;gap:8px;position:fixed;right:14px;bottom:calc(var(--tab-h) + var(--safe-bottom) + 12px);z-index:60;background:linear-gradient(135deg,var(--red),var(--red-d));color:#fff;border:1px solid rgba(217,184,122,.4);border-radius:100px;padding:11px 16px;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;box-shadow:0 6px 22px rgba(184,23,46,.45)}
+  #ramiFab .rami-fab-ava{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:700;font-size:13px}
+  #ramiCard.rami-open{display:flex;position:fixed;left:0;right:0;bottom:0;top:auto;height:82vh;max-height:600px;border-radius:22px 22px 0 0;z-index:9999;animation:ramiUp .28s cubic-bezier(.4,0,.2,1)}
+  #ramiCard.rami-open .rami-x{display:block}
+}
+@keyframes ramiUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 @media(max-width:390px){
   .hero-glass{padding:16px 14px 14px;border-radius:16px}
   .hero-glass h1{font-size:clamp(22px,7vw,30px)!important;margin-bottom:8px!important}
@@ -1812,6 +1857,52 @@ var SETTINGS = {
 /* helper: build a wa.me URL with optional pre-filled text */
 function waUrl(msg){ return 'https://wa.me/'+SETTINGS.whatsapp+(msg?'?text='+encodeURIComponent(msg):''); }
 
+/* ── ROAMER — AI éco-tourism guide (backend /api/chat) ── */
+var RAMI = { msgs: [], busy: false, greeted: false };
+function ramiEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
+function ramiRender(){
+  var b = document.getElementById('ramiBody'); if(!b) return;
+  b.innerHTML = RAMI.msgs.map(function(m){
+    if(m.role==='typing') return '<div class="rami-msg rami-bot"><div class="rami-bubble rami-typing"><span></span><span></span><span></span></div></div>';
+    return '<div class="rami-msg '+(m.role==='user'?'rami-user':'rami-bot')+'"><div class="rami-bubble">'+ramiEsc(m.content)+'</div></div>';
+  }).join('');
+  b.scrollTop = b.scrollHeight;
+}
+function ramiInit(){
+  if(!document.getElementById('ramiBody')) return;
+  if(!RAMI.greeted){
+    RAMI.greeted = true;
+    RAMI.msgs = [{ role:'assistant', content:'Salam ! 👋 Je suis Roamer, votre guide éco-touristique de la région Taza-Atlas. Comment puis-je vous aider à préparer votre aventure ?' }];
+  }
+  ramiRender();
+}
+function ramiGrow(t){ t.style.height='auto'; t.style.height=Math.min(t.scrollHeight,110)+'px'; }
+function ramiKey(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); ramiSend(); } }
+function ramiChip(btn){ var inp=document.getElementById('ramiInput'); if(inp){ inp.value=btn.textContent.replace(/^[^A-Za-zÀ-ÿ]+/,'').trim(); ramiSend(); } }
+function ramiOpen(){ var c=document.getElementById('ramiCard'); if(c){ c.classList.add('rami-open'); ramiInit(); var i=document.getElementById('ramiInput'); if(i) setTimeout(function(){ i.focus(); },60); } }
+function ramiClose(){ var c=document.getElementById('ramiCard'); if(c) c.classList.remove('rami-open'); }
+function ramiSend(){
+  var inp=document.getElementById('ramiInput'); if(!inp || RAMI.busy) return;
+  var text=(inp.value||'').trim(); if(!text) return;
+  var chips=document.getElementById('ramiChips'); if(chips) chips.style.display='none';
+  RAMI.msgs.push({ role:'user', content:text });
+  inp.value=''; inp.style.height='auto';
+  RAMI.busy=true; RAMI.msgs.push({ role:'typing' }); ramiRender();
+  var history = RAMI.msgs.filter(function(m){ return m.role==='user'||m.role==='assistant'; }).map(function(m){ return { role:m.role, content:m.content }; });
+  fetch('/api/chat',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ messages: history }) })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      RAMI.msgs = RAMI.msgs.filter(function(m){ return m.role!=='typing'; });
+      RAMI.msgs.push({ role:'assistant', content:(d && d.reply) ? d.reply : 'Désolé, je n\'ai pas pu répondre. Écrivez-nous sur WhatsApp ! 🌿' });
+      RAMI.busy=false; ramiRender();
+    })
+    .catch(function(){
+      RAMI.msgs = RAMI.msgs.filter(function(m){ return m.role!=='typing'; });
+      RAMI.msgs.push({ role:'assistant', content:'Connexion impossible pour le moment. Réessayez dans un instant. 🌿' });
+      RAMI.busy=false; ramiRender();
+    });
+}
+
 /* STATE */
 var ST = {
   expSeg:'all', expType:'all',
@@ -1845,7 +1936,7 @@ function go(pg,param){
   window.scrollTo({top:0,behavior:'smooth'});
   syncNav();
   syncAppShell(pg);
-  setTimeout(function(){initReveal();initDetailSlider();if(pg==='home'){initHeroCanvas();initAppVersion();}if(pg==='login'){initGoogleAuth();}if(pg==='exp-detail'&&ST.param){loadExpReviews(ST.param);loadExpGallery(ST.param);}},80);
+  setTimeout(function(){initReveal();initDetailSlider();if(pg==='home'){initHeroCanvas();initAppVersion();ramiInit();}if(pg==='login'){initGoogleAuth();}if(pg==='exp-detail'&&ST.param){loadExpReviews(ST.param);loadExpGallery(ST.param);}},80);
   /* Close mobile drawer if open */
   var mob2=document.getElementById('mob');
   if(mob2 && mob2.classList.contains('open')){mob2.classList.remove('open');document.body.style.overflow='';}
@@ -2871,6 +2962,18 @@ function pgHome(){
         +'<a href="'+waUrl()+'" target="_blank" class="btn btn-o btn-lg hero-wa-cta">💬 WhatsApp</a>'
       +'</div>'
     +'</div>'
+    +'<aside id="ramiCard" aria-label="Assistant Roamer">'
+      +'<div class="rami-head"><div class="rami-ava">R</div><div><div class="rami-name">Roamer</div><div class="rami-status"><span class="rami-dot"></span>Guide éco-touristique · en ligne</div></div><button class="rami-x" onclick="ramiClose()" aria-label="Fermer">✕</button></div>'
+      +'<div id="ramiBody" class="rami-body"></div>'
+      +'<div id="ramiChips" class="rami-chips">'
+        +'<button class="rami-chip" onclick="ramiChip(this)">🥾 Randonnée Atlas</button>'
+        +'<button class="rami-chip" onclick="ramiChip(this)">⛺ Bivouac Taza</button>'
+        +'<button class="rami-chip" onclick="ramiChip(this)">🍽️ Gastronomie</button>'
+        +'<button class="rami-chip" onclick="ramiChip(this)">🐎 Équestre</button>'
+      +'</div>'
+      +'<div class="rami-input"><textarea id="ramiInput" rows="1" placeholder="Posez votre question à Roamer…" onkeydown="ramiKey(event)" oninput="ramiGrow(this)"></textarea><button class="rami-send" onclick="ramiSend()" aria-label="Envoyer">➤</button></div>'
+    +'</aside>'
+    +'<button id="ramiFab" onclick="ramiOpen()" aria-label="Demander à Roamer"><span class="rami-fab-ava">R</span> Demander à Roamer</button>'
     +'</div>'
     +'<div class="hero-stats">'
       +'<div><span class="hs-n">'+SETTINGS.cmsHeroSt1Val+'</span><span class="hs-l">'+SETTINGS.cmsHeroSt1Lbl+'</span></div>'

@@ -431,6 +431,47 @@ app.get('/api/events/:id', function(req, res) {
   res.json({ event: ev });
 });
 
+/* ── ROAMER — AI éco-tourism guide (Claude Haiku 4.5) ───────── */
+var _anthropicClient = null;
+try {
+  var _AnthropicSDK = require('@anthropic-ai/sdk');
+  var _Anthropic = _AnthropicSDK.Anthropic || _AnthropicSDK.default || _AnthropicSDK;
+  if (process.env.ANTHROPIC_API_KEY) _anthropicClient = new _Anthropic();
+} catch (e) { console.warn('[chat] @anthropic-ai/sdk unavailable:', e && e.message); }
+
+var ROAMER_SYSTEM =
+  "Tu es Roamer, guide éco-touristique passionné de la région naturel au Maroc, pour Roamers Community SARL.\n" +
+  "Tu maîtrises : randonnées et bivouacs dans le Moyen Atlas, culture Amazighe, gastronomie locale (tagine, couscous berbère, miel de Taza), circuits équestres, hébergement chez l'habitant, éco-tourisme.\n" +
+  "Ton ton : chaleureux, précis, enthousiaste. Max 3-4 phrases par réponse. 1-2 emojis max. Réponds en français ou darija selon la langue de l'utilisateur.";
+
+app.post('/api/chat', express.json({ limit: '64kb' }), async function(req, res) {
+  try {
+    if (!_anthropicClient) return res.status(503).json({ error: 'Chat temporairement indisponible' });
+    var raw = (req.body && Array.isArray(req.body.messages)) ? req.body.messages : [];
+    var msgs = raw
+      .filter(function(m){ return m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim(); })
+      .slice(-20)
+      .map(function(m){ return { role: m.role, content: String(m.content).slice(0, 4000) }; });
+    if (!msgs.length || msgs[msgs.length - 1].role !== 'user') {
+      return res.status(400).json({ error: 'Message requis' });
+    }
+    var resp = await _anthropicClient.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 1000,
+      system: ROAMER_SYSTEM,
+      messages: msgs
+    });
+    var reply = (resp.content || [])
+      .filter(function(b){ return b.type === 'text'; })
+      .map(function(b){ return b.text; })
+      .join('').trim();
+    res.json({ reply: reply || 'Je reviens vers vous très vite ! 🌿' });
+  } catch (e) {
+    console.error('[chat] error:', e && e.message);
+    res.status(500).json({ error: 'Erreur du service de chat' });
+  }
+});
+
 /* ── PROMO CODES (public validate) ──────────────────────────── */
 app.get('/api/promos/validate', function(req, res) {
   var code = (req.query.code || '').toUpperCase().trim();
