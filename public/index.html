@@ -306,6 +306,7 @@ em.s{color:var(--sand);font-style:italic}
   #ramiCard.rami-open .rami-input{padding-bottom:calc(12px + var(--safe-bottom,0px))}
 }
 @keyframes ramiUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+body.rami-chat-open #appTabs,body.rami-chat-open #appTopbar{display:none!important}
 @media(max-width:390px){
   .hero-glass{padding:16px 14px 14px;border-radius:16px}
   .hero-glass h1{font-size:clamp(22px,7vw,30px)!important;margin-bottom:8px!important}
@@ -1874,15 +1875,15 @@ function ramiInit(){
   if(!document.getElementById('ramiBody')) return;
   if(!RAMI.greeted){
     RAMI.greeted = true;
-    RAMI.msgs = [{ role:'assistant', content:'Salam ! 👋 Je suis Roamer, votre guide éco-touristique de la région Taza-Atlas. Comment puis-je vous aider à préparer votre aventure ?' }];
+    RAMI.msgs = [{ role:'assistant', content:'Salam ! 👋 Je suis ROA, votre compagnonne de voyage chez Roamers Community. Dites-moi ce qui vous fait rêver au Maroc — montagnes, désert, océan, culture… — et je vous guide vers l\'aventure parfaite. 🌿' }];
   }
   ramiRender();
 }
 function ramiGrow(t){ t.style.height='auto'; t.style.height=Math.min(t.scrollHeight,110)+'px'; }
 function ramiKey(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); ramiSend(); } }
 function ramiChip(btn){ var inp=document.getElementById('ramiInput'); if(inp){ inp.value=btn.textContent.replace(/^[^A-Za-zÀ-ÿ]+/,'').trim(); ramiSend(); } }
-function ramiOpen(){ var c=document.getElementById('ramiCard'); if(c){ c.classList.add('rami-open'); if(window.innerWidth<=900){ document.body.style.overflow='hidden'; } ramiInit(); var i=document.getElementById('ramiInput'); if(i) setTimeout(function(){ i.focus(); },60); } }
-function ramiClose(){ var c=document.getElementById('ramiCard'); if(c) c.classList.remove('rami-open'); document.body.style.overflow=''; }
+function ramiOpen(){ var c=document.getElementById('ramiCard'); if(c){ c.classList.add('rami-open'); if(window.innerWidth<=900){ document.body.style.overflow='hidden'; document.body.classList.add('rami-chat-open'); } ramiInit(); var i=document.getElementById('ramiInput'); if(i) setTimeout(function(){ i.focus(); },60); } }
+function ramiClose(){ var c=document.getElementById('ramiCard'); if(c) c.classList.remove('rami-open'); document.body.style.overflow=''; document.body.classList.remove('rami-chat-open'); }
 function ramiSend(){
   var inp=document.getElementById('ramiInput'); if(!inp || RAMI.busy) return;
   var text=(inp.value||'').trim(); if(!text) return;
@@ -2964,8 +2965,8 @@ function pgHome(){
         +'<a href="'+waUrl()+'" target="_blank" class="btn btn-o btn-lg hero-wa-cta">💬 WhatsApp</a>'
       +'</div>'
     +'</div>'
-    +'<aside id="ramiCard" aria-label="Assistant Roamer">'
-      +'<div class="rami-head"><div class="rami-ava">R</div><div><div class="rami-name">Roamer</div><div class="rami-status"><span class="rami-dot"></span>Guide éco-touristique · en ligne</div></div><button class="rami-x" onclick="ramiClose()" aria-label="Fermer">✕</button></div>'
+    +'<aside id="ramiCard" aria-label="ROA — compagnonne de voyage Roamers">'
+      +'<div class="rami-head"><div class="rami-ava">R</div><div><div class="rami-name">ROA</div><div class="rami-status"><span class="rami-dot"></span>Ambassadrice Roamers · en ligne</div></div><button class="rami-x" onclick="ramiClose()" aria-label="Fermer">✕</button></div>'
       +'<div id="ramiBody" class="rami-body"></div>'
       +'<div id="ramiChips" class="rami-chips">'
         +'<button class="rami-chip" onclick="ramiChip(this)">🥾 Randonnée Atlas</button>'
@@ -2973,9 +2974,9 @@ function pgHome(){
         +'<button class="rami-chip" onclick="ramiChip(this)">🍽️ Gastronomie</button>'
         +'<button class="rami-chip" onclick="ramiChip(this)">🐎 Équestre</button>'
       +'</div>'
-      +'<div class="rami-input"><textarea id="ramiInput" rows="1" placeholder="Posez votre question à Roamer…" onkeydown="ramiKey(event)" oninput="ramiGrow(this)"></textarea><button class="rami-send" onclick="ramiSend()" aria-label="Envoyer">➤</button></div>'
+      +'<div class="rami-input"><textarea id="ramiInput" rows="1" placeholder="Écrivez à ROA…" onkeydown="ramiKey(event)" oninput="ramiGrow(this)"></textarea><button class="rami-send" onclick="ramiSend()" aria-label="Envoyer">➤</button></div>'
     +'</aside>'
-    +'<button id="ramiFab" onclick="ramiOpen()" aria-label="Demander à Roamer"><span class="rami-fab-ava">R</span> Demander à Roamer</button>'
+    +'<button id="ramiFab" onclick="ramiOpen()" aria-label="Discuter avec ROA"><span class="rami-fab-ava">R</span> Discuter avec ROA</button>'
     +'</div>'
     +'<div class="hero-stats">'
       +'<div><span class="hs-n">'+SETTINGS.cmsHeroSt1Val+'</span><span class="hs-l">'+SETTINGS.cmsHeroSt1Lbl+'</span></div>'

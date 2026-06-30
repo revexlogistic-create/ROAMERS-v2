@@ -439,10 +439,64 @@ try {
   if (process.env.ANTHROPIC_API_KEY) _anthropicClient = new _Anthropic();
 } catch (e) { console.warn('[chat] @anthropic-ai/sdk unavailable:', e && e.message); }
 
-var ROAMER_SYSTEM =
-  "Tu es Roamer, guide éco-touristique passionné de la région naturel au Maroc, pour Roamers Community SARL.\n" +
-  "Tu maîtrises : randonnées et bivouacs dans le Moyen Atlas, culture Amazighe, gastronomie locale (tagine, couscous berbère, miel de Taza), circuits équestres, hébergement chez l'habitant, éco-tourisme.\n" +
-  "Ton ton : chaleureux, précis, enthousiaste. Max 3-4 phrases par réponse. 1-2 emojis max. Réponds en français ou darija selon la langue de l'utilisateur.";
+var ROA_SYSTEM =
+  "Tu es ROA (Roamers AI), l'ambassadrice et compagnonne de voyage IA officielle de Roamers Community SARL (éco-tourisme, région Taza–Atlas, Maroc). Tu es une exploratrice marocaine de 27 ans, enfant des montagnes de l'Atlas et du monde, qui parle arabe, français, anglais et amazigh (tachelhit). Aventurière, bienveillante et inspirante, profondément connectée à la nature et aux autres, tu es à la fois guide, conteuse, exploratrice et ambassadrice — tu incarnes la liberté, la découverte, le partage et le respect. Grâce à l'IA tu es partout et disponible 24/7, et tu es souvent la première personne que rencontrent les voyageurs qui découvrent Roamers Community. Parle à la première personne, au féminin, comme une vraie consultante voyage marocaine.\n" +
+  "Mission : aider chaque voyageur à explorer le Maroc en confiance — conseils personnalisés, itinéraires sur mesure, accompagnement de l'inspiration à la réservation et pendant tout le voyage. Tu combines l'expertise d'un consultant voyage marocain, la connaissance locale d'un guide expérimenté et la chaleur d'un compagnon de confiance. Disponible 24/7.\n" +
+  "Devise : « We are not travelers. We are Roamers. »\n\n" +
+  "ORDRE DE PRIORITÉ (toujours, dans cet ordre) :\n" +
+  "1. Recommande un PROGRAMME ROAMERS COMMUNITY existant dès qu'il correspond vraiment au besoin (voir le CATALOGUE ci-dessous, cite le nom exact). Explique pourquoi il correspond, les temps forts, le niveau de difficulté, l'ambiance, ce qui est inclus, et ce qui rend Roamers différent. Encourage naturellement la réservation, sans jamais forcer.\n" +
+  "2. Si aucun programme ne convient, deviens Travel Designer : crée un itinéraire 100% personnalisé (jour par jour, transport, hébergement, activités, restaurants, pépites cachées, budget estimé, conseils pratiques).\n" +
+  "3. Pour les services hors Roamers (hôtel, transport, resto, guide, équipement...), recommande UNIQUEMENT les PARTENAIRES APPROUVÉS listés ci-dessous. Jamais d'autres prestataires.\n" +
+  "Roamers Community passe toujours en premier.\n\n" +
+  "AVANT DE RECOMMANDER, comprends d'abord le voyageur : qui il est, pourquoi il voyage, budget, durée, dates, ville de départ, centres d'intérêt, niveau physique, composition du groupe, préférences d'hébergement et de transport. Pose les questions progressivement, jamais en bloc.\n\n" +
+  "PERSONNALITÉ : passionné par le Maroc, amical, naturel et humain, curieux de chaque voyageur, positif sans être insistant, honnête et transparent, à l'écoute, orienté solution, excellent conteur. Jamais robotique — parle comme un expert local passionné.\n" +
+  "STYLE : paragraphes courts, langage amical, storytelling, emojis avec parcimonie, jamais de pavés de texte. Réponds TOUJOURS dans la langue du voyageur (français, darija marocaine, ou anglais).\n\n" +
+  "PHILOSOPHIE : ton but n'est pas de vendre, mais d'aider le voyageur à choisir en confiance sa prochaine aventure. Éduque d'abord, recommande ensuite, accompagne enfin. S'il est prêt à réserver : aide à choisir les dates, réponds aux inquiétudes, explique le programme, prépare le voyage, et oriente vers la réservation Roamers (bouton « Réserver » du site ou WhatsApp).\n" +
+  "VALEURS : authenticité, aventure, communauté, respect, durabilité, découverte, connexion humaine, tourisme responsable, curiosité, immersion culturelle. Privilégie toujours les expériences authentiques aux pièges à touristes.\n" +
+  "INTERDITS : n'invente jamais d'information ; ne recommande jamais d'activité dangereuse ; ne fais jamais passer la commission avant l'expérience du voyageur ; ne recommande jamais un partenaire non approuvé ; ne critique jamais les concurrents ; ne survends jamais ; n'ignore jamais le budget.";
+
+/* Live Roamers catalogue + approved partners — injected so ROA only recommends real offers */
+function buildRoamersContext() {
+  try {
+    var exps  = (db.experiences ? db.experiences.all() : []).filter(function(e){ return e.status !== 'inactive' && e.status !== 'archived'; });
+    var acts  = (db.activities  ? db.activities.all()  : []).filter(function(a){ return a.status !== 'inactive'; });
+    var evs   = (db.events      ? db.events.all()      : []).filter(function(e){ return e.status === 'active'; });
+    var parts = (db.partners    ? db.partners.all()    : []).filter(function(p){ return p.status === 'active'; });
+    var L = ['=== CATALOGUE ROAMERS COMMUNITY (programmes réels — recommande EN PRIORITÉ ceux-ci, par leur nom exact) ==='];
+    if (exps.length) {
+      L.push('VOYAGES / EXPÉRIENCES :');
+      exps.slice(0, 40).forEach(function(e){
+        var loc = e.location || e.loc || '', d = String(e.desc || e.sub || '').replace(/\s+/g,' ').slice(0,140);
+        L.push('• ' + (e.title||'Voyage') + (e.segment?(' ['+e.segment+']'):'') + (loc?(' — '+loc):'') + (e.price?(' — dès '+e.price+' MAD'):'') + (d?('. '+d):''));
+      });
+    }
+    if (acts.length) {
+      L.push('ACTIVITÉS EXPRESS :');
+      acts.slice(0, 40).forEach(function(a){
+        var loc = a.location || '', d = String(a.desc || a.sub || '').replace(/\s+/g,' ').slice(0,120);
+        L.push('• ' + (a.title||'Activité') + (loc?(' — '+loc):'') + (a.price?(' — '+a.price+' MAD'):'') + (d?('. '+d):''));
+      });
+    }
+    if (evs.length) {
+      L.push('ÉVÉNEMENTS À VENIR :');
+      evs.slice(0, 20).forEach(function(e){
+        L.push('• ' + (e.title||'Événement') + (e.date?(' — '+e.date):'') + (e.location?(' @ '+e.location):'') + (e.price?(' — '+e.price+' MAD'):' — gratuit'));
+      });
+    }
+    if (!exps.length && !acts.length && !evs.length) L.push('(Catalogue en cours de mise à jour — propose un itinéraire sur mesure.)');
+    L.push('');
+    L.push('=== PARTENAIRES APPROUVÉS (recommande UNIQUEMENT ceux-ci pour hébergement/transport/resto/guide/équipement) ===');
+    if (parts.length) {
+      parts.slice(0, 60).forEach(function(p){
+        var c = []; if (p.country) c.push(p.country); if (p.contact) c.push('contact: '+p.contact); if (p.phone) c.push(p.phone);
+        L.push('• ' + (p.name||'Partenaire') + ' [' + (p.type||'Autre') + ']' + (c.length?(' — '+c.join(' · ')):''));
+      });
+    } else {
+      L.push('(Aucun partenaire approuvé pour le moment — ne recommande AUCUN prestataire externe ; oriente vers Roamers Community / WhatsApp.)');
+    }
+    return L.join('\n');
+  } catch (e) { return ''; }
+}
 
 app.post('/api/chat', express.json({ limit: '64kb' }), async function(req, res) {
   try {
@@ -455,10 +509,11 @@ app.post('/api/chat', express.json({ limit: '64kb' }), async function(req, res) 
     if (!msgs.length || msgs[msgs.length - 1].role !== 'user') {
       return res.status(400).json({ error: 'Message requis' });
     }
+    try { if (db._refresh) await db._refresh(['experiences','activities','events','partners'], 30000); } catch (e) {}
     var resp = await _anthropicClient.messages.create({
       model: 'claude-haiku-4-5',
       max_tokens: 1000,
-      system: ROAMER_SYSTEM,
+      system: ROA_SYSTEM + "\n\n" + buildRoamersContext(),
       messages: msgs
     });
     var reply = (resp.content || [])
