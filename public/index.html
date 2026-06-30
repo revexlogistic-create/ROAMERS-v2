@@ -272,7 +272,7 @@ em.s{color:var(--sand);font-style:italic}
 #ramiCard .rami-status{font-size:11px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:5px;margin-top:1px}
 #ramiCard .rami-dot{width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 6px #34d399}
 #ramiCard .rami-x{margin-left:auto;background:none;border:none;color:rgba(255,255,255,.55);font-size:15px;cursor:pointer;padding:4px;display:none}
-#ramiCard .rami-body{flex:1 1 auto;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin}
+#ramiCard .rami-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin}
 #ramiCard .rami-body::-webkit-scrollbar{width:5px}
 #ramiCard .rami-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:4px}
 #ramiCard .rami-msg{display:flex;max-width:88%}
@@ -289,10 +289,10 @@ em.s{color:var(--sand);font-style:italic}
 #ramiCard .rami-chips{display:flex;flex-wrap:wrap;gap:7px;padding:0 14px 10px}
 #ramiCard .rami-chip{background:rgba(217,184,122,.13);border:1px solid rgba(217,184,122,.3);color:var(--sand);font-size:12px;font-weight:600;padding:7px 12px;border-radius:100px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s}
 #ramiCard .rami-chip:hover{background:var(--sand);color:#1a0d10}
-#ramiCard .rami-input{display:flex;align-items:flex-end;gap:8px;padding:12px 14px;border-top:1px solid rgba(255,255,255,.08)}
-#ramiCard .rami-input textarea{flex:1;resize:none;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:14px;color:#fff;font-size:13.5px;font-family:'DM Sans',sans-serif;padding:10px 12px;outline:none;max-height:110px;line-height:1.4}
-#ramiCard .rami-input textarea::placeholder{color:rgba(255,255,255,.4)}
-#ramiCard .rami-input textarea:focus{border-color:rgba(217,184,122,.5)}
+#ramiCard .rami-input{flex:0 0 auto;display:flex;align-items:flex-end;gap:8px;padding:12px 14px;border-top:1px solid rgba(217,184,122,.28);background:rgba(0,0,0,.3)}
+#ramiCard .rami-input textarea{flex:1;resize:none;background:rgba(255,255,255,.16);border:1px solid rgba(217,184,122,.45);border-radius:14px;color:#fff;font-size:13.5px;font-family:'DM Sans',sans-serif;padding:11px 13px;outline:none;max-height:110px;line-height:1.4}
+#ramiCard .rami-input textarea::placeholder{color:rgba(255,255,255,.62)}
+#ramiCard .rami-input textarea:focus{border-color:var(--sand);background:rgba(255,255,255,.2)}
 #ramiCard .rami-send{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--red-d));border:none;color:#fff;font-size:15px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:transform .15s}
 #ramiCard .rami-send:hover{transform:scale(1.06)}
 #ramiFab{display:none}
