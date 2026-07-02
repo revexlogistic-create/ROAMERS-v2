@@ -25,6 +25,7 @@ var morgan    = require('morgan');
 
 var db       = require('./database');
 var sanitize = require('./middleware/sanitize');
+var authMod  = require('./middleware/auth');
 
 /* ── STARTUP GUARDS ─────────────────────────────────────────── */
 if (!process.env.JWT_SECRET) {
@@ -498,9 +499,22 @@ function buildRoamersContext() {
   } catch (e) { return ''; }
 }
 
-app.post('/api/chat', express.json({ limit: '64kb' }), async function(req, res) {
+var ROA_DAILY_LIMIT = Math.max(1, parseInt(process.env.ROA_DAILY_LIMIT) || 20);
+
+app.post('/api/chat', express.json({ limit: '64kb' }), authMod.auth, async function(req, res) {
   try {
+    var today = new Date().toISOString().slice(0, 10);
+    var usage = req.user.chatUsage || {};
+    var usedToday = (usage.date === today) ? (usage.count || 0) : 0;
+    if (usedToday >= ROA_DAILY_LIMIT) {
+      return res.status(429).json({
+        error: 'Vous avez atteint votre limite de ' + ROA_DAILY_LIMIT + ' messages avec ROA aujourd\'hui. Revenez demain, ou contactez-nous sur WhatsApp !',
+        limitReached: true,
+        remaining: 0
+      });
+    }
     if (!_anthropicClient) return res.status(503).json({ error: 'Chat temporairement indisponible' });
+
     var raw = (req.body && Array.isArray(req.body.messages)) ? req.body.messages : [];
     var msgs = raw
       .filter(function(m){ return m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim(); })
@@ -520,7 +534,12 @@ app.post('/api/chat', express.json({ limit: '64kb' }), async function(req, res) 
       .filter(function(b){ return b.type === 'text'; })
       .map(function(b){ return b.text; })
       .join('').trim();
-    res.json({ reply: reply || 'Je reviens vers vous très vite ! 🌿' });
+
+    var newCount = usedToday + 1;
+    db.users.update(function(u){ return u.id === req.user.id; }, { chatUsage: { date: today, count: newCount } });
+    await db.users.flush();
+
+    res.json({ reply: reply || 'Je reviens vers vous très vite ! 🌿', remaining: Math.max(0, ROA_DAILY_LIMIT - newCount) });
   } catch (e) {
     console.error('[chat] error:', e && e.message);
     res.status(500).json({ error: 'Erreur du service de chat' });

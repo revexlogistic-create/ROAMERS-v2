@@ -1875,33 +1875,52 @@ function ramiInit(){
   if(!document.getElementById('ramiBody')) return;
   if(!RAMI.greeted){
     RAMI.greeted = true;
-    RAMI.msgs = [{ role:'assistant', content:'Salam ! 👋 Je suis ROA, votre compagnonne de voyage chez Roamers Community. Dites-moi ce qui vous fait rêver au Maroc — montagnes, désert, océan, culture… — et je vous guide vers l\'aventure parfaite. 🌿' }];
+    RAMI.msgs = [{ role:'assistant', content: ST.user
+      ? 'Salam ! 👋 Je suis ROA, votre compagnonne de voyage chez Roamers Community. Dites-moi ce qui vous fait rêver au Maroc — montagnes, désert, océan, culture… — et je vous guide vers l\'aventure parfaite. 🌿'
+      : 'Salam ! 👋 Je suis ROA, votre compagnonne de voyage chez Roamers Community. Connectez-vous pour discuter avec moi et préparer votre aventure sur mesure. 🌿' }];
   }
   ramiRender();
+  ramiStatusSet(ST.user ? 'Ambassadrice Roamers · en ligne' : 'Connectez-vous pour discuter');
 }
 function ramiGrow(t){ t.style.height='auto'; t.style.height=Math.min(t.scrollHeight,110)+'px'; }
 function ramiKey(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); ramiSend(); } }
 function ramiChip(btn){ var inp=document.getElementById('ramiInput'); if(inp){ inp.value=btn.textContent.replace(/^[^A-Za-zÀ-ÿ]+/,'').trim(); ramiSend(); } }
 function ramiOpen(){ var c=document.getElementById('ramiCard'); if(c){ c.classList.add('rami-open'); if(window.innerWidth<=900){ document.body.style.overflow='hidden'; document.body.classList.add('rami-chat-open'); } ramiInit(); var i=document.getElementById('ramiInput'); if(i) setTimeout(function(){ i.focus(); },60); } }
 function ramiClose(){ var c=document.getElementById('ramiCard'); if(c) c.classList.remove('rami-open'); document.body.style.overflow=''; document.body.classList.remove('rami-chat-open'); }
+function ramiStatusSet(txt){ var s=document.getElementById('ramiStatusTxt'); if(s) s.textContent=txt; }
 function ramiSend(){
   var inp=document.getElementById('ramiInput'); if(!inp || RAMI.busy) return;
   var text=(inp.value||'').trim(); if(!text) return;
+  if(!ST.user){
+    ramiClose();
+    toast('Connectez-vous pour discuter avec ROA','warn');
+    go('login');
+    return;
+  }
   var chips=document.getElementById('ramiChips'); if(chips) chips.style.display='none';
   RAMI.msgs.push({ role:'user', content:text });
   inp.value=''; inp.style.height='auto';
   RAMI.busy=true; RAMI.msgs.push({ role:'typing' }); ramiRender();
   var history = RAMI.msgs.filter(function(m){ return m.role==='user'||m.role==='assistant'; }).map(function(m){ return { role:m.role, content:m.content }; });
-  fetch('/api/chat',{ method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ messages: history }) })
-    .then(function(r){ return r.json(); })
+  apiPost('/chat', { messages: history })
     .then(function(d){
       RAMI.msgs = RAMI.msgs.filter(function(m){ return m.role!=='typing'; });
       RAMI.msgs.push({ role:'assistant', content:(d && d.reply) ? d.reply : 'Désolé, je n\'ai pas pu répondre. Écrivez-nous sur WhatsApp ! 🌿' });
       RAMI.busy=false; ramiRender();
+      if(d && typeof d.remaining==='number') ramiStatusSet(d.remaining>0 ? (d.remaining+' message(s) restant(s) aujourd\'hui') : 'Limite atteinte pour aujourd\'hui');
     })
-    .catch(function(){
+    .catch(function(err){
       RAMI.msgs = RAMI.msgs.filter(function(m){ return m.role!=='typing'; });
-      RAMI.msgs.push({ role:'assistant', content:'Connexion impossible pour le moment. Réessayez dans un instant. 🌿' });
+      var code = err && err.data && err.data.error;
+      if(err && err.data && err.data.limitReached){
+        RAMI.msgs.push({ role:'assistant', content:code||'Vous avez atteint votre limite de messages pour aujourd\'hui. Revenez demain, ou contactez-nous sur WhatsApp ! 🌿' });
+        ramiStatusSet('Limite atteinte pour aujourd\'hui');
+      } else if(err && err.data && (err.data.error==='Authentication required' || err.data.error==='User not found' || /no longer valid/i.test(err.data.error||''))){
+        RAMI.msgs.push({ role:'assistant', content:'Votre session a expiré — reconnectez-vous pour continuer à discuter avec moi. 🌿' });
+        setTimeout(function(){ ramiClose(); go('login'); }, 1200);
+      } else {
+        RAMI.msgs.push({ role:'assistant', content:'Connexion impossible pour le moment. Réessayez dans un instant. 🌿' });
+      }
       RAMI.busy=false; ramiRender();
     });
 }
@@ -2966,7 +2985,7 @@ function pgHome(){
       +'</div>'
     +'</div>'
     +'<aside id="ramiCard" aria-label="ROA — compagnonne de voyage Roamers">'
-      +'<div class="rami-head"><div class="rami-ava"></div><div><div class="rami-name">ROA</div><div class="rami-status"><span class="rami-dot"></span>Ambassadrice Roamers · en ligne</div></div><button class="rami-x" onclick="ramiClose()" aria-label="Fermer">✕</button></div>'
+      +'<div class="rami-head"><div class="rami-ava"></div><div><div class="rami-name">ROA</div><div class="rami-status"><span class="rami-dot"></span><span id="ramiStatusTxt">Ambassadrice Roamers · en ligne</span></div></div><button class="rami-x" onclick="ramiClose()" aria-label="Fermer">✕</button></div>'
       +'<div id="ramiBody" class="rami-body"></div>'
       +'<div id="ramiChips" class="rami-chips">'
         +'<button class="rami-chip" onclick="ramiChip(this)">🥾 Randonnée Atlas</button>'
