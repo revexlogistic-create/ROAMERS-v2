@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,interactive-widget=resizes-content">
 <title>Roamers Community — Agence de Voyage & Tourisme au Maroc</title>
 
 <!-- ── Favicon & App Icon ── -->
@@ -1892,10 +1892,29 @@ function ramiKey(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); ram
 function ramiChip(btn){ var inp=document.getElementById('ramiInput'); if(inp){ inp.value=btn.textContent.replace(/^[^A-Za-zÀ-ÿ]+/,'').trim(); ramiSend(); } }
 function ramiOpen(){
   if(!ST.user){ toast('Connectez-vous pour discuter avec ROA','warn'); go('login'); return; }
-  var c=document.getElementById('ramiCard'); if(c){ c.classList.add('rami-open'); if(window.innerWidth<=900){ document.body.style.overflow='hidden'; document.body.classList.add('rami-chat-open'); } ramiInit(); var i=document.getElementById('ramiInput'); if(i) setTimeout(function(){ i.focus(); },60); } }
-function ramiClose(){ var c=document.getElementById('ramiCard'); if(c) c.classList.remove('rami-open'); document.body.style.overflow=''; document.body.classList.remove('rami-chat-open'); }
+  var c=document.getElementById('ramiCard'); if(c){ c.classList.add('rami-open'); if(window.innerWidth<=900){ document.body.style.overflow='hidden'; document.body.classList.add('rami-chat-open'); ramiVVBind(true); } ramiInit(); var i=document.getElementById('ramiInput'); if(i) setTimeout(function(){ i.focus(); },60); } }
+function ramiClose(){ var c=document.getElementById('ramiCard'); if(c){ c.classList.remove('rami-open'); c.style.height=''; c.style.top=''; } document.body.style.overflow=''; document.body.classList.remove('rami-chat-open'); ramiVVBind(false); }
 function ramiStatusSet(txt){ var s=document.getElementById('ramiStatusTxt'); if(s) s.textContent=txt; }
 function ramiFocus(){ if(window.innerWidth<=900){ var c=document.getElementById('ramiCard'); if(c && !c.classList.contains('rami-open')) ramiOpen(); } }
+/* Keyboard handling: pin the full-screen chat to the visual viewport so the
+   header stays on screen when the mobile keyboard opens */
+function ramiVVAdjust(){
+  var c=document.getElementById('ramiCard');
+  if(!c || !c.classList.contains('rami-open')) return;
+  var vv=window.visualViewport;
+  if(!vv) return;
+  /* finish the slide-up entry animation so its transform can't offset the pinned card */
+  try{ c.getAnimations().forEach(function(a){ a.finish(); }); }catch(e){}
+  c.style.height = Math.round(vv.height) + 'px';
+  c.style.top = Math.round(vv.offsetTop) + 'px';
+  window.scrollTo(0,0);
+  var b=document.getElementById('ramiBody'); if(b) b.scrollTop=b.scrollHeight;
+}
+function ramiVVBind(on){
+  if(!window.visualViewport) return;
+  if(on){ window.visualViewport.addEventListener('resize', ramiVVAdjust); window.visualViewport.addEventListener('scroll', ramiVVAdjust); }
+  else  { window.visualViewport.removeEventListener('resize', ramiVVAdjust); window.visualViewport.removeEventListener('scroll', ramiVVAdjust); }
+}
 function ramiSend(){
   var inp=document.getElementById('ramiInput'); if(!inp || RAMI.busy) return;
   var text=(inp.value||'').trim(); if(!text) return;
