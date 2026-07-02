@@ -1873,8 +1873,11 @@ function ramiRender(){
 }
 function ramiInit(){
   if(!document.getElementById('ramiBody')) return;
+  var authState = !!ST.user;
+  if(RAMI.greeted && RAMI.greetedAuth !== authState && RAMI.msgs.length <= 1){ RAMI.greeted = false; }
   if(!RAMI.greeted){
     RAMI.greeted = true;
+    RAMI.greetedAuth = authState;
     RAMI.msgs = [{ role:'assistant', content: ST.user
       ? 'Salam ! 👋 Je suis ROA, votre compagnonne de voyage chez Roamers Community. Dites-moi ce qui vous fait rêver au Maroc — montagnes, désert, océan, culture… — et je vous guide vers l\'aventure parfaite. 🌿'
       : 'Salam ! 👋 Je suis ROA, votre compagnonne de voyage chez Roamers Community. Connectez-vous pour discuter avec moi et préparer votre aventure sur mesure. 🌿' }];
@@ -1885,7 +1888,9 @@ function ramiInit(){
 function ramiGrow(t){ t.style.height='auto'; t.style.height=Math.min(t.scrollHeight,110)+'px'; }
 function ramiKey(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); ramiSend(); } }
 function ramiChip(btn){ var inp=document.getElementById('ramiInput'); if(inp){ inp.value=btn.textContent.replace(/^[^A-Za-zÀ-ÿ]+/,'').trim(); ramiSend(); } }
-function ramiOpen(){ var c=document.getElementById('ramiCard'); if(c){ c.classList.add('rami-open'); if(window.innerWidth<=900){ document.body.style.overflow='hidden'; document.body.classList.add('rami-chat-open'); } ramiInit(); var i=document.getElementById('ramiInput'); if(i) setTimeout(function(){ i.focus(); },60); } }
+function ramiOpen(){
+  if(!ST.user){ toast('Connectez-vous pour discuter avec ROA','warn'); go('login'); return; }
+  var c=document.getElementById('ramiCard'); if(c){ c.classList.add('rami-open'); if(window.innerWidth<=900){ document.body.style.overflow='hidden'; document.body.classList.add('rami-chat-open'); } ramiInit(); var i=document.getElementById('ramiInput'); if(i) setTimeout(function(){ i.focus(); },60); } }
 function ramiClose(){ var c=document.getElementById('ramiCard'); if(c) c.classList.remove('rami-open'); document.body.style.overflow=''; document.body.classList.remove('rami-chat-open'); }
 function ramiStatusSet(txt){ var s=document.getElementById('ramiStatusTxt'); if(s) s.textContent=txt; }
 function ramiSend(){
@@ -2987,13 +2992,18 @@ function pgHome(){
     +'<aside id="ramiCard" aria-label="ROA — compagnonne de voyage Roamers">'
       +'<div class="rami-head"><div class="rami-ava"></div><div><div class="rami-name">ROA</div><div class="rami-status"><span class="rami-dot"></span><span id="ramiStatusTxt">Ambassadrice Roamers · en ligne</span></div></div><button class="rami-x" onclick="ramiClose()" aria-label="Fermer">✕</button></div>'
       +'<div id="ramiBody" class="rami-body"></div>'
-      +'<div id="ramiChips" class="rami-chips">'
-        +'<button class="rami-chip" onclick="ramiChip(this)">🥾 Randonnée Atlas</button>'
-        +'<button class="rami-chip" onclick="ramiChip(this)">⛺ Bivouac Taza</button>'
-        +'<button class="rami-chip" onclick="ramiChip(this)">🍽️ Gastronomie</button>'
-        +'<button class="rami-chip" onclick="ramiChip(this)">🐎 Équestre</button>'
-      +'</div>'
-      +'<div class="rami-input"><textarea id="ramiInput" rows="1" placeholder="Écrivez à ROA…" onkeydown="ramiKey(event)" oninput="ramiGrow(this)"></textarea><button class="rami-send" onclick="ramiSend()" aria-label="Envoyer">➤</button></div>'
+      +(ST.user
+        ? '<div id="ramiChips" class="rami-chips">'
+            +'<button class="rami-chip" onclick="ramiChip(this)">🥾 Randonnée Atlas</button>'
+            +'<button class="rami-chip" onclick="ramiChip(this)">⛺ Bivouac Taza</button>'
+            +'<button class="rami-chip" onclick="ramiChip(this)">🍽️ Gastronomie</button>'
+            +'<button class="rami-chip" onclick="ramiChip(this)">🐎 Équestre</button>'
+          +'</div>'
+          +'<div class="rami-input"><textarea id="ramiInput" rows="1" placeholder="Écrivez à ROA…" onkeydown="ramiKey(event)" oninput="ramiGrow(this)"></textarea><button class="rami-send" onclick="ramiSend()" aria-label="Envoyer">➤</button></div>'
+        : '<div class="rami-input" style="flex-direction:column;align-items:stretch;gap:8px">'
+            +'<button class="btn btn-r" style="width:100%;justify-content:center" onclick="ramiClose();go(\'login\')">🔒 Se connecter pour discuter avec ROA</button>'
+            +'<div style="font-size:11.5px;color:rgba(255,255,255,.55);text-align:center">Gratuit — créez un compte en 30 secondes</div>'
+          +'</div>')
     +'</aside>'
     +'<button id="ramiFab" onclick="ramiOpen()" aria-label="Discuter avec ROA"><span class="rami-fab-ava"></span> Discuter avec ROA</button>'
     +'</div>'
