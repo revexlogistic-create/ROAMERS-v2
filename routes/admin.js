@@ -509,7 +509,7 @@ router.delete('/events/:id', auditMod.audit('admin:event:delete'), async functio
 });
 
 /* ── PARTNERS ────────────────────────────────────────────────── */
-var PARTNER_TYPES   = ['Tour Operator','Hotel','Transport','Activity','Other'];
+var PARTNER_TYPES   = ['Travel Agency','Tour Operator','Transport','Activity','Hotel','Restaurant','Guide','Other'];
 var PARTNER_STATUS  = ['active','inactive','suspended'];
 
 router.get('/partners', function(req, res) {
