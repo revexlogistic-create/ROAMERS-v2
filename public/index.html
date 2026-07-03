@@ -261,9 +261,12 @@ em.s{color:var(--sand);font-style:italic}
 .hero-stats{position:absolute;bottom:3vh;right:5%;display:flex;gap:20px;z-index:2}
 /* ── ROAMER AI CHAT (hero) ── */
 @media(min-width:901px){
-  .hero .hero-c{display:flex;gap:22px;align-items:stretch}
-  .hero .hero-c > .hero-glass{flex:1 1 auto;min-width:0}
-  #ramiCard{flex:0 0 clamp(330px,33vw,400px)}
+  /* AI-first desktop hero — ROA conversation is the dominant element,
+     the brand panel becomes the side column */
+  .hero .hero-c{display:flex;gap:22px;align-items:stretch;justify-content:center}
+  .hero .hero-c > .hero-glass{flex:0 0 clamp(300px,32vw,440px);min-width:0}
+  #ramiCard{flex:1 1 auto;min-width:0;max-width:780px}
+  #ramiCard .rami-msg{max-width:560px}
 }
 #ramiCard{display:flex;flex-direction:column;height:100%;box-sizing:border-box;background:rgba(10,8,8,.62);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(217,184,122,.22);border-radius:22px;box-shadow:0 8px 32px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.1);overflow:hidden;z-index:4}
 #ramiCard .rami-head{display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(135deg,rgba(184,23,46,.22),rgba(217,184,122,.06))}
