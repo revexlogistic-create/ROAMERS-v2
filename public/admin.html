@@ -626,6 +626,7 @@ function loadAll(cb) {
     if(d.settings) {
       DB.settings = d.settings;
       if(d.settings.cms) DB.cms = JSON.parse(JSON.stringify(Object.assign({}, DB.cms, d.settings.cms)));
+      if(d.settings.cms && Array.isArray(d.settings.cms.mediaFiles)) DB.mediaFiles = d.settings.cms.mediaFiles;
     }
   }).catch(function(){}).then(done);
   api('GET','/admin/itineraries').then(function(d){
@@ -2995,71 +2996,6 @@ function setActivityAvail(mode) {
   if (dates) dates.style.display = mode === 'dates' ? 'flex' : 'none';
 }
 
-/* ── Standalone map picker overlay (avoids Leaflet-in-scrollable-modal issues) ── */
-function openMapPicker() {
-  var curLat = parseFloat(document.getElementById('maLat').value) || null;
-  var curLng = parseFloat(document.getElementById('maLng').value) || null;
-  window._mpLat = curLat; window._mpLng = curLng; window._mpMarker = null; window._mpMap = null;
-  var ov = document.createElement('div');
-  ov.id = 'mpOverlay';
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:600;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)';
-  ov.innerHTML =
-    '<div style="background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);width:90vw;max-width:900px;height:82vh;display:flex;flex-direction:column;overflow:hidden">'
-    + '<div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">'
-      + '<div><div style="font-weight:700;font-size:15px">📍 Choisir la position</div>'
-      + '<div style="font-size:11px;color:var(--text3);margin-top:2px">Cliquer sur la carte pour placer le marqueur — utilisez le scroll pour zoomer</div></div>'
-      + '<button onclick="closeMapPicker()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3);line-height:1;padding:4px">✕</button>'
-    + '</div>'
-    + '<div style="flex:1;position:relative;min-height:0"><div id="mpMapDiv" style="width:100%;height:100%"></div>'
-    + '<div id="mpLabel" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;pointer-events:none;white-space:nowrap">'+(curLat?'📍 '+curLat.toFixed(5)+', '+curLng.toFixed(5):'Cliquez pour placer le marqueur')+'</div>'
-    + '</div>'
-    + '<div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">'
-      + '<span id="mpCoordsTxt" style="font-size:12px;color:var(--text2)">'+(curLat?'Lat: '+curLat.toFixed(6)+' — Lng: '+curLng.toFixed(6):'Aucune position sélectionnée')+'</span>'
-      + '<div style="display:flex;gap:8px"><button class="btn btn-secondary" onclick="closeMapPicker()">Annuler</button>'
-      + '<button class="btn btn-primary" id="mpConfirmBtn" onclick="confirmMapPicker()" '+(curLat?'':'disabled')+'>Confirmer la position</button></div>'
-    + '</div>'
-    + '</div>';
-  document.body.appendChild(ov);
-  function _doInit() {
-    var L = window.L;
-    if (!document.getElementById('mpMapDiv')) return;
-    var lat = window._mpLat || 31.7917, lng = window._mpLng || -7.0926, zoom = window._mpLat ? 12 : 5;
-    var map = L.map('mpMapDiv').setView([lat, lng], zoom);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap', maxZoom:19 }).addTo(map);
-    if (window._mpLat) { window._mpMarker = L.marker([window._mpLat, window._mpLng]).addTo(map); }
-    map.on('click', function(e) {
-      var ll = e.latlng;
-      window._mpLat = ll.lat; window._mpLng = ll.lng;
-      if (window._mpMarker) map.removeLayer(window._mpMarker);
-      window._mpMarker = L.marker([ll.lat, ll.lng]).addTo(map);
-      var lbl = document.getElementById('mpLabel'), ct = document.getElementById('mpCoordsTxt'), btn = document.getElementById('mpConfirmBtn');
-      if (lbl) lbl.textContent = '📍 '+ll.lat.toFixed(5)+', '+ll.lng.toFixed(5);
-      if (ct)  ct.textContent  = 'Lat: '+ll.lat.toFixed(6)+' — Lng: '+ll.lng.toFixed(6);
-      if (btn) btn.disabled = false;
-    });
-    window._mpMap = map;
-    setTimeout(function(){ map.invalidateSize(true); }, 100);
-  }
-  setTimeout(function(){
-    if (window.L) { _doInit(); }
-    else {
-      var lcs = document.createElement('link'); lcs.rel='stylesheet'; lcs.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(lcs);
-      var lsc = document.createElement('script'); lsc.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'; lsc.onload=_doInit; document.head.appendChild(lsc);
-    }
-  }, 80);
-}
-function closeMapPicker() {
-  if (window._mpMap) { window._mpMap.remove(); window._mpMap = null; }
-  var ov = document.getElementById('mpOverlay'); if (ov) ov.remove();
-}
-function confirmMapPicker() {
-  if (window._mpLat == null) return;
-  var latEl = document.getElementById('maLat'), lngEl = document.getElementById('maLng');
-  if (latEl) latEl.value = window._mpLat.toFixed(6);
-  if (lngEl) lngEl.value = window._mpLng.toFixed(6);
-  closeMapPicker();
-}
-
 /* ── Circuit itinerary map picker ── */
 function openCircuitPicker() {
   /* Read existing stops (from circuitCoords if available, else parse circuit text) */
@@ -3515,6 +3451,7 @@ function saveUploadedUrl() {
   var cat = (document.getElementById('uploadCat') || {}).value || 'trips';
   var name = url.split('/').pop().split('?')[0] || 'image-' + Date.now() + '.jpg';
   DB.mediaFiles.unshift({ id: Date.now(), name: name, type: 'image', category: cat, trip: '', url: url, featured: false, size: '—' });
+  persistMediaFiles();
   closeModal(); goPage('media'); showToast('Image ajoutée à la médiathèque', 'success');
 }
 
@@ -3652,9 +3589,27 @@ function deleteItem(collection, id) {
     }).catch(function(){showToast('Erreur réseau','error');});
     return;
   }
+  if (collection === 'media') {
+    DB.mediaFiles = DB.mediaFiles.filter(function(x){ return x.id !== id; });
+    persistMediaFiles();
+    goPage(APP.page); showToast('Image supprimée','success');
+    return;
+  }
+  if (!Array.isArray(DB[collection])) { showToast('Collection inconnue: '+collection,'error'); return; }
   DB[collection] = DB[collection].filter(function(x){ return x.id !== id; });
   goPage(APP.page);
   showToast('Item deleted','success');
+}
+
+/* Persist the media library into settings.cms.mediaFiles (survives reloads) */
+function persistMediaFiles() {
+  var cms = Object.assign({}, (DB.settings && DB.settings.cms) || {});
+  cms.mediaFiles = DB.mediaFiles;
+  api('PUT', '/admin/settings', { cms: cms }).then(function(d){
+    if (d.error) { showToast(d.error, 'error'); return; }
+    if (!DB.settings) DB.settings = {};
+    DB.settings.cms = (d.settings && d.settings.cms) || cms;
+  }).catch(function(){ showToast('Erreur réseau — médiathèque non sauvegardée', 'error'); });
 }
 
 function toggleActivity(id, el) {
@@ -3670,7 +3625,7 @@ function toggleActivity(id, el) {
 
 function toggleFeatured(id) {
   var f = DB.mediaFiles.find(function(x){ return x.id===id; });
-  if (f) { f.featured = !f.featured; goPage('media'); showToast(f.featured?'Set as featured':'Removed from featured','success'); }
+  if (f) { f.featured = !f.featured; persistMediaFiles(); goPage('media'); showToast(f.featured?'Set as featured':'Removed from featured','success'); }
 }
 
 function saveCMS() {
