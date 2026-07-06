@@ -1110,6 +1110,12 @@ function renderCustomers() {
     });
     return Array.from(segs);
   }
+  /* Aggregate real trips + spend per customer from bookings (mapping defaults are 0) */
+  DB.customers.forEach(function(c){
+    var bs = DB.bookings.filter(function(b){ return b.email===c.email && b.status!=='cancelled'; });
+    c.trips = bs.length;
+    c.spent = bs.reduce(function(s,b){ return s + (Number(b.amountPaid)||0); }, 0);
+  });
 
   return '<div class="page-header"><div><h1>Clients</h1><p>Profils, historique de réservations et communication</p></div>'
     +'<div class="ph-actions"><button class="btn btn-secondary" onclick="exportCSV(\'customers\')">⬇ Export CSV</button><button class="btn btn-primary" onclick="openCustomerModal()">+ Ajouter client</button></div></div>'
@@ -1123,12 +1129,12 @@ function renderCustomers() {
 
   +'<div class="tbl-wrap"><div class="tbl-toolbar">'
   +'<div class="tbl-search"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6" cy="6" r="4" stroke="#94A3B8" stroke-width="1.3"/><path d="M9.5 9.5l2 2" stroke="#94A3B8" stroke-width="1.3" stroke-linecap="round"/></svg><input type="text" placeholder="Rechercher un client…" oninput="filterTable(this.value,\'custTable\')"></div>'
-  +'<div class="tbl-filter"><select class="fi fi-select" style="width:auto"><option>Tous profils</option><option>vip</option><option>partner</option><option>regular</option><option>new</option></select><select class="fi fi-select" style="width:auto"><option>Tous pays</option><option>Morocco</option><option>France</option><option>China</option><option>UK</option></select></div>'
+  +'<div class="tbl-filter"><select class="fi fi-select" style="width:auto" onchange="filterTableByStatus(this.value,\'custTable\')"><option value="">Tous profils</option><option>vip</option><option>partner</option><option>regular</option><option>new</option></select><select class="fi fi-select" style="width:auto" onchange="filterTableByStatus(this.value,\'custTable\')"><option value="">Tous pays</option><option>Morocco</option><option>France</option><option>China</option><option>UK</option></select></div>'
   +'<span class="tbl-count">'+DB.customers.length+' clients</span></div>'
   +'<table id="custTable"><thead><tr><th><input type="checkbox" class="tbl-check"></th><th>Client</th><th>Téléphone</th><th>Nationalité</th><th>Univers favoris</th><th>Voyages</th><th>CA Client</th><th>Statut</th><th>Inscrit le</th><th>Actions</th></tr></thead><tbody>'
   + DB.customers.map(function(c){
       var segs=custSegs(c);
-      return '<tr data-search="'+c.name+' '+c.email+' '+c.country+'">'
+      return '<tr data-search="'+c.name+' '+c.email+' '+c.country+' '+c.status+'">'
         +'<td><input type="checkbox" class="tbl-check"></td>'
         +'<td><div style="display:flex;align-items:center;gap:9px"><div class="avatar av-sm" style="background:'+hashColor(c.name)+'">'+initials(c.name)+'</div><div><div style="font-weight:600">'+c.name+'</div><div class="text-muted text-xs">'+c.email+'</div></div></div></td>'
         +'<td style="font-size:12px">'+c.phone+'</td>'
@@ -1139,9 +1145,8 @@ function renderCustomers() {
         +'<td><span class="badge badge-'+(['vip','partner'].indexOf(c.status)!==-1?'open':'closed')+'">'+cap(c.status)+'</span></td>'
         +'<td style="font-size:12px">'+fmtDate(c.joined)+'</td>'
         +'<td><div class="tbl-actions">'
-          +'<button class="btn btn-secondary btn-sm btn-icon" onclick="viewCustomer('+c.id+')" title="Profil">👁</button>'
+          +'<button class="btn btn-secondary btn-sm btn-icon" onclick="viewCustomer(\''+c.id+'\')" title="Profil">👁</button>'
           +'<button class="btn btn-ghost btn-sm btn-icon" onclick="sendWhatsApp(\''+c.phone+'\',\''+c.name+'\')" title="WhatsApp">💬</button>'
-          +'<button class="btn btn-danger btn-sm btn-icon" onclick="deleteItem(\'customers\','+c.id+')" title="Supprimer">🗑</button>'
         +'</div></td>'
       +'</tr>';
     }).join('')
