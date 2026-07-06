@@ -1576,8 +1576,7 @@ function renderAnalytics() {
 function renderUsers() {
   var roleDefs=[
     {role:'admin',label:'Super Admin',color:'var(--red)',perms:['Toutes les permissions'],desc:'Accès complet à toutes les fonctionnalités'},
-    {role:'manager',label:'Manager',color:'var(--blue)',perms:['Réservations','Voyages','Clients','Analytiques'],desc:'Gestion des opérations quotidiennes'},
-    {role:'editor',label:'Éditeur',color:'var(--purple)',perms:['CMS & Contenu','Médiathèque','Activités'],desc:'Mise à jour du contenu du site'}
+    {role:'editor',label:'Éditeur',color:'var(--purple)',perms:['Compte membre uniquement'],desc:'Rôle réservé — l\'accès au panneau d\'administration n\'est pas encore activé pour ce rôle'}
   ];
   return '<div class="page-header"><div><h1>Utilisateurs & Rôles</h1><p>Gérez l\'accès de votre équipe au panneau d\'administration</p></div>'
     +'<div class="ph-actions"><button class="btn btn-primary" onclick="openUserModal()">+ Inviter un membre</button></div></div>'
@@ -1607,8 +1606,8 @@ function renderUsers() {
   +'</div>'
 
   +'<div class="card"><div class="card-header"><div class="card-title">📋 Matrice d\'accès</div></div>'
-  +'<table style="font-size:12px"><thead><tr><th>Fonctionnalité</th><th>Admin</th><th>Manager</th><th>Éditeur</th></tr></thead><tbody>'
-  +[['Tableau de bord','✅','✅','✅'],['Réservations','✅','✅','👁'],['Voyages','✅','✅','👁'],['Activités','✅','✅','✅'],['Clients','✅','✅','—'],['Médiathèque','✅','👁','✅'],['CMS','✅','—','✅'],['Partenaires','✅','✅','—'],['Analytiques','✅','✅','—'],['Utilisateurs','✅','—','—'],['Paramètres','✅','—','—']].map(function(row){
+  +'<table style="font-size:12px"><thead><tr><th>Fonctionnalité</th><th>Admin</th><th>Éditeur</th></tr></thead><tbody>'
+  +[['Tableau de bord','✅','—'],['Réservations','✅','—'],['Voyages','✅','—'],['Activités','✅','—'],['Clients','✅','—'],['Médiathèque','✅','—'],['CMS','✅','—'],['Partenaires','✅','—'],['Analytiques','✅','—'],['Utilisateurs','✅','—'],['Paramètres','✅','—']].map(function(row){
     return '<tr><td style="font-weight:500">'+row[0]+'</td>'+row.slice(1).map(function(v){return '<td style="text-align:center;font-size:14px">'+v+'</td>';}).join('')+'</tr>';
   }).join('')
   +'</tbody></table></div>'
@@ -3461,21 +3460,24 @@ function saveUploadedUrl() {
 }
 
 function openUserModal() {
-  openModal('<div class="modal-header"><h3>Invite Team Member</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
+  openModal('<div class="modal-header"><h3>Ajouter un membre</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
     + '<div class="modal-body">'
-    + '<div class="fg-row"><div class="fg"><label class="fl">Full Name *</label><input class="fi" id="muName"></div><div class="fg"><label class="fl">Email *</label><input class="fi" id="muEmail" type="email"></div></div>'
-    + '<div class="fg"><label class="fl">Role</label><select class="fi fi-select" id="muRole"><option value="editor">Editor — Website content, media</option><option value="manager">Manager — Bookings, trips, customers</option><option value="admin">Admin — Full access</option></select></div>'
-    + '<div style="background:var(--blue-l);border-radius:var(--r-sm);padding:11px 13px;font-size:13px;color:var(--blue);margin-top:4px">An invitation email will be sent to the user with setup instructions.</div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Nom complet *</label><input class="fi" id="muName"></div><div class="fg"><label class="fl">Email *</label><input class="fi" id="muEmail" type="email"></div></div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Rôle</label><select class="fi fi-select" id="muRole"><option value="editor">Éditeur — Contenu du site, médias</option><option value="admin">Admin — Accès complet</option></select></div>'
+    + '<div class="fg"><label class="fl">Mot de passe provisoire *</label><input class="fi" id="muPassword" type="text" placeholder="Min 8 car., 1 lettre + 1 chiffre"></div></div>'
+    + '<div style="background:var(--blue-l);border-radius:var(--r-sm);padding:11px 13px;font-size:13px;color:var(--blue);margin-top:4px">Communiquez ce mot de passe au membre — il pourra le changer depuis son profil.</div>'
     + '</div>'
-    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveUser()">Send Invitation</button></div>',
+    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="saveUser()">Créer le compte</button></div>',
     'modal-sm');
 }
 
 function saveUser() {
   var name=document.getElementById('muName').value,email=document.getElementById('muEmail').value;
-  if(!name||!email){showToast('Name and email required','error');return;}
+  var pw=(document.getElementById('muPassword')||{}).value||'';
+  if(!name||!email){showToast('Nom et email requis','error');return;}
+  if(pw.length<8||!/[a-zA-Z]/.test(pw)||!/[0-9]/.test(pw)){showToast('Mot de passe : min 8 caractères, avec au moins 1 lettre et 1 chiffre','error');return;}
   var parts=name.trim().split(' ');
-  var body={fname:parts[0]||name,lname:parts.slice(1).join(' ')||'',email:email,role:document.getElementById('muRole').value,password:'Roamers2024!'};
+  var body={fname:parts[0]||name,lname:parts.slice(1).join(' ')||'',email:email,role:document.getElementById('muRole').value,password:pw};
   api('POST','/admin/team',body).then(function(d){
     if(d.error){showToast(d.error,'error');return;}
     DB.adminUsers.push({id:d.user.id,name:name,email:email,role:body.role,status:'active',lastLogin:'—'});
@@ -3489,7 +3491,7 @@ function openEditUserModal(id) {
   openModal('<div class="modal-header"><h3>Modifier le membre</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
     +'<div class="modal-body">'
     +'<div class="fg-row"><div class="fg"><label class="fl">Nom complet *</label><input class="fi" id="muEditName" value="'+u.name+'"></div><div class="fg"><label class="fl">Email *</label><input class="fi" id="muEditEmail" type="email" value="'+u.email+'"></div></div>'
-    +'<div class="fg"><label class="fl">Rôle</label><select class="fi fi-select" id="muEditRole"><option value="editor">Editor — Contenu & media</option><option value="manager">Manager — Réservations & voyages</option><option value="admin">Admin — Accès complet</option></select></div>'
+    +'<div class="fg"><label class="fl">Rôle</label><select class="fi fi-select" id="muEditRole"><option value="editor">Éditeur — Contenu & médias</option><option value="admin">Admin — Accès complet</option></select></div>'
     +'</div>'
     +'<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="updateUser(\''+id+'\')">Enregistrer</button></div>',
     'modal-sm');
