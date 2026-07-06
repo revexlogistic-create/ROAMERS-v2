@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,interactive-widget=resizes-content">
-<title>Roamers Community — Guide Touristique du Maroc | Tourisme & Voyage</title>
+<title>Roamers Community — Plateforme & Guide du Tourisme au Maroc</title>
 
 <!-- ── Favicon & App Icon ── -->
 <link rel="icon" type="image/png" sizes="192x192" href="/favicon.png">
@@ -24,7 +24,7 @@
 <meta name="application-name" content="Roamers Community">
 
 <!-- ── SEO ── -->
-<meta name="description" content="Roamers Community, le guide touristique de confiance au Maroc : informations, destinations, conseils pratiques et expériences authentiques — Sahara, Atlas, côtes et villes impériales — avec un réseau de partenaires approuvés (agences de voyage, transport touristique, activités).">
+<meta name="description" content="Roamers Community, la plateforme de confiance du tourisme marocain : voyages, activités, événements, hébergements, restaurants et guides certifiés — sélectionnés selon les standards Roamers, avec ROA votre concierge IA. Sahara, Atlas, côtes et villes impériales.">
 <meta name="keywords" content="Roamers Community, Roamers, guide touristique Maroc, tourisme Maroc, voyage Maroc, que faire au Maroc, visiter le Maroc, informations touristiques Maroc, Morocco travel guide, voyage, trip, tourisme, Maroc, Sahara, Atlas, villes impériales, agence de voyage Maroc, aventure Maroc">
 <meta name="author" content="Roamers Community">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -55,8 +55,8 @@
   "url": "https://roamerscommunity.com",
   "logo": "https://roamerscommunity.com/ROAMERS_LOGO.png",
   "image": "https://roamerscommunity.com/ROAMERS_LOGO.png",
-  "description": "Roamers Community, le guide touristique de confiance au Maroc : informations, destinations, conseils pratiques et expériences authentiques — Sahara, Atlas, côtes et villes impériales — avec un réseau de partenaires approuvés.",
-  "slogan": "Le guide de confiance du tourisme marocain",
+  "description": "Roamers Community, la plateforme de confiance du tourisme marocain : voyages, activités, événements, hébergements, restaurants et guides certifiés — sélectionnés selon les standards Roamers, avec ROA votre concierge IA.",
+  "slogan": "The Tourism Operating System of Morocco",
   "keywords": "guide touristique Maroc, tourisme Maroc, voyage Maroc, que faire au Maroc, visiter le Maroc, informations touristiques Maroc, Roamers Community",
   "areaServed": { "@type": "Country", "name": "Morocco" },
   "address": { "@type": "PostalAddress", "addressCountry": "MA" },
@@ -1659,6 +1659,7 @@ em.s{
     <li><a href="#" onclick="go('activities');return false" data-pg="activities">Activities</a></li>
     <li><a href="#" onclick="go('events');return false" data-pg="events">Events</a></li>
     <li><a href="#" onclick="go('destinations');return false" data-pg="destinations">Destinations</a></li>
+    <li><a href="#" onclick="go('partners');return false" data-pg="partners">Réseau</a></li>
     <li><a href="#" onclick="go('team');return false" data-pg="team">Team Building</a></li>
     <li><a href="#" onclick="go('about');return false" data-pg="about">About</a></li>
     <li><a href="#" onclick="go('contact');return false" data-pg="contact">Contact</a></li>
@@ -1856,8 +1857,8 @@ var SETTINGS = {
     {name:'Sophie Martin',role:'Travel Blogger, Lyon',text:'J\'ai voyagé dans 50+ pays. Le trek Atlas avec Roamers est dans mon top 3. Nos guides étaient des historiens, des conteurs et des experts montagne réunis en une seule personne.',rating:5,featured:true,seg:'weekend',img:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=70'}
   ],
   /* SEO */
-  seoTitle:       'Roamers Community — Guide Touristique du Maroc | Tourisme & Voyage',
-  seoDescription: 'Roamers Community, votre guide touristique de confiance au Maroc : informations, destinations, conseils et expériences — Sahara, Atlas, côtes et villes impériales, avec un réseau de partenaires approuvés.',
+  seoTitle:       'Roamers Community — Plateforme & Guide du Tourisme au Maroc',
+  seoDescription: 'Roamers Community, la plateforme de confiance du tourisme marocain : voyages, activités, événements, hébergements, restaurants et guides certifiés — avec ROA votre concierge IA.',
   seoKeywords:    'Roamers Community,guide touristique Maroc,tourisme Maroc,voyage Maroc,que faire au Maroc,visiter le Maroc,informations touristiques Maroc,voyage,trip,tourisme,Maroc,Sahara,Atlas,agence de voyage Maroc',
   /* Bank virement — populated from site-config */
   bankBenef:'', bankName:'', bankRib:'', bankIban:'', bankSwift:''
@@ -2003,6 +2004,7 @@ function render(){
   if(ST.pg==='event-detail') return pgEventDetail(ST.param);
   if(ST.pg==='act-detail')   return pgActDetail(ST.param);
   if(ST.pg==='destinations') return pgDests();
+  if(ST.pg==='partners')     return pgPartners();
   if(ST.pg==='team')         return pgTeam();
   if(ST.pg==='about')        return pgAbout();
   if(ST.pg==='blog')         return pgBlog();
@@ -2019,7 +2021,7 @@ function syncAppShell(pg){
   var titles = {
     home:'Roamers', experiences:'Voyages', 'exp-detail':'Détails du voyage',
     activities:'Activités', 'act-detail':'Détails activité', events:'Events', 'event-detail':'Détails événement',
-    destinations:'Destinations', team:'Team Building', about:'À propos',
+    destinations:'Destinations', partners:'Réseau Roamers', team:'Team Building', about:'À propos',
     blog:'Magazine', post:'Article', contact:'Contact', plan:'Planifier',
     login:'Connexion', dashboard:'Mon compte', admin:'Admin'
   };
@@ -2867,7 +2869,7 @@ function ecCard(e){
 }
 
 function foot(){
-  return '<footer style="background:#050505;padding:64px 5% 24px;color:rgba(255,255,255,.48)"><div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:44px;margin-bottom:48px"><div><img src="ROAMERS_LOGO.png" style="height:52px;margin-bottom:13px" onerror="this.style.display=\'none\'"><p style="font-size:13px;line-height:1.7;max-width:250px;margin-bottom:18px">'+SETTINGS.cmsFooterTagline+'</p><p style="font-size:11px;line-height:1.65;max-width:290px;color:rgba(255,255,255,.34);margin-bottom:16px">Roamers Community est le guide touristique de confiance du Maroc — informations, destinations, conseils et expériences authentiques à travers le Sahara, l\'Atlas, les côtes et les villes impériales, avec un réseau de partenaires approuvés : agences de voyage, transport touristique et activités.</p><div style="display:flex;gap:8px">'+['in','ig','fb','yt'].map(function(s){return '<a href="#" style="width:32px;height:32px;border:1px solid rgba(255,255,255,.1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.38);transition:all .2s" onmouseover="this.style.borderColor=\'var(--sand)\';this.style.color=\'var(--sand)\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,.1)\';this.style.color=\'rgba(255,255,255,.38)\'">'+s+'</a>';}).join('')+'</div></div><div><p style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;margin-bottom:14px">Experiences</p><div style="display:flex;flex-direction:column;gap:8px">'+[['All Experiences','experiences'],['Desert','experiences'],['Mountain','experiences'],['Cultural','experiences'],['Team Building','team']].map(function(x){return '<a href="#" onclick="go(\''+x[1]+'\');return false" style="font-size:13px;color:rgba(255,255,255,.38);transition:color .2s" onmouseover="this.style.color=\'var(--sand)\'" onmouseout="this.style.color=\'rgba(255,255,255,.38)\'">'+x[0]+'</a>';}).join('')+'</div></div><div><p style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;margin-bottom:14px">Company</p><div style="display:flex;flex-direction:column;gap:8px">'+[['About Us','about'],['Blog','blog'],['Contact','contact'],['My Dashboard','dashboard'],['Admin','admin']].map(function(x){return '<a href="#" onclick="go(\''+x[1]+'\');return false" style="font-size:13px;color:rgba(255,255,255,.38);transition:color .2s" onmouseover="this.style.color=\'var(--sand)\'" onmouseout="this.style.color=\'rgba(255,255,255,.38)\'">'+x[0]+'</a>';}).join('')+'</div></div><div><p style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;margin-bottom:14px">Contact</p><div style="font-size:13px;line-height:2.1;color:rgba(255,255,255,.4)">'+SETTINGS.phone+'<br>'+SETTINGS.email+'<br>'+SETTINGS.address+'</div><a href="'+waUrl()+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;padding:7px 14px;border-radius:100px;font-size:12px;font-weight:600;margin-top:14px">WhatsApp</a></div></div><div style="border-top:1px solid rgba(255,255,255,.05);padding-top:20px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:12px"><span>'+SETTINGS.cmsFooterCopyright+'</span><div style="display:flex;gap:18px"><a href="#" style="color:rgba(255,255,255,.26)">Privacy</a><a href="#" style="color:rgba(255,255,255,.26)">Terms</a></div></div></footer>';
+  return '<footer style="background:#050505;padding:64px 5% 24px;color:rgba(255,255,255,.48)"><div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:44px;margin-bottom:48px"><div><img src="ROAMERS_LOGO.png" style="height:52px;margin-bottom:13px" onerror="this.style.display=\'none\'"><p style="font-size:13px;line-height:1.7;max-width:250px;margin-bottom:18px">'+SETTINGS.cmsFooterTagline+'</p><p style="font-size:11px;line-height:1.65;max-width:290px;color:rgba(255,255,255,.34);margin-bottom:16px">Roamers Community est la plateforme de confiance du tourisme marocain — The Tourism Operating System of Morocco : voyages, activités, événements, hébergements, restaurants et guides certifiés, sélectionnés selon les standards Roamers, avec ROA votre concierge IA.</p><div style="display:flex;gap:8px">'+['in','ig','fb','yt'].map(function(s){return '<a href="#" style="width:32px;height:32px;border:1px solid rgba(255,255,255,.1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:rgba(255,255,255,.38);transition:all .2s" onmouseover="this.style.borderColor=\'var(--sand)\';this.style.color=\'var(--sand)\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,.1)\';this.style.color=\'rgba(255,255,255,.38)\'">'+s+'</a>';}).join('')+'</div></div><div><p style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;margin-bottom:14px">Experiences</p><div style="display:flex;flex-direction:column;gap:8px">'+[['All Experiences','experiences'],['Desert','experiences'],['Mountain','experiences'],['Cultural','experiences'],['Team Building','team']].map(function(x){return '<a href="#" onclick="go(\''+x[1]+'\');return false" style="font-size:13px;color:rgba(255,255,255,.38);transition:color .2s" onmouseover="this.style.color=\'var(--sand)\'" onmouseout="this.style.color=\'rgba(255,255,255,.38)\'">'+x[0]+'</a>';}).join('')+'</div></div><div><p style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;margin-bottom:14px">Company</p><div style="display:flex;flex-direction:column;gap:8px">'+[['Réseau partenaires','partners'],['About Us','about'],['Blog','blog'],['Contact','contact'],['My Dashboard','dashboard'],['Admin','admin']].map(function(x){return '<a href="#" onclick="go(\''+x[1]+'\');return false" style="font-size:13px;color:rgba(255,255,255,.38);transition:color .2s" onmouseover="this.style.color=\'var(--sand)\'" onmouseout="this.style.color=\'rgba(255,255,255,.38)\'">'+x[0]+'</a>';}).join('')+'</div></div><div><p style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;margin-bottom:14px">Contact</p><div style="font-size:13px;line-height:2.1;color:rgba(255,255,255,.4)">'+SETTINGS.phone+'<br>'+SETTINGS.email+'<br>'+SETTINGS.address+'</div><a href="'+waUrl()+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;padding:7px 14px;border-radius:100px;font-size:12px;font-weight:600;margin-top:14px">WhatsApp</a></div></div><div style="border-top:1px solid rgba(255,255,255,.05);padding-top:20px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:12px"><span>'+SETTINGS.cmsFooterCopyright+'</span><div style="display:flex;gap:18px"><a href="#" style="color:rgba(255,255,255,.26)">Privacy</a><a href="#" style="color:rgba(255,255,255,.26)">Terms</a></div></div></footer>';
 }
 
 /* HELPERS */
@@ -3038,6 +3040,29 @@ function pgHome(){
       +'<div><span class="hs-n">'+SETTINGS.cmsHeroSt3Val+'</span><span class="hs-l">'+SETTINGS.cmsHeroSt3Lbl+'</span></div>'
     +'</div>'
   +'</div>'
+
+  /* ── §1b ÉCOSYSTÈME ROAMERS 2.0 — les 6 piliers de la plateforme ── */
+  +'<section class="sec" style="background:var(--cream)">'
+    +'<div style="text-align:center;margin-bottom:34px"><span class="eye">The Tourism Operating System of Morocco</span>'
+    +'<h2 class="h2" style="margin-top:10px">Tout le tourisme marocain, <em class="s">une seule plateforme</em></h2>'
+    +'<p style="color:var(--txt2);max-width:560px;margin:12px auto 0;font-size:14.5px">Voyages, activités, événements, hébergements, restaurants et guides certifiés — sélectionnés selon les standards Roamers, avec ROA comme concierge IA.</p></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;max-width:1080px;margin:0 auto">'
+    +[
+      {i:'🧭',t:'Voyages',d:'Circuits des agences partenaires',oc:"go('experiences')"},
+      {i:'⚡',t:'Activités',d:'Expériences à la journée',oc:"go('activities')"},
+      {i:'📅',t:'Événements',d:'Festivals & sorties',oc:"go('events')"},
+      {i:'🏨',t:'Hébergements',d:'Adresses approuvées',oc:"ST.partnerCat='hebergements';go('partners')"},
+      {i:'🍽️',t:'Restaurants',d:'Tables authentiques',oc:"ST.partnerCat='restaurants';go('partners')"},
+      {i:'🗺️',t:'Guides certifiés',d:'Experts locaux de confiance',oc:"ST.partnerCat='guides';go('partners')"}
+    ].map(function(p){
+      return '<div class="reveal" onclick="'+p.oc+'" style="background:#fff;border:1px solid var(--bdr);border-radius:18px;padding:22px 16px;text-align:center;cursor:pointer;transition:all .2s" onmouseover="this.style.transform=\'translateY(-4px)\';this.style.boxShadow=\'var(--sh2)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
+        +'<div style="font-size:30px;margin-bottom:10px">'+p.i+'</div>'
+        +'<div style="font-weight:700;font-size:14.5px;margin-bottom:5px">'+p.t+'</div>'
+        +'<div style="font-size:12px;color:var(--txt2);line-height:1.45">'+p.d+'</div>'
+      +'</div>';
+    }).join('')
+    +'</div>'
+  +'</section>'
 
   /* ── §2 APP DOWNLOAD ──────────────────────────── */
   +'<section class="app-dl-section">'
@@ -4215,6 +4240,49 @@ function pgDests(){
   return '<div class="pg-hdr pg-hdr-dk" data-bg="DESTINATIONS"><span class="eye eye-s">Explore Morocco</span><h1 class="h1" style="color:#fff">Morocco from <em class="s">every angle</em></h1><p style="color:rgba(255,255,255,.5);font-size:15px">Six iconic regions. Infinite stories.</p></div>'
   +'<div class="sec" style="background:var(--cream)"><div class="g3">'+DESTS.map(function(d){return '<div class="ec reveal" onclick="go(\'experiences\')"><div class="ec-img" style="aspect-ratio:16/10"><img src="'+d.img+'" alt="'+d.name+'" loading="lazy"><span class="ec-badge b-r">'+d.cnt+' Trips</span></div><div class="ec-body"><div class="cap" style="color:var(--mut);margin-bottom:5px">'+d.region+'</div><div class="ec-title" style="font-size:18px;font-family:\'Cormorant Garamond\',serif">'+d.name+'</div><div style="font-size:13px;color:var(--mut);margin-top:5px;line-height:1.6;margin-bottom:13px">'+d.desc.slice(0,100)+'...</div><button class="btn btn-s btn-full" onclick="event.stopPropagation();go(\'experiences\')">See Experiences</button></div></div>';}).join('')+'</div></div>'
   +'<div class="cta-sec"><h2 class="h2" style="color:#fff;margin-bottom:10px">Not sure where to go?</h2><p style="color:rgba(255,255,255,.78);margin-bottom:26px">Tell us what you love — we will design your perfect Morocco itinerary.</p><button class="btn btn-w btn-lg" onclick="go(\'contact\')">Get a Personalised Recommendation</button></div>'
+  +foot();
+}
+
+/* PAGE: PARTNERS — Roamers 2.0 network directory (hébergements, restaurants,
+   guides certifiés, transport, agences partenaires) */
+var PARTNER_CATS = [
+  {id:'all',           label:'Tous',                icon:'🌍', types:null},
+  {id:'hebergements',  label:'Hébergements',        icon:'🏨', types:['Hotel']},
+  {id:'restaurants',   label:'Restaurants',         icon:'🍽️', types:['Restaurant']},
+  {id:'guides',        label:'Guides certifiés',    icon:'🧭', types:['Guide']},
+  {id:'transport',     label:'Transport',           icon:'🚐', types:['Transport']},
+  {id:'agences',       label:'Agences & activités', icon:'🧳', types:['Travel Agency','Tour Operator','Activity']}
+];
+var PARTNER_TYPE_FR = {'Hotel':'Hébergement','Restaurant':'Restaurant','Guide':'Guide certifié','Transport':'Transport touristique','Travel Agency':'Agence de voyage','Tour Operator':'Tour opérateur','Activity':'Activités','Other':'Partenaire'};
+function pgPartners(){
+  var cat = PARTNER_CATS.find(function(c){ return c.id===(ST.partnerCat||'all'); }) || PARTNER_CATS[0];
+  var list = PARTNERS.filter(function(p){ return !cat.types || cat.types.indexOf(p.type)!==-1; });
+  function card(p){
+    var typeFr = PARTNER_TYPE_FR[p.type] || p.type;
+    var ic = (PARTNER_CATS.find(function(c){ return c.types && c.types.indexOf(p.type)!==-1; })||{}).icon || '🤝';
+    return '<div class="reveal" style="background:#fff;border:1px solid var(--bdr);border-radius:18px;padding:22px 20px;display:flex;flex-direction:column;gap:10px">'
+      +'<div style="display:flex;align-items:center;gap:12px"><div style="width:46px;height:46px;border-radius:14px;background:rgba(184,23,46,.08);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">'+ic+'</div>'
+      +'<div style="min-width:0"><div style="font-weight:700;font-size:15.5px;line-height:1.25">'+p.name+'</div>'
+      +'<div style="font-size:12px;color:var(--txt2)">'+typeFr+(p.country?(' · '+p.country):'')+'</div></div></div>'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-top:2px">'
+      +'<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#16A34A;background:rgba(22,163,74,.09);padding:4px 10px;border-radius:100px">✓ Approuvé Roamers</span></div>'
+      +'<a href="'+waUrl('Bonjour ! Je souhaite réserver avec votre partenaire « '+p.name+' » ('+typeFr+').')+'" target="_blank" class="btn btn-r" style="justify-content:center;margin-top:4px">Réserver via Roamers</a>'
+    +'</div>';
+  }
+  return '<div class="pg-hdr pg-hdr-dk" data-bg="RÉSEAU"><span class="eye eye-s">The Tourism Operating System of Morocco</span><h1 class="h1" style="color:#fff">Le réseau <em class="s">Roamers</em></h1><p style="color:rgba(255,255,255,.7);max-width:560px;margin:14px auto 0">Hébergements, restaurants, guides certifiés, transport et agences — chaque partenaire est sélectionné et approuvé selon les standards Roamers Community.</p></div>'
+  +'<div class="sec" style="background:var(--cream)">'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:28px">'
+      +PARTNER_CATS.map(function(c){
+        var on = c.id===cat.id;
+        return '<button onclick="ST.partnerCat=\''+c.id+'\';go(\'partners\')" style="padding:9px 16px;border-radius:100px;font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid '+(on?'var(--red)':'var(--bdr)')+';background:'+(on?'var(--red)':'#fff')+';color:'+(on?'#fff':'var(--txt)')+'">'+c.icon+' '+c.label+'</button>';
+      }).join('')
+    +'</div>'
+    +(list.length
+      ? '<div class="g3">'+list.map(card).join('')+'</div>'
+      : '<div style="text-align:center;padding:52px 20px;color:var(--txt2)"><div style="font-size:38px;margin-bottom:12px">🤝</div><p style="font-weight:600;margin-bottom:6px">Cette catégorie arrive bientôt</p><p style="font-size:13px">Nous sélectionnons nos partenaires selon les standards Roamers. Vous êtes un professionnel du tourisme ? Rejoignez le réseau !</p>'
+        +'<a href="'+waUrl('Bonjour ! Je suis un professionnel du tourisme et je souhaite rejoindre le réseau de partenaires Roamers Community.')+'" target="_blank" class="btn btn-o" style="margin-top:16px">Devenir partenaire</a></div>')
+  +'</div>'
+  +'<div class="cta-sec"><h2 class="h2" style="color:#fff;margin-bottom:10px">Vous êtes un professionnel du tourisme ?</h2><p style="color:rgba(255,255,255,.78);margin-bottom:26px">Agence, hébergement, restaurant, guide ou transporteur — rejoignez la plateforme et gagnez en visibilité auprès de nos voyageurs.</p><a href="'+waUrl('Bonjour ! Je souhaite rejoindre le réseau de partenaires Roamers Community.')+'" target="_blank" class="btn btn-r btn-lg">Rejoindre le réseau</a></div>'
   +foot();
 }
 
@@ -6973,6 +7041,7 @@ restoreSession();
 loadExperiencesFromApi();
 loadActivitiesFromApi();
 loadEventsFromApi();
+loadPartnersFromApi();
 loadSiteConfig();
 go('home');
 syncNav();
@@ -7064,6 +7133,19 @@ function loadActivitiesFromApi(){
       }));
     });
     if(ST.pg==='activities' || ST.pg==='act-detail'){
+      var app=document.getElementById('app');
+      if(app){ app.innerHTML = render(); setTimeout(initReveal,80); }
+    }
+  }).catch(function(){});
+}
+
+var PARTNERS = [];
+function loadPartnersFromApi(){
+  apiGet('/partners').then(function(d){
+    if(!d || !Array.isArray(d.partners)) return;
+    PARTNERS.length = 0;
+    d.partners.forEach(function(p){ PARTNERS.push(p); });
+    if(ST.pg==='partners'){
       var app=document.getElementById('app');
       if(app){ app.innerHTML = render(); setTimeout(initReveal,80); }
     }

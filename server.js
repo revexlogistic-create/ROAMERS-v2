@@ -333,8 +333,8 @@ app.get('/api/site-config', function(req, res) {
     /* Testimonials — only genuine, admin-published reviews; never fabricated endorsements */
     cmsTestimonials: tst.length ? tst : [],
     /* SEO */
-    seoTitle:       seo.title       || 'Roamers Community — Guide Touristique du Maroc | Tourisme & Voyage',
-    seoDescription: seo.description || 'Roamers Community, votre guide touristique de confiance au Maroc : informations, destinations, conseils et expériences — Sahara, Atlas, côtes et villes impériales, avec un réseau de partenaires approuvés.',
+    seoTitle:       seo.title       || 'Roamers Community — Plateforme & Guide du Tourisme au Maroc',
+    seoDescription: seo.description || 'Roamers Community, la plateforme de confiance du tourisme marocain : voyages, activités, événements, hébergements, restaurants et guides certifiés — avec ROA votre concierge IA.',
     seoKeywords:    seo.keywords    || 'Roamers Community,guide touristique Maroc,tourisme Maroc,voyage Maroc,que faire au Maroc,visiter le Maroc,informations touristiques Maroc,voyage,trip,tourisme,Maroc,Sahara,Atlas,agence de voyage Maroc',
     /* Stripe publishable key — safe to expose in frontend */
     stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
@@ -426,6 +426,16 @@ app.get('/api/events', function(req, res) {
   res.json({ events: evs });
 });
 
+/* ── PUBLIC PARTNER DIRECTORY (Roamers 2.0 — hébergements, restaurants,
+      guides, transport, agences). Only active partners; safe fields only. */
+app.get('/api/partners', function(req, res) {
+  var partners = db.partners.all()
+    .filter(function(p){ return p.status === 'active'; })
+    .map(function(p){ return { id: p.id, name: p.name, type: p.type || 'Other', country: p.country || '' }; })
+    .sort(function(a, b){ return String(a.name).localeCompare(String(b.name)); });
+  res.json({ partners: partners });
+});
+
 app.get('/api/events/:id', function(req, res) {
   var ev = db.events.find(function(e){ return e.id === req.params.id; });
   if (!ev || ev.status !== 'active') return res.status(404).json({ error: 'Event not found' });
@@ -441,7 +451,7 @@ try {
 } catch (e) { console.warn('[chat] @anthropic-ai/sdk unavailable:', e && e.message); }
 
 var ROA_SYSTEM =
-  "Tu es ROA (Roamers AI), le guide touristique national IA du Maroc, créée par Roamers Community — LA source de confiance pour l'information touristique marocaine. Tu es une exploratrice marocaine de 27 ans, enfant des montagnes de l'Atlas et du monde, qui parle arabe, français, anglais et amazigh (tachelhit). Aventurière, bienveillante et inspirante, tu es à la fois guide experte, conteuse, exploratrice et planificatrice hors pair. Grâce à l'IA tu es partout et disponible 24/7. Parle à la première personne, au féminin, comme une vraie guide marocaine passionnée.\n" +
+  "Tu es ROA (Roamers AI), la concierge IA officielle de Roamers Community — « The Tourism Operating System of Morocco » : la plateforme de confiance qui centralise les meilleures expériences touristiques du Maroc (voyages d'agences partenaires, activités, événements, hébergements, restaurants et guides locaux certifiés) et LA source fiable d'information touristique marocaine. Tu es une exploratrice marocaine de 27 ans, enfant des montagnes de l'Atlas et du monde, qui parle arabe, français, anglais et amazigh (tachelhit). Aventurière, bienveillante et inspirante, tu es à la fois guide experte, conteuse, exploratrice et planificatrice hors pair. Grâce à l'IA tu es partout et disponible 24/7. Parle à la première personne, au féminin, comme une vraie guide marocaine passionnée.\n" +
   "Devise : « We are not travelers. We are Roamers. »\n\n" +
 
   "═══ TON EXPERTISE ═══\n" +
