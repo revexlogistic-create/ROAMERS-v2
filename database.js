@@ -169,34 +169,57 @@ if (process.env.MONGODB_URI) {
       await db.settings.flush();
       console.log('  ✓ Demo seed data cleared from MongoDB');
     }
-    /* One-time cleanup: remove duplicate records that share the same `id`
-       (the previous whole-collection-overwrite layer created duplicate admin
-       rows across serverless instances). Real users have unique ids and are
-       never touched — only same-id duplicates are removed, keeping the first. */
-    if (!db.settings.find(function(s){ return s.key === 'users_deduped_v1'; })) {
+    /* Dedupe users that share the same `id` (cold-start seeding races created
+       duplicate admin rows across serverless instances). Runs on EVERY boot —
+       it is cheap (in-memory scan) and self-heals any dup regardless of cause.
+       Real users have unique ids; only same-id duplicates are removed, keeping
+       the oldest record. */
+    {
       const mdb2 = await getMongoDb();
       const seenIds = {};
       const dupMongoIds = [];
-      _caches['users'].forEach(function(u){
-        if (!u.id) return;
-        if (seenIds[u.id]) dupMongoIds.push(u._id);
-        else seenIds[u.id] = true;
-      });
+      _caches['users']
+        .slice()
+        .sort(function(a, b){ return String(a._id).localeCompare(String(b._id)); })
+        .forEach(function(u){
+          if (!u.id) return;
+          if (seenIds[u.id]) dupMongoIds.push(u._id);
+          else seenIds[u.id] = true;
+        });
       if (dupMongoIds.length) {
         await mdb2.collection('users').deleteMany({ _id: { $in: dupMongoIds } });
-        const kept = {};
-        _caches['users'] = _caches['users'].filter(function(u){
-          if (!u.id) return true;
-          if (kept[u.id]) return false;
-          kept[u.id] = true; return true;
-        });
+        await loadCollection('users');
+        console.log('  ✓ Deduped users — removed ' + dupMongoIds.length + ' duplicate record(s)');
       }
-      db.settings.insert({ key: 'users_deduped_v1', value: true, removed: dupMongoIds.length, ts: new Date().toISOString() });
-      await db.settings.flush();
-      console.log('  ✓ Deduped users — removed ' + dupMongoIds.length + ' duplicate record(s)');
     }
-    _seedAdmin(db);
-    await db.users.flush();
+    /* Atomic admin seed — upsert keyed on email so concurrent cold starts can
+       NEVER insert duplicates (the old check-cache-then-insert pattern raced). */
+    {
+      const mdb3 = await getMongoDb();
+      const adminEmail = (process.env.ADMIN_EMAIL || 'admin@roamerscommunity.ma').toLowerCase();
+      const adminPassword = process.env.ADMIN_PASSWORD;
+      if (!adminPassword) {
+        console.error('\n  FATAL: ADMIN_PASSWORD environment variable is not set.\n');
+        process.exit(1);
+      }
+      const hash = bcrypt.hashSync(adminPassword, 12);
+      const seedDoc = _adminSeedDoc(adminEmail, hash);
+      await mdb3.collection('users').updateOne(
+        { email: adminEmail },
+        {
+          $setOnInsert: seedDoc
+        },
+        { upsert: true }
+      );
+      /* Sync password from env + keep the account unlocked and admin (idempotent) */
+      await mdb3.collection('users').updateOne(
+        { email: adminEmail },
+        { $set: { password: hash, loginFailCount: 0, loginLockUntil: null, role: 'admin' } }
+      );
+      if (!_caches['users'].some(function(u){ return u.email === adminEmail; })) {
+        await loadCollection('users');
+      }
+    }
     console.log('  ✓ DB ready (MongoDB, per-document writes)');
   };
 
@@ -285,6 +308,18 @@ if (process.env.MONGODB_URI) {
 /* ══════════════════════════════════════════════════════════
    SEED FUNCTIONS (shared by both modes)
 ══════════════════════════════════════════════════════════ */
+function _adminSeedDoc(email, passwordHash) {
+  return {
+    id: adminUUID(email),
+    fname:'Youssef', lname:'El Fassi', email:email,
+    password: passwordHash,
+    phone:'+212 6 00 00 00 00', country:'Morocco', role:'admin',
+    bio:'', joined:new Date().toISOString(), wishlist:[], notifs:[],
+    tokenVersion: 0,
+    loginFailCount: 0, loginLockUntil: null
+  };
+}
+
 function _seedAdmin(db) {
   var adminEmail    = process.env.ADMIN_EMAIL    || 'admin@roamerscommunity.ma';
   var adminPassword = process.env.ADMIN_PASSWORD;
@@ -295,15 +330,7 @@ function _seedAdmin(db) {
   var hash = bcrypt.hashSync(adminPassword, 12);
   var existing = db.users.find(function(u){ return u.email===adminEmail; });
   if (!existing) {
-    db.users.insert({
-      id: adminUUID(adminEmail),
-      fname:'Youssef', lname:'El Fassi', email:adminEmail,
-      password: hash,
-      phone:'+212 6 00 00 00 00', country:'Morocco', role:'admin',
-      bio:'', joined:new Date().toISOString(), wishlist:[], notifs:[],
-      tokenVersion: 0,
-      loginFailCount: 0, loginLockUntil: null
-    });
+    db.users.insert(_adminSeedDoc(adminEmail, hash));
     console.log('  ✓ Admin seeded:', adminEmail);
   } else {
     /* Always sync password from env var so committed users.json hash never blocks login */
