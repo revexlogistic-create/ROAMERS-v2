@@ -1366,51 +1366,48 @@ function renderCmsTab(tab){
    PAGE: PARTNERS
 ══════════════════════════════════════════════════ */
 function renderPartners() {
-  var totalPartnerRev=DB.partners.reduce(function(s,p){return s+(p.revenue||0);},0);
-  return '<div class="page-header"><div><h1>Partenariats & Programmes Internationaux</h1><p>Gérez les partenaires B2B et les programmes de collaboration</p></div>'
-    +'<div class="ph-actions"><button class="btn btn-primary" onclick="openPartnerModal()">+ Ajouter partenaire</button></div></div>'
+  var PT_LABELS={'Hotel':'🏨 Hébergement','Restaurant':'🍽️ Restaurant','Guide':'🗺️ Guide certifié','Transport':'🚐 Transport','Travel Agency':'🧳 Agence de voyage','Tour Operator':'🧭 Tour opérateur','Activity':'⚡ Activité','Other':'🤝 Autre'};
+  var active=DB.partners.filter(function(p){return p.status==='active';});
+  var typeCounts={};
+  active.forEach(function(p){ var t=p.type||'Other'; typeCounts[t]=(typeCounts[t]||0)+1; });
+  return '<div class="page-header"><div><h1>Réseau de Partenaires</h1><p>Annuaire public « Réseau » — hébergements, restaurants, guides, transport & agences approuvés</p></div>'
+    +'<div class="ph-actions"><a class="btn btn-secondary" href="/#" onclick="window.open(\'/\',\'_blank\');return false" title="Voir l\'annuaire public">🌍 Voir l\'annuaire</a><button class="btn btn-primary" onclick="openPartnerModal()">+ Ajouter partenaire</button></div></div>'
 
   +'<div class="grid-4" style="margin-bottom:20px">'
   + miniStat('Partenaires','🤝',DB.partners.length,'var(--blue-l)')
-  + miniStat('Actifs','✅',DB.partners.filter(function(p){return p.status==='active';}).length,'var(--green-l)')
-  + miniStat('Pays','🌍','5','var(--purple-l)')
-  + miniStat('CA Partenaires','💰',fmt(totalPartnerRev)+' MAD','var(--red-l)')
+  + miniStat('Visibles (actifs)','✅',active.length,'var(--green-l)')
+  + miniStat('En vedette','⭐',DB.partners.filter(function(p){return p.featured;}).length,'var(--amber-l)')
+  + miniStat('Avec photo','🖼️',DB.partners.filter(function(p){return p.img;}).length,'var(--purple-l)')
   +'</div>'
 
-  /* Which segments these partners cover */
-  +'<div class="card" style="margin-bottom:20px"><div class="card-header"><div class="card-title">Segments couverts par les partenaires</div></div>'
+  /* Directory categories coverage */
+  +'<div class="card" style="margin-bottom:20px"><div class="card-header"><div class="card-title">Catégories de l\'annuaire</div></div>'
   +'<div style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0">'
-  +ADMIN_SEGS.map(function(s){
-    var hasPart=DB.partners.some(function(p){return (p.trips||[]).some(function(t){return DB.trips.some(function(tr){return tr.title===t&&tr.segment===s.id;});});});
-    return '<div style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:'+(hasPart?s.color+'18':'var(--surface3)')+';border:1.5px solid '+(hasPart?s.color:'var(--border)')+';border-radius:100px">'
-      +'<span style="font-size:16px">'+s.icon+'</span>'
-      +'<span style="font-size:12px;font-weight:600;color:'+(hasPart?s.color:'var(--text3)')+'">'+s.label+'</span>'
-      +(hasPart?'<span style="font-size:10px;background:'+s.color+';color:#fff;padding:1px 6px;border-radius:100px;margin-left:2px">✓</span>':'')
-    +'</div>';
+  +Object.keys(PT_LABELS).map(function(t){
+    var n=typeCounts[t]||0;
+    return '<div style="display:flex;align-items:center;gap:7px;padding:8px 14px;background:'+(n?'var(--green-l)':'var(--surface3)')+';border:1.5px solid '+(n?'var(--green)':'var(--border)')+';border-radius:100px">'
+      +'<span style="font-size:12px;font-weight:600;color:'+(n?'var(--green)':'var(--text3)')+'">'+PT_LABELS[t]+'</span>'
+      +'<span style="font-size:10px;background:'+(n?'var(--green)':'var(--text3)')+';color:#fff;padding:1px 7px;border-radius:100px">'+n+'</span></div>';
   }).join('')
   +'</div></div>'
 
+  +(DB.partners.length?'':'<div class="empty-state"><p>Aucun partenaire</p><span>Ajoutez vos hébergements, restaurants et guides — les partenaires actifs apparaissent dans l\'annuaire public.</span></div>')
   +'<div class="grid-2">'
   + DB.partners.map(function(p){
-      var partnerTrips=(p.trips||[]).map(function(title){
-        var t=DB.trips.find(function(x){return x.title===title;});
-        return t?{title:title,seg:t.segment,type:t.type}:{title:title,seg:null,type:null};
-      });
-      return '<div class="partner-card"><div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">'
-        +'<div style="display:flex;align-items:center;gap:11px"><div class="partner-logo" style="margin-bottom:0">🌐</div><div><div style="font-size:15px;font-weight:700">'+p.name+'</div><div style="font-size:12px;color:var(--text3)">'+p.type+' · '+p.country+'</div></div></div>'
-        +'<span class="badge badge-'+(p.status==='active'?'confirmed':'closed')+'">'+cap(p.status)+'</span>'
+      var place=[p.city,p.country].filter(Boolean).join(', ');
+      return '<div class="partner-card">'
+        +(p.img?'<div style="aspect-ratio:16/6;border-radius:var(--r-sm);overflow:hidden;margin-bottom:12px;background:var(--surface3)"><img src="'+escH(p.img)+'" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.style.display=\'none\'"></div>':'')
+        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">'
+        +'<div style="display:flex;align-items:center;gap:11px;min-width:0"><div class="partner-logo" style="margin-bottom:0">'+(PT_LABELS[p.type]||'🤝').split(' ')[0]+'</div><div style="min-width:0"><div style="font-size:15px;font-weight:700">'+escH(p.name)+(p.featured?' <span title="En vedette">⭐</span>':'')+'</div><div style="font-size:12px;color:var(--text3)">'+(PT_LABELS[p.type]||p.type)+(place?(' · '+escH(place)):'')+'</div></div></div>'
+        +'<span class="badge badge-'+(p.status==='active'?'confirmed':'closed')+'" title="'+(p.status==='active'?'Visible dans l\'annuaire':'Masqué du public')+'">'+cap(p.status)+'</span>'
         +'</div>'
-        +'<div class="grid-2" style="margin-bottom:11px;gap:8px">'
-          +'<div style="background:var(--surface3);border-radius:var(--r-sm);padding:10px"><div style="font-size:11px;color:var(--text3)">Programmes</div><div style="font-size:18px;font-weight:700">'+p.programs+'</div></div>'
-          +'<div style="background:var(--surface3);border-radius:var(--r-sm);padding:10px"><div style="font-size:11px;color:var(--text3)">CA Partenaire</div><div style="font-size:15px;font-weight:700;color:var(--green)">'+(p.revenue?fmt(p.revenue)+' MAD':'—')+'</div></div>'
-        +'</div>'
-        +'<div style="font-size:12px;color:var(--text2);margin-bottom:10px">Contact : <strong>'+p.contact+'</strong> · <span style="color:var(--blue)">'+p.email+'</span></div>'
-        +(partnerTrips.length?'<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Voyages assignés</div><div style="display:flex;flex-direction:column;gap:5px">'+partnerTrips.map(function(t){return '<div style="display:flex;align-items:center;gap:6px;font-size:12px"><span>'+t.title+'</span>'+(t.seg?segBadge(t.seg):'')+(t.type?typeBadge(t.type):'')+'</div>';}).join('')+'</div></div>':'')
+        +(p.desc?'<div style="font-size:12.5px;color:var(--text2);line-height:1.5;margin-bottom:10px">'+escH(p.desc)+'</div>':'<div style="font-size:12px;color:var(--amber);margin-bottom:10px">⚠ Pas de description publique</div>')
+        +((p.contact||p.email||p.phone)?'<div style="font-size:12px;color:var(--text3);margin-bottom:10px">Interne : '+[escH(p.contact),escH(p.email),escH(p.phone)].filter(Boolean).join(' · ')+'</div>':'')
         +'<div style="display:flex;gap:7px">'
           +'<button class="btn btn-secondary btn-sm" onclick="editPartner(\''+p.id+'\')" style="flex:1">✏️ Modifier</button>'
           +'<button class="btn btn-danger btn-sm btn-icon" onclick="deleteItem(\'partners\',\''+p.id+'\')" title="Supprimer">🗑</button>'
-          +'<button class="btn btn-ghost btn-sm btn-icon" onclick="sendEmail(\''+p.email+'\')" title="Email">✉️</button>'
-          +'<button class="btn btn-ghost btn-sm btn-icon" onclick="sendWhatsApp(\''+p.phone+'\',\''+p.name+'\')" title="WhatsApp">💬</button>'
+          +(p.email?'<button class="btn btn-ghost btn-sm btn-icon" onclick="sendEmail(\''+escH(p.email)+'\')" title="Email">✉️</button>':'')
+          +(p.phone?'<button class="btn btn-ghost btn-sm btn-icon" onclick="sendWhatsApp(\''+escH(p.phone)+'\',\''+escH(p.name)+'\')" title="WhatsApp">💬</button>':'')
         +'</div>'
       +'</div>';
     }).join('')
@@ -3368,16 +3365,31 @@ function viewCustomer(id) {
 
 function openPartnerModal(id) {
   var p = id ? DB.partners.find(function(x){return x.id===id;}) : null;
-  openModal('<div class="modal-header"><h3>'+(p?'Edit':'Add New')+' Partner</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
+  openModal('<div class="modal-header"><h3>'+(p?'Modifier le':'Nouveau')+' partenaire</h3><div class="modal-close" onclick="closeModal()">✕</div></div>'
     + '<div class="modal-body">'
-    + '<div class="fg-row"><div class="fg"><label class="fl">Company Name *</label><input class="fi" id="mpName" placeholder="Partner name" value="'+(p?p.name:'')+'"></div><div class="fg"><label class="fl">Type</label><select class="fi fi-select" id="mpType"><option>Travel Agency</option><option>Tour Operator</option><option>Transport</option><option>Activity</option><option>Hotel</option><option>Restaurant</option><option>Guide</option><option>Other</option></select></div></div>'
-    + '<div class="fg-row"><div class="fg"><label class="fl">Country</label><input class="fi" id="mpCountry" placeholder="China" value="'+(p?p.country:'')+'"></div><div class="fg"><label class="fl">Status</label><select class="fi fi-select" id="mpStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="suspended">Suspended</option></select></div></div>'
-    + '<div class="fg-row"><div class="fg"><label class="fl">Contact Person</label><input class="fi" id="mpContact" placeholder="Name" value="'+(p?p.contact:'')+'"></div><div class="fg"><label class="fl">Email</label><input class="fi" id="mpEmail" type="email" placeholder="email@company.com" value="'+(p?p.email:'')+'"></div></div>'
-    + '<div class="fg"><label class="fl">Phone</label><input class="fi" id="mpPhone" placeholder="+XX XXX XXX XXXX" value="'+(p?p.phone:'')+'"></div>'
+    + '<div style="background:var(--blue-l);border-radius:var(--r-sm);padding:10px 13px;font-size:12.5px;color:var(--blue);margin-bottom:14px">🌍 Les partenaires <b>actifs</b> apparaissent dans l\'annuaire public « Réseau ». Photo, description et ville sont affichées aux voyageurs. Contact/email/téléphone restent internes.</div>'
+    + '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Fiche publique</div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Nom *</label><input class="fi" id="mpName" placeholder="Ex : Riad Atlas Serenity" value="'+escH(p?p.name:'')+'"></div><div class="fg"><label class="fl">Type *</label><select class="fi fi-select" id="mpType"><option>Travel Agency</option><option>Tour Operator</option><option>Transport</option><option>Activity</option><option>Hotel</option><option>Restaurant</option><option>Guide</option><option>Other</option></select></div></div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Ville</label><input class="fi" id="mpCity" placeholder="Marrakech" value="'+escH(p?p.city:'')+'"></div><div class="fg"><label class="fl">Pays / Région</label><input class="fi" id="mpCountry" placeholder="Maroc" value="'+escH(p?p.country:'')+'"></div></div>'
+    + '<div class="fg"><label class="fl">Description publique</label><textarea class="fi fi-area" id="mpDesc" placeholder="Courte présentation affichée aux voyageurs (max 500 caractères)">'+escH(p?p.desc:'')+'</textarea></div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Photo (URL)</label><input class="fi" id="mpImg" placeholder="https://…" value="'+escH(p?p.img:'')+'" oninput="previewPartnerImg(this.value)"></div><div class="fg"><label class="fl">Site web / lien</label><input class="fi" id="mpLink" placeholder="https://…" value="'+escH(p?p.link:'')+'"></div></div>'
+    + '<div id="mpImgPreview" style="display:none;margin:-4px 0 12px;border-radius:var(--r-sm);overflow:hidden;max-height:150px"><img id="mpImgEl" style="width:100%;object-fit:cover;max-height:150px" alt="preview"></div>'
+    + '<div class="fg"><label class="fi-check"><input type="checkbox" id="mpFeatured" '+(p&&p.featured?'checked':'')+'> ⭐ Mettre en avant dans l\'annuaire</label></div>'
+    + '<div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:14px 0 8px;border-top:1px solid var(--border);padding-top:14px">Interne (non public)</div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Statut</label><select class="fi fi-select" id="mpStatus"><option value="active">Actif (visible dans l\'annuaire)</option><option value="inactive">Inactif (masqué)</option><option value="suspended">Suspendu</option></select></div><div class="fg"><label class="fl">Contact</label><input class="fi" id="mpContact" placeholder="Nom du contact" value="'+escH(p?p.contact:'')+'"></div></div>'
+    + '<div class="fg-row"><div class="fg"><label class="fl">Email</label><input class="fi" id="mpEmail" type="email" placeholder="email@partenaire.com" value="'+escH(p?p.email:'')+'"></div><div class="fg"><label class="fl">Téléphone</label><input class="fi" id="mpPhone" placeholder="+212 …" value="'+escH(p?p.phone:'')+'"></div></div>'
     + '</div>'
     + '<div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="savePartner(\''+(p?p.id:'null')+'\')">Enregistrer</button></div>',
     'modal-md');
-  if (p) { document.getElementById('mpType').value = p.type; document.getElementById('mpStatus').value = p.status; }
+  if (p) { document.getElementById('mpType').value = p.type; document.getElementById('mpStatus').value = p.status; if(p.img) previewPartnerImg(p.img); }
+}
+
+function previewPartnerImg(url){
+  var box=document.getElementById('mpImgPreview'), img=document.getElementById('mpImgEl');
+  if(!box||!img) return;
+  if(!url){ box.style.display='none'; return; }
+  img.src=url; box.style.display='block';
+  img.onerror=function(){ box.style.display='none'; };
 }
 
 function editPartner(id) { openPartnerModal(id); }
@@ -3387,7 +3399,12 @@ function savePartner(id) {
   if (!name) { showToast('Nom du partenaire requis','error'); return; }
   var body = {
     name:name, country:document.getElementById('mpCountry').value,
+    city:document.getElementById('mpCity').value,
     type:document.getElementById('mpType').value,
+    desc:document.getElementById('mpDesc').value,
+    img:document.getElementById('mpImg').value,
+    link:document.getElementById('mpLink').value,
+    featured:document.getElementById('mpFeatured').checked,
     contact:document.getElementById('mpContact').value,
     email:document.getElementById('mpEmail').value,
     phone:document.getElementById('mpPhone').value,

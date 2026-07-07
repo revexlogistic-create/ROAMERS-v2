@@ -4260,14 +4260,22 @@ function pgPartners(){
   function card(p){
     var typeFr = PARTNER_TYPE_FR[p.type] || p.type;
     var ic = (PARTNER_CATS.find(function(c){ return c.types && c.types.indexOf(p.type)!==-1; })||{}).icon || '🤝';
-    return '<div class="reveal" style="background:#fff;border:1px solid var(--bdr);border-radius:18px;padding:22px 20px;display:flex;flex-direction:column;gap:10px">'
-      +'<div style="display:flex;align-items:center;gap:12px"><div style="width:46px;height:46px;border-radius:14px;background:rgba(184,23,46,.08);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">'+ic+'</div>'
-      +'<div style="min-width:0"><div style="font-weight:700;font-size:15.5px;line-height:1.25">'+p.name+'</div>'
-      +'<div style="font-size:12px;color:var(--txt2)">'+typeFr+(p.country?(' · '+p.country):'')+'</div></div></div>'
-      +'<div style="display:flex;align-items:center;gap:8px;margin-top:2px">'
-      +'<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#16A34A;background:rgba(22,163,74,.09);padding:4px 10px;border-radius:100px">✓ Approuvé Roamers</span></div>'
-      +'<a href="'+waUrl('Bonjour ! Je souhaite réserver avec votre partenaire « '+p.name+' » ('+typeFr+').')+'" target="_blank" class="btn btn-r" style="justify-content:center;margin-top:4px">Réserver via Roamers</a>'
-    +'</div>';
+    var place = [p.city, p.country].filter(Boolean).join(', ');
+    return '<div class="reveal" style="background:#fff;border:1px solid var(--bdr);border-radius:18px;overflow:hidden;display:flex;flex-direction:column">'
+      +(p.img
+        ? '<div style="aspect-ratio:16/9;overflow:hidden;position:relative;background:#161616"><img src="'+p.img+'" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.style.display=\'none\'">'
+          +(p.featured?'<div style="position:absolute;top:10px;left:10px;background:var(--sand);color:#1a0d10;font-size:10px;font-weight:800;padding:4px 10px;border-radius:100px">⭐ En vedette</div>':'')+'</div>'
+        : '<div style="aspect-ratio:16/9;background:linear-gradient(135deg,rgba(184,23,46,.12),rgba(217,184,122,.14));display:flex;align-items:center;justify-content:center;font-size:40px">'+ic+'</div>')
+      +'<div style="padding:18px 18px 20px;display:flex;flex-direction:column;gap:9px;flex:1">'
+      +'<div><div style="font-weight:700;font-size:16px;line-height:1.25">'+esc(p.name)+'</div>'
+      +'<div style="font-size:12px;color:var(--txt2);margin-top:2px">'+ic+' '+typeFr+(place?(' · '+esc(place)):'')+'</div></div>'
+      +(p.desc?'<p style="font-size:13px;color:var(--txt2);line-height:1.55;margin:0">'+esc(p.desc)+'</p>':'')
+      +'<span style="align-self:flex-start;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#16A34A;background:rgba(22,163,74,.09);padding:4px 10px;border-radius:100px">✓ Approuvé Roamers</span>'
+      +'<div style="display:flex;gap:8px;margin-top:auto;padding-top:4px">'
+      +'<a href="'+waUrl('Bonjour ! Je souhaite réserver avec votre partenaire « '+p.name+' » ('+typeFr+').')+'" target="_blank" class="btn btn-r" style="flex:1;justify-content:center">Réserver via Roamers</a>'
+      +(p.link?'<a href="'+esc(p.link)+'" target="_blank" rel="noopener nofollow" class="btn btn-o" style="justify-content:center" title="Site web">↗</a>':'')
+      +'</div>'
+    +'</div></div>';
   }
   return '<div class="pg-hdr pg-hdr-dk" data-bg="RÉSEAU"><span class="eye eye-s">The Tourism Operating System of Morocco</span><h1 class="h1" style="color:#fff">Le réseau <em class="s">Roamers</em></h1><p style="color:rgba(255,255,255,.7);max-width:560px;margin:14px auto 0">Hébergements, restaurants, guides certifiés, transport et agences — chaque partenaire est sélectionné et approuvé selon les standards Roamers Community.</p></div>'
   +'<div class="sec" style="background:var(--cream)">'
@@ -7139,6 +7147,7 @@ function loadActivitiesFromApi(){
   }).catch(function(){});
 }
 
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 var PARTNERS = [];
 function loadPartnersFromApi(){
   apiGet('/partners').then(function(d){

@@ -525,7 +525,12 @@ router.post('/partners', auditMod.audit('admin:partner:create'), async function(
     id:       uuidv4(),
     name:     String(f.name).trim(),
     country:  f.country  ? String(f.country).trim()  : '',
+    city:     f.city     ? String(f.city).trim().slice(0,80)     : '',
     type:     PARTNER_TYPES.includes(f.type) ? f.type : 'Tour Operator',
+    desc:     f.desc     ? String(f.desc).trim().slice(0,500)    : '',
+    img:      f.img      ? String(f.img).trim().slice(0,600)     : '',
+    link:     f.link     ? String(f.link).trim().slice(0,300)    : '',
+    featured: !!f.featured,
     contact:  f.contact  ? String(f.contact).trim()  : '',
     email:    f.email    ? f.email.toLowerCase().trim() : '',
     phone:    f.phone    ? String(f.phone).trim()    : '',
@@ -560,6 +565,11 @@ router.put('/partners/:id', auditMod.audit('admin:partner:update'), async functi
     if (!PARTNER_STATUS.includes(f.status)) return res.status(400).json({ error: 'Invalid partner status' });
     changes.status = f.status;
   }
+  if (f.city    !== undefined) changes.city    = String(f.city || '').trim().slice(0,80);
+  if (f.desc    !== undefined) changes.desc    = String(f.desc || '').trim().slice(0,500);
+  if (f.img     !== undefined) changes.img     = String(f.img  || '').trim().slice(0,600);
+  if (f.link    !== undefined) changes.link    = String(f.link || '').trim().slice(0,300);
+  if (f.featured!== undefined) changes.featured= !!f.featured;
   if (f.trips    !== undefined) changes.trips    = Array.isArray(f.trips) ? f.trips : [];
   if (f.programs !== undefined) changes.programs = Math.max(0, parseInt(f.programs) || 0);
   if (f.revenue  !== undefined) changes.revenue  = Math.max(0, parseInt(f.revenue)  || 0);

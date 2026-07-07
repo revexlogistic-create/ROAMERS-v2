@@ -431,8 +431,16 @@ app.get('/api/events', function(req, res) {
 app.get('/api/partners', function(req, res) {
   var partners = db.partners.all()
     .filter(function(p){ return p.status === 'active'; })
-    .map(function(p){ return { id: p.id, name: p.name, type: p.type || 'Other', country: p.country || '' }; })
-    .sort(function(a, b){ return String(a.name).localeCompare(String(b.name)); });
+    .map(function(p){ return {
+      id: p.id, name: p.name, type: p.type || 'Other',
+      country: p.country || '', city: p.city || '',
+      desc: p.desc || '', img: p.img || '', link: p.link || '',
+      featured: !!p.featured
+    }; })
+    .sort(function(a, b){
+      if (a.featured !== b.featured) return a.featured ? -1 : 1;
+      return String(a.name).localeCompare(String(b.name));
+    });
   res.json({ partners: partners });
 });
 
